@@ -1,0 +1,51 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_lens_vault/app/models/storage_entry.dart';
+import 'support/fakes.dart';
+
+void main() {
+  test('目录始终在前，未知元数据在升降序中均在末尾', () {
+    final items = [
+      entry('未知'),
+      entry('大', size: 1024),
+      entry('文件夹', directory: true),
+      entry('小', size: 2),
+    ];
+    expect(sortEntries(items, EntrySort.size, false).map((e) => e.name), [
+      '文件夹',
+      '小',
+      '大',
+      '未知',
+    ]);
+    expect(sortEntries(items, EntrySort.size, true).map((e) => e.name), [
+      '文件夹',
+      '大',
+      '小',
+      '未知',
+    ]);
+  });
+  test('名称拒绝空白、路径穿越、控制字符和过长名称', () {
+    for (final name in [
+      '',
+      '  ',
+      '.',
+      '..',
+      '../视频',
+      'a/b',
+      'a\\b',
+      'a\u0000b',
+      'x' * 121,
+    ]) {
+      expect(validateEntryName(name), isNotNull, reason: name);
+    }
+    expect(validateEntryName('现场 1'), isNull);
+  });
+  test('时间戳和大小使用明确格式', () {
+    expect(
+      recordingFileName(DateTime(2026, 9, 17, 8, 3, 2)),
+      '2026-09-17_08-03-02.mp4',
+    );
+    expect(formatBytes(null), '大小未知');
+    expect(formatBytes(1024), '1.0 KB');
+    expect(formatDuration(const Duration(seconds: 65)), '01:05');
+  });
+}
