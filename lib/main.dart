@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
+import 'app/services/archive_service.dart';
 import 'app/services/saf_storage.dart';
 import 'app/services/vault_store.dart';
 
@@ -11,6 +12,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   Get.put<StorageGateway>(SafStorage(), permanent: true);
   Get.put<VaultStore>(DriftVaultStore(AppDatabase()), permanent: true);
+  Get.put<ArchiveGateway>(ArchiveService(), permanent: true);
   runApp(const LensVaultApp());
 }
 

@@ -7,15 +7,28 @@ import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import com.example.flutter_lens_vault.storage.SafStorage
+import com.example.flutter_lens_vault.storage.archive.ArchiveManager
+import com.example.flutter_lens_vault.storage.share.ShareManager
 import java.util.concurrent.Executors
 
-/** 管理目录选择器生命周期；文件访问在串行 IO 队列执行，回调始终返回主线程。 */
+/**
+ * 管理目录选择器与平台通道生命周期。
+ *
+ * - 文件访问与归档任务各自使用串行队列，长归档不会阻塞录像保存。
+ * - 进度经 EventChannel 上报，回调始终返回主线程。
+ */
 class MainActivity : FlutterFragmentActivity() {
     private val executor = Executors.newSingleThreadExecutor()
+    private val archiveExecutor = Executors.newSingleThreadExecutor()
     private var pickerResult: MethodChannel.Result? = null
     private var channel: MethodChannel? = null
+    private var archiveChannel: MethodChannel? = null
+    private var events: EventChannel.EventSink? = null
+    private var archive: ArchiveManager? = null
+    private var share: ShareManager? = null
     private val picker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { response ->
         val result = pickerResult
         pickerResult = null
@@ -63,6 +76,55 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> execute(result) { storage.handle(call.method, call.arguments) }
             }
         }
+
+        val archiveManager = ArchiveManager(applicationContext) { event ->
+            runOnUiThread { if (!isDestroyed) events?.success(event) }
+        }
+        archive = archiveManager
+        val shareManager = ShareManager(applicationContext)
+        share = shareManager
+        EventChannel(engine.dartExecutor.binaryMessenger, "lens_vault/archive_events")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                    events = sink
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    events = null
+                }
+            })
+        archiveChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/archive")
+        archiveChannel!!.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "cancel" -> {
+                    val id = (call.arguments as? Map<*, *>)?.get("operationId") as? String
+                    result.success(id != null && archiveManager.cancel(id))
+                }
+                // 分享需要主线程启动系统界面，不能放入 IO 队列。
+                "share" -> {
+                    try {
+                        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                        result.success(shareManager.share(args))
+                    } catch (error: Exception) {
+                        val failure = SafStorage.failure(error)
+                        result.error(failure.code, failure.message, failure.details)
+                    }
+                }
+                "cleanupShareCache" -> archiveExecutor.execute {
+                    val deleted = archiveManager.cleanupShareCache()
+                    runOnUiThread { if (!isDestroyed) result.success(deleted) }
+                }
+                else -> archiveExecutor.execute {
+                    try {
+                        val value = archiveManager.handle(call.method, call.arguments)
+                        runOnUiThread { if (!isDestroyed) result.success(value) }
+                    } catch (error: Exception) {
+                        val failure = SafStorage.failure(error)
+                        runOnUiThread { if (!isDestroyed) result.error(failure.code, failure.message, failure.details) }
+                    }
+                }
+            }
+        }
     }
 
     private fun execute(result: MethodChannel.Result, action: () -> Any?) {
@@ -79,8 +141,11 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onDestroy() {
         channel?.setMethodCallHandler(null)
+        archiveChannel?.setMethodCallHandler(null)
+        events = null
         pickerResult = null
         executor.shutdown()
+        archiveExecutor.shutdown()
         super.onDestroy()
     }
 }

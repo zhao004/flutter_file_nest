@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../models/archive_models.dart';
 import '../../models/storage_entry.dart';
 import '../../routes/app_pages.dart';
 import 'home_controller.dart';
@@ -102,42 +103,114 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Future<void> _actions(StorageEntry entry) async {
+    final canWrite = controller.current?.canCreate == true;
+    final archiving = controller.archive.active.value != null;
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(
-                entry.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (entry.isDirectory && entry.canRename)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.drive_file_rename_outline),
-                title: const Text('重命名'),
-                onTap: () => Navigator.pop(context, 'rename'),
+                title: Text(
+                  entry.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error,
+              if (entry.isDirectory && entry.canRename)
+                ListTile(
+                  leading: const Icon(Icons.drive_file_rename_outline),
+                  title: const Text('重命名'),
+                  enabled: !archiving,
+                  onTap: () => Navigator.pop(context, 'rename'),
+                ),
+              if (canWrite)
+                ListTile(
+                  leading: const Icon(Icons.folder_zip_outlined),
+                  title: const Text('压缩为 ZIP'),
+                  subtitle: const Text('输出到当前文件夹，不覆盖同名文件'),
+                  enabled: !archiving,
+                  onTap: () => Navigator.pop(context, 'zip'),
+                ),
+              if (looksLikeZip(entry))
+                ListTile(
+                  leading: const Icon(Icons.unarchive_outlined),
+                  title: const Text('解压到新文件夹'),
+                  subtitle: const Text('同名文件夹存在时自动使用新名称'),
+                  enabled: canWrite && !archiving,
+                  onTap: () => Navigator.pop(context, 'extract'),
+                ),
+              ListTile(
+                leading: const Icon(Icons.ios_share),
+                title: const Text('分享'),
+                subtitle: entry.isDirectory
+                    ? const Text('先生成临时 ZIP，再打开系统分享')
+                    : null,
+                enabled: !archiving,
+                onTap: () => Navigator.pop(context, 'share'),
               ),
-              title: const Text('删除'),
-              enabled: entry.canDelete,
-              onTap: () => Navigator.pop(context, 'delete'),
-            ),
-          ],
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: const Text('删除'),
+                enabled: entry.canDelete && !archiving,
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
+            ],
+          ),
         ),
       ),
     );
-    if (action == 'rename') await _nameDialog(entry: entry);
-    if (action == 'delete') await _delete(entry);
+    switch (action) {
+      case 'rename':
+        await _nameDialog(entry: entry);
+      case 'delete':
+        await _delete(entry);
+      case 'zip':
+        _notify((await controller.zipEntry(entry)).summary);
+      case 'extract':
+        _notify((await controller.extractEntry(entry)).summary);
+      case 'share':
+        _notify((await controller.shareEntry(entry)).summary);
+    }
   }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// 前台归档任务进度条；总量未知时使用不定进度，始终提供取消入口。
+  Widget _archiveBanner(ArchiveTaskState task) => Material(
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        LinearProgressIndicator(value: task.fraction),
+        ListTile(
+          dense: true,
+          leading: const Icon(Icons.folder_zip_outlined),
+          title: Text(task.label),
+          trailing: task.canCancel
+              ? TextButton(
+                  onPressed: () async {
+                    await controller.cancelArchive();
+                    _notify('正在取消归档任务…');
+                  },
+                  child: const Text('取消'),
+                )
+              : null,
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Obx(() {
@@ -215,6 +288,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               height: 3,
               child: busy ? const LinearProgressIndicator() : null,
             ),
+            if (controller.archive.active.value != null)
+              _archiveBanner(controller.archive.active.value!),
             if (controller.error.value != null)
               MaterialBanner(
                 content: Text(controller.error.value!),

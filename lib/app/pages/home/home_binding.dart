@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import 'home_controller.dart';
+import '../../services/archive_service.dart';
 import '../../services/saf_storage.dart';
 import '../../services/vault_store.dart';
 
@@ -11,6 +12,7 @@ class HomeBinding extends Bindings {
       () => HomeController(
         storage: Get.find<StorageGateway>(),
         store: Get.find<VaultStore>(),
+        archive: Get.find<ArchiveGateway>(),
       ),
     );
   }

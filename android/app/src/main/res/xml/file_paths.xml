@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 分享缓存只暴露 cache/share_cache 子目录，不开放整个私有目录。 -->
+<paths>
+    <cache-path name="share_cache" path="share_cache/" />
+</paths>

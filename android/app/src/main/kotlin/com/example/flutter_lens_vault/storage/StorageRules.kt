@@ -30,4 +30,10 @@ object StorageRules {
             ?: throw StorageFailure("invalid_argument", "缺少有效参数：$key")
 }
 
-class StorageFailure(val code: String, override val message: String, val details: Any? = null) : Exception(message)
+class StorageFailure(val code: String, override val message: String, val details: Any? = null) : Exception(message) {
+    companion object {
+        /** 归档与分享等后台任务的事件文案；不暴露底层异常细节。 */
+        fun messageOf(error: Exception): String =
+            if (error is StorageFailure) error.message else "归档操作失败，请重试"
+    }
+}

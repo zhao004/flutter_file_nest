@@ -1,16 +1,23 @@
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../models/archive_models.dart';
 import '../../models/storage_entry.dart';
+import '../../services/archive_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/saf_storage.dart';
 import '../../services/vault_store.dart';
 
 /// 保持当前目录导航和文件快照；所有修改完成后重新向 SAF 读取。
 class HomeController extends GetxController {
-  HomeController({required this.storage, required this.store});
+  HomeController({
+    required this.storage,
+    required this.store,
+    required this.archive,
+  });
   final StorageGateway storage;
   final VaultStore store;
+  final ArchiveGateway archive;
   late final recordings = RecordingService(storage, store);
   final folders = <StorageEntry>[].obs;
   final entries = <StorageEntry>[].obs;
@@ -157,6 +164,51 @@ class HomeController extends GetxController {
 
   Future<void> openFile(StorageEntry entry) =>
       _run(() => storage.openFile(entry));
+
+  /// 压缩单个条目到当前目录；成功或失败结果由界面提示。
+  Future<ArchiveOutcome> zipEntry(StorageEntry entry) async {
+    final folder = current;
+    if (folder == null || folder.canCreate != true) {
+      return const ArchiveOutcome.failure(
+        ArchiveKind.zip,
+        'read_only',
+        '当前目录不可写入',
+      );
+    }
+    return _finishArchive(
+      await archive.zip(entries: [entry], targetFolder: folder),
+    );
+  }
+
+  /// 解压 ZIP 到当前目录下的新文件夹；不覆盖已有项目。
+  Future<ArchiveOutcome> extractEntry(StorageEntry entry) async {
+    final folder = current;
+    if (folder == null || folder.canCreate != true) {
+      return const ArchiveOutcome.failure(
+        ArchiveKind.extract,
+        'read_only',
+        '当前目录不可写入',
+      );
+    }
+    return _finishArchive(
+      await archive.extract(archive: entry, targetFolder: folder),
+    );
+  }
+
+  /// 通过系统 Sharesheet 分享条目；文件夹先压缩为临时缓存 ZIP。
+  Future<ShareOutcome> shareEntry(StorageEntry entry) => archive.share([entry]);
+
+  Future<void> cancelArchive() => archive.cancelActive();
+
+  /// 归档成功且产生了新条目时刷新列表；失败写入错误横幅，取消不报错。
+  Future<ArchiveOutcome> _finishArchive(ArchiveOutcome outcome) async {
+    if (outcome.ok) {
+      if (outcome.target != null) await _load();
+    } else if (!outcome.cancelled) {
+      error.value = outcome.message ?? '归档任务失败';
+    }
+    return outcome;
+  }
 
   Future<void> retryRecording(RecordingJob job) => _run(() async {
     await recordings.commit(job);
