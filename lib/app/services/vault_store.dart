@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database/database.dart';
+import '../models/camera_presets.dart';
 import '../models/storage_entry.dart';
 
 class VaultPreferences {
@@ -65,6 +66,14 @@ abstract interface class VaultStore {
   Future<void> addJob(RecordingJob job);
   Future<void> removeJob(String id);
   Future<void> recordCreated(String uri, DateTime time);
+
+  /// 用户预设，按最近更新排序；内置预设不在此列。
+  Future<List<CameraPreset>> userPresets();
+
+  /// 新增或覆盖用户预设；同名不合并，由 id 决定覆盖目标。
+  Future<void> savePreset(CameraPreset preset);
+
+  Future<void> deletePreset(String id);
 }
 
 class DriftVaultStore implements VaultStore {
@@ -142,4 +151,52 @@ class DriftVaultStore implements VaultStore {
   @override
   Future<void> recordCreated(String uri, DateTime time) =>
       database.saveCreatedEntry(uri, time.toUtc());
+
+  @override
+  Future<List<CameraPreset>> userPresets() async {
+    final rows = await (database.select(
+      database.cameraPresetRecords,
+    )..orderBy([(row) => OrderingTerm.desc(row.updatedAt)])).get();
+    return rows.map(_presetFromRow).toList();
+  }
+
+  CameraPreset _presetFromRow(CameraPresetRecord row) {
+    final decoded = PresetConfig.decode(row.configJson);
+    return CameraPreset(
+      id: row.id,
+      name: row.name,
+      configVersion: row.configVersion,
+      config: decoded.config,
+      issue: decoded.ok ? null : decoded.message,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
+  }
+
+  @override
+  Future<void> savePreset(CameraPreset preset) async {
+    final config = preset.config;
+    if (config == null) {
+      throw StateError('不能保存配置损坏的预设');
+    }
+    await database
+        .into(database.cameraPresetRecords)
+        .insertOnConflictUpdate(
+          CameraPresetRecordsCompanion.insert(
+            id: preset.id,
+            name: preset.name,
+            configVersion: presetConfigVersion,
+            configJson: config.encode(),
+            createdAt: preset.createdAt.toUtc(),
+            updatedAt: preset.updatedAt.toUtc(),
+          ),
+        );
+  }
+
+  @override
+  Future<void> deletePreset(String id) async {
+    await (database.delete(
+      database.cameraPresetRecords,
+    )..where((row) => row.id.equals(id))).go();
+  }
 }

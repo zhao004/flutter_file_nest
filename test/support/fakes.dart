@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_lens_vault/app/models/camera_presets.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
 import 'package:flutter_lens_vault/app/services/saf_storage.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
@@ -35,6 +36,7 @@ StorageEntry entry(
 class MemoryStore implements VaultStore {
   VaultPreferences value = const VaultPreferences();
   final jobs = <RecordingJob>[];
+  final presets = <CameraPreset>[];
   @override
   Future<VaultPreferences> loadPreferences() async => value;
   @override
@@ -57,6 +59,24 @@ class MemoryStore implements VaultStore {
 
   @override
   Future<void> recordCreated(String uri, DateTime time) async {}
+
+  @override
+  Future<List<CameraPreset>> userPresets() async {
+    final sorted = List.of(presets)
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sorted;
+  }
+
+  @override
+  Future<void> savePreset(CameraPreset preset) async {
+    presets.removeWhere((value) => value.id == preset.id);
+    presets.add(preset);
+  }
+
+  @override
+  Future<void> deletePreset(String id) async {
+    presets.removeWhere((value) => value.id == id);
+  }
 }
 
 class FakeStorage implements StorageGateway {

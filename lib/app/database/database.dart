@@ -5,18 +5,21 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/app_settings.dart';
+import 'tables/camera_presets.dart';
 import 'tables/entry_metadata.dart';
 import 'tables/pending_recordings.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [AppSettings, EntryMetadata, PendingRecordings])
+@DriftDatabase(
+  tables: [AppSettings, EntryMetadata, PendingRecordings, CameraPresetRecords],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -25,6 +28,8 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await customStatement('DROP TABLE IF EXISTS todos');
         await migrator.createAll();
+      } else if (from < 3) {
+        await migrator.createTable(cameraPresetRecords);
       }
     },
   );

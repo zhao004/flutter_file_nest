@@ -5,6 +5,7 @@ abstract class Routes {
   static const home = _Paths.home;
   static const camera = '/camera';
   static const video = '/video';
+  static const presets = '/presets';
   static const settings = '/settings';
 }
 
