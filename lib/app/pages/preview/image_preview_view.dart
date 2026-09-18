@@ -25,6 +25,10 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
     appBar: AppBar(
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
+      // 沉浸式黑底查看器需显式指定图标色：主题的 AppBar 图标色会覆盖
+      // foregroundColor，浅色模式下为深色，在黑底上不可见。
+      iconTheme: const IconThemeData(color: Colors.white),
+      actionsIconTheme: const IconThemeData(color: Colors.white),
       title: Text(
         widget.entry.name,
         maxLines: 1,

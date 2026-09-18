@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:get/get.dart';
 import 'package:flutter_lens_vault/app/models/archive_models.dart';
 import 'package:flutter_lens_vault/app/models/incoming_share.dart';
@@ -7,10 +8,12 @@ import 'package:flutter_lens_vault/app/models/storage_entry.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_controller.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_view.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_widgets.dart';
+import 'package:flutter_lens_vault/app/pages/preview/image_preview_view.dart';
 import 'package:flutter_lens_vault/app/pages/preview/pdf_preview_view.dart';
 import 'package:flutter_lens_vault/app/pages/video/video_view.dart';
 import 'package:flutter_lens_vault/app/services/saf_storage.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
+import 'package:flutter_lens_vault/app/theme/app_theme.dart';
 import 'support/fakes.dart';
 import 'support/archive_fakes.dart';
 
@@ -566,5 +569,44 @@ void main() {
     await tester.fling(find.text('此页无法渲染'), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
     expect(find.text('第 2 / 3 页'), findsOneWidget);
+  });
+
+  testWidgets('图片预览页顶部按钮在黑色背景上保持白色图标', (tester) async {
+    Get.put<StorageGateway>(FakeStorage(), permanent: true);
+    // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
+    await tester.pumpWidget(
+      GetMaterialApp(
+        theme: buildLightTheme(FlexScheme.blue),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => ImagePreviewView(
+                      entry: entry('照片.png', mime: 'image/png'),
+                    ),
+                  ),
+                ),
+                child: const Text('打开图片'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('打开图片'));
+    await tester.pumpAndSettle();
+
+    final actionIcon = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byIcon(Icons.open_in_new),
+    );
+    expect(IconTheme.of(tester.element(actionIcon)).color, Colors.white);
+    expect(
+      IconTheme.of(tester.element(find.byType(BackButton))).color,
+      Colors.white,
+    );
   });
 }
