@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault.storage.share
+package com.zhao.lens.vault.storage.share
 
 import android.content.ClipData
 import android.content.Context
@@ -6,7 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.FileProvider
-import com.example.flutter_lens_vault.storage.StorageFailure
+import com.zhao.lens.vault.storage.StorageFailure
 import java.io.File
 
 /**

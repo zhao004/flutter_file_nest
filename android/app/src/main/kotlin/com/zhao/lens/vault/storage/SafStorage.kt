@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault.storage
+package com.zhao.lens.vault.storage
 
 import android.content.ActivityNotFoundException
 import android.content.Context

@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault.storage.archive
+package com.zhao.lens.vault.storage.archive
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

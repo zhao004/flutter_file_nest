@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault.storage.archive
+package com.zhao.lens.vault.storage.archive
 
 /**
  * 归档安全规则与维护上限；与 Android API 解耦，便于单元测试。

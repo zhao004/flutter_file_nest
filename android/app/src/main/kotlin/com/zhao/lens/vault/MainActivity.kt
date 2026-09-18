@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault
+package com.zhao.lens.vault
 
 import android.content.Intent
 import android.net.Uri
@@ -13,10 +13,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import com.example.flutter_lens_vault.storage.SafStorage
-import com.example.flutter_lens_vault.storage.StorageFailure
-import com.example.flutter_lens_vault.storage.archive.ArchiveManager
-import com.example.flutter_lens_vault.storage.share.ShareManager
+import com.zhao.lens.vault.storage.SafStorage
+import com.zhao.lens.vault.storage.StorageFailure
+import com.zhao.lens.vault.storage.archive.ArchiveManager
+import com.zhao.lens.vault.storage.share.ShareManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

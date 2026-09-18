@@ -1,4 +1,4 @@
-package com.example.flutter_lens_vault.storage
+package com.zhao.lens.vault.storage
 
 import java.util.Locale
 

@@ -26,21 +26,22 @@ class LensVaultApp extends StatelessWidget {
   const LensVaultApp({super.key});
 
   @override
-  Widget build(BuildContext context) => GetMaterialApp(
-    title: 'Lens Vault',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff16766c)),
-      scaffoldBackgroundColor: const Color(0xfff6f7f8),
-      appBarTheme: const AppBarTheme(centerTitle: false),
-      dialogTheme: const DialogThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
+  Widget build(BuildContext context) =>
+      GetMaterialApp(
+        title: 'Lens Vault',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff16766c)),
+          scaffoldBackgroundColor: const Color(0xfff6f7f8),
+          appBarTheme: const AppBarTheme(centerTitle: false),
+          dialogTheme: const DialogThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+          ),
         ),
-      ),
-    ),
-    initialRoute: AppPages.initial,
-    getPages: AppPages.routes,
-  );
+        initialRoute: AppPages.initial,
+        getPages: AppPages.routes,
+      );
 }
