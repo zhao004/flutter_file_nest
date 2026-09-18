@@ -2,7 +2,6 @@ package com.example.flutter_lens_vault
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
@@ -14,6 +13,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import com.example.flutter_lens_vault.storage.SafStorage
+import com.example.flutter_lens_vault.storage.StorageFailure
 import com.example.flutter_lens_vault.storage.archive.ArchiveManager
 import com.example.flutter_lens_vault.storage.share.ShareManager
 import java.io.File
@@ -67,13 +67,8 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
     private val importLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri -> finishImport(uri) }
-    private val photoPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { response ->
-        finishImport(if (response.resultCode == RESULT_OK) response.data?.data else null)
-    }
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris -> finishImport(uris) }
     private val photoCaptureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { response ->
@@ -182,9 +177,9 @@ class MainActivity : FlutterFragmentActivity() {
     /**
      * 从系统选择器导入内容到指定目录。
      *
-     * - 图片/视频：Android 13+ 优先系统照片选择器（无需存储权限），否则 OpenDocument。
-     * - PDF 等其他类型：固定 OpenDocument。
-     * - 取消时返回 null；选中后立即复制到目标目录，临时读取授权随进程有效。
+     * - 使用系统文档选择器（OpenMultipleDocuments），支持一次选择多个任意类型文件。
+     * - 取消时返回空列表；选中后逐个复制到目标目录，临时读取授权随进程有效。
+     * - 单个文件失败不阻塞其余文件，最后按失败数量上报。
      */
     private fun startImport(call: MethodCall, result: MethodChannel.Result) {
         if (importResult != null) {
@@ -200,17 +195,10 @@ class MainActivity : FlutterFragmentActivity() {
         }
         val mimeTypes = (args["mimeTypes"] as? List<*>)?.filterIsInstance<String>()?.toTypedArray()
             ?: arrayOf("*/*")
-        val mediaOnly = mimeTypes.size == 2 && mimeTypes.contains("image/*") && mimeTypes.contains("video/*")
         importResult = result
         importTarget = rootUri to parentId
         try {
-            if (mediaOnly && Build.VERSION.SDK_INT >= 33) {
-                photoPickerLauncher.launch(
-                    Intent(MediaStore.ACTION_PICK_IMAGES).apply { type = "*/*" },
-                )
-            } else {
-                importLauncher.launch(mimeTypes)
-            }
+            importLauncher.launch(mimeTypes)
         } catch (_: Exception) {
             importResult = null
             importTarget = null
@@ -218,25 +206,39 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun finishImport(uri: Uri?) {
+    private fun finishImport(uris: List<Uri>) {
         val result = importResult
         importResult = null
         val target = importTarget
         importTarget = null
         if (result == null || target == null) return
-        if (uri == null) {
-            result.success(null)
+        if (uris.isEmpty()) {
+            result.success(emptyList<Any>())
             return
         }
         execute(result) {
-            storageHandler?.handle(
-                "importDocument",
-                mapOf(
-                    "sourceUri" to uri.toString(),
-                    "rootUri" to target.first,
-                    "parentDocumentId" to target.second,
-                ),
-            )
+            val entries = mutableListOf<Map<String, Any?>>()
+            var failed = 0
+            for (uri in uris) {
+                try {
+                    val entry = storageHandler?.handle(
+                        "importDocument",
+                        mapOf(
+                            "sourceUri" to uri.toString(),
+                            "rootUri" to target.first,
+                            "parentDocumentId" to target.second,
+                        ),
+                    ) as? Map<String, Any?>
+                    if (entry != null) entries.add(entry) else failed++
+                } catch (_: Exception) {
+                    // 单个文件失败不阻塞其余导入，最后统一上报失败数量。
+                    failed++
+                }
+            }
+            if (failed > 0) {
+                throw StorageFailure("import_partial", "已导入 ${entries.size} 个文件，$failed 个失败")
+            }
+            entries
         }
     }
 

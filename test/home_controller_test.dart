@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_lens_vault/app/models/archive_models.dart';
 import 'package:flutter_lens_vault/app/models/batch_models.dart';
@@ -451,19 +452,43 @@ void main() {
     expect(store.created.keys.any((uri) => uri.contains('新名')), true);
   });
 
-  test('从相册选择导入图片到当前目录并刷新', () async {
+  test('选择多个文件批量导入并刷新列表', () async {
     final storage = FakeStorage()
-      ..pickImportResult = entry('照片.jpg', mime: 'image/jpeg');
+      ..pickImportResults = [
+        entry('照片.jpg', mime: 'image/jpeg'),
+        entry('合同.pdf', mime: 'application/pdf'),
+      ];
     final controller = HomeController(
       storage: storage,
       store: MemoryStore(),
       archive: FakeArchive(),
     );
     await controller.pickRoot();
-    await controller.importFromPicker(const ['image/*', 'video/*']);
-    expect(storage.imports.single, 'image/*,video/*');
-    expect(controller.entries.single.name, '照片.jpg');
+    await controller.importFromPicker(const ['*/*']);
+    expect(storage.imports.single, '*/*');
+    expect(
+      controller.entries.map((value) => value.name),
+      containsAll(['照片.jpg', '合同.pdf']),
+    );
     expect(controller.error.value, isNull);
+  });
+
+  test('部分导入失败仍刷新已成功文件并上报错误', () async {
+    final storage = FakeStorage()
+      ..pickImportResults = [entry('成功.jpg', mime: 'image/jpeg')]
+      ..pickImportFailure = PlatformException(
+        code: 'import_partial',
+        message: '已导入 1 个文件，1 个失败',
+      );
+    final controller = HomeController(
+      storage: storage,
+      store: MemoryStore(),
+      archive: FakeArchive(),
+    );
+    await controller.pickRoot();
+    await controller.importFromPicker(const ['*/*']);
+    expect(controller.entries.single.name, '成功.jpg');
+    expect(controller.error.value, contains('失败'));
   });
 
   test('取消导入不产生变更', () async {
@@ -481,7 +506,7 @@ void main() {
 
   test('选择 PDF 使用明确的 MIME 过滤', () async {
     final storage = FakeStorage()
-      ..pickImportResult = entry('合同.pdf', mime: 'application/pdf');
+      ..pickImportResults = [entry('合同.pdf', mime: 'application/pdf')];
     final controller = HomeController(
       storage: storage,
       store: MemoryStore(),
@@ -511,7 +536,7 @@ void main() {
     // 导入的外部内容不登记创建时间，避免倒推不实信息。
     final importedStore = MemoryStore();
     final importedStorage = FakeStorage()
-      ..pickImportResult = entry('照片.jpg', mime: 'image/jpeg');
+      ..pickImportResults = [entry('照片.jpg', mime: 'image/jpeg')];
     final importedController = HomeController(
       storage: importedStorage,
       store: importedStore,

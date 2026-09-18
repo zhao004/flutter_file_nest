@@ -196,9 +196,12 @@ void main() {
     expect(find.textContaining('正在取消'), findsOneWidget);
   });
 
-  testWidgets('悬浮菜单选择任意文件并刷新列表', (tester) async {
+  testWidgets('悬浮菜单选择多个任意文件并刷新列表', (tester) async {
     final storage = FakeStorage()
-      ..pickImportResult = entry('资料.pdf', mime: 'application/pdf');
+      ..pickImportResults = [
+        entry('资料.pdf', mime: 'application/pdf'),
+        entry('照片.jpg', mime: 'image/jpeg'),
+      ];
     Get.put(
       HomeController(
         storage: storage,
@@ -214,11 +217,12 @@ void main() {
     expect(find.text('选择文件'), findsOneWidget);
     expect(find.text('拍照'), findsOneWidget);
     expect(find.text('录制'), findsOneWidget);
-    // 选择文件不限定 MIME，支持任意文件类型。
+    // 选择文件不限定 MIME，且支持一次选择多个文件。
     await tester.tap(find.byTooltip('选择文件'));
     await tester.pumpAndSettle();
     expect(storage.imports.single, '*/*');
     expect(find.text('资料.pdf'), findsOneWidget);
+    expect(find.text('照片.jpg'), findsOneWidget);
   });
 
   testWidgets('悬浮菜单拍照与录制调用系统相机', (tester) async {

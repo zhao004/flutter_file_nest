@@ -44,10 +44,10 @@ abstract interface class StorageGateway {
   Future<void> openFile(StorageEntry entry);
   Future<void> openAppSettings();
 
-  /// 从系统选择器导入内容到目标目录；取消返回 null。
+  /// 从系统选择器批量导入内容到目标目录；取消返回空列表。
   ///
-  /// 图片/视频在 Android 13+ 使用照片选择器，其余类型使用 OpenDocument。
-  Future<StorageEntry?> pickImport(
+  /// 支持一次选择多个任意类型文件，逐个复制到目标目录；部分失败由实现上报。
+  Future<List<StorageEntry>> pickImport(
     List<String> mimeTypes,
     StorageEntry targetFolder,
   );
@@ -197,17 +197,18 @@ class SafStorage implements StorageGateway {
       channel.invokeMethod<void>('openAppSettings');
 
   @override
-  Future<StorageEntry?> pickImport(
+  Future<List<StorageEntry>> pickImport(
     List<String> mimeTypes,
     StorageEntry targetFolder,
   ) async {
-    final value = await channel
-        .invokeMapMethod<Object?, Object?>('pickImport', {
-          'mimeTypes': mimeTypes,
-          'rootUri': targetFolder.rootUri,
-          'parentDocumentId': targetFolder.documentId,
-        });
-    return value == null ? null : StorageEntry.fromMap(value);
+    final values = await channel.invokeListMethod<Object?>('pickImport', {
+      'mimeTypes': mimeTypes,
+      'rootUri': targetFolder.rootUri,
+      'parentDocumentId': targetFolder.documentId,
+    });
+    return (values ?? [])
+        .map((value) => StorageEntry.fromMap(value as Map<Object?, Object?>))
+        .toList();
   }
 
   @override

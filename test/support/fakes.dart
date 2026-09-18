@@ -93,10 +93,13 @@ class FakeStorage implements StorageGateway {
   Uint8List? thumbnailResult = Uint8List.fromList([9, 9, 9]);
   final failingFolders = <String>{};
   final failDeleteNames = <String>{};
-  StorageEntry? pickImportResult;
+  List<StorageEntry> pickImportResults = [];
   StorageEntry? takePhotoResult;
   StorageEntry? takeVideoResult;
   final imports = <String>[];
+
+  /// 非空时模拟导入失败：先写入已成功项，再抛出，用于覆盖部分失败路径。
+  PlatformException? pickImportFailure;
   int photoCaptures = 0;
   int videoCaptures = 0;
   int deletes = 0;
@@ -219,16 +222,17 @@ class FakeStorage implements StorageGateway {
   Future<void> openAppSettings() async {}
 
   @override
-  Future<StorageEntry?> pickImport(
+  Future<List<StorageEntry>> pickImport(
     List<String> mimeTypes,
     StorageEntry targetFolder,
   ) async {
     imports.add(mimeTypes.join(','));
-    final result = pickImportResult;
-    if (result != null) {
-      contents.putIfAbsent(targetFolder.documentId, () => []).add(result);
+    for (final entry in pickImportResults) {
+      contents.putIfAbsent(targetFolder.documentId, () => []).add(entry);
     }
-    return result;
+    final failure = pickImportFailure;
+    if (failure != null) throw failure;
+    return List.of(pickImportResults);
   }
 
   @override

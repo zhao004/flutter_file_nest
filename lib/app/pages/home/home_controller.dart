@@ -247,16 +247,22 @@ class HomeController extends GetxController {
 
   // ---- 内容导入（相册 / PDF / 拍照）----
 
-  /// 从系统选择器导入内容到当前目录；取消时不刷新。
+  /// 从系统选择器批量导入内容到当前目录；取消时不刷新。
   ///
   /// 导入内容不是本应用创建的，登记创建时间会倒推不实信息，保持未知。
+  /// 部分文件失败时仍刷新已成功导入的条目，再上报错误。
   Future<void> importFromPicker(List<String> mimeTypes) => _run(() async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
       throw PlatformException(code: 'read_only', message: '当前目录不可写入');
     }
-    final imported = await storage.pickImport(mimeTypes, folder);
-    if (imported != null) await _load();
+    try {
+      final imported = await storage.pickImport(mimeTypes, folder);
+      if (imported.isNotEmpty) await _load();
+    } catch (_) {
+      await _load();
+      rethrow;
+    }
   });
 
   /// 系统相机拍摄照片并复制到当前目录；本应用创建的内容登记创建时间。
