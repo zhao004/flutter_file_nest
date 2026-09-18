@@ -12,6 +12,14 @@ class AppSettings extends Table {
   BoolColumn get sortDescending =>
       boolean().withDefault(const Constant(true))();
 
+  /// 是否启用专业原生相机后端（实验特性）；默认关闭，待真机验收后调整。
+  BoolColumn get proCameraEnabled =>
+      boolean().withDefault(const Constant(false))();
+
+  /// 录制时是否直接调用系统相机；关闭则使用应用内相机（支持专业参数）。
+  BoolColumn get systemCameraRecording =>
+      boolean().withDefault(const Constant(true))();
+
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

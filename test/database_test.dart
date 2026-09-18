@@ -13,18 +13,21 @@ void main() {
     addTearDown(db.close);
     final store = DriftVaultStore(db);
     expect((await store.loadPreferences()).audioEnabled, true);
+    expect((await store.loadPreferences()).proCameraEnabled, false);
     await store.savePreferences(
       const VaultPreferences(
         rootUri: 'content://root',
         audioEnabled: false,
         sort: EntrySort.name,
         descending: false,
+        proCameraEnabled: true,
       ),
     );
     final stored = await store.loadPreferences();
     expect(stored.rootUri, 'content://root');
     expect(stored.audioEnabled, false);
     expect(stored.sort, EntrySort.name);
+    expect(stored.proCameraEnabled, true);
     await store.addJob(
       RecordingJob(
         id: '1',
@@ -73,8 +76,9 @@ void main() {
     );
   });
 
-  test('schema v2 迁移到 v3 保留设置与待保存录像并新增预设表', () async {
-    // 先取全新建库时三个 v2 表的准确建表语句，避免手写 SQL 与生成代码漂移。
+  test('schema v2 迁移到当前版本保留设置与待保存录像并新增预设表', () async {
+    // 先取全新建库时三个 v2 表的准确建表语句，避免手写 SQL 与生成代码漂移；
+    // v4 新增列在测试库中移除，得到真实的旧 schema。
     final template = AppDatabase.forTesting(NativeDatabase.memory());
     final schemaRows = await template
         .customSelect(
@@ -93,6 +97,10 @@ void main() {
         for (final statement in statements) {
           raw.execute(statement);
         }
+        raw.execute('ALTER TABLE app_settings DROP COLUMN pro_camera_enabled');
+        raw.execute(
+          'ALTER TABLE app_settings DROP COLUMN system_camera_recording',
+        );
         raw.execute(
           "INSERT INTO app_settings "
           '(id, root_uri, audio_enabled, sort_field, sort_descending, updated_at) '
@@ -113,6 +121,7 @@ void main() {
     expect(preferences.rootUri, 'content://root');
     expect(preferences.audioEnabled, false);
     expect(preferences.sort, EntrySort.name);
+    expect(preferences.proCameraEnabled, false);
     expect((await store.pendingJobs()).single.fileName, 'video.mp4');
     const preset = PresetConfig(quality: CaptureQuality.p720);
     await store.savePreset(
@@ -128,6 +137,97 @@ void main() {
     final presets = await store.userPresets();
     expect(presets.single.name, '迁移后预设');
     expect(presets.single.config, preset);
+  });
+
+  test('schema v3 迁移到 v4 增加专业相机后端开关且保留用户预设', () async {
+    // 以当前 schema 建库后移除 v4 新列，得到真实 v3 结构。
+    final template = AppDatabase.forTesting(NativeDatabase.memory());
+    final statements =
+        (await template
+                .customSelect(
+                  "SELECT sql FROM sqlite_master WHERE type='table' AND name = 'app_settings'",
+                )
+                .get())
+            .map((row) => row.read<String>('sql'))
+            .toList();
+    await template.close();
+
+    final executor = NativeDatabase.memory(
+      setup: (raw) {
+        for (final statement in statements) {
+          raw.execute(statement);
+        }
+        raw.execute('ALTER TABLE app_settings DROP COLUMN pro_camera_enabled');
+        raw.execute(
+          'ALTER TABLE app_settings DROP COLUMN system_camera_recording',
+        );
+        raw.execute(
+          "INSERT INTO app_settings "
+          '(id, root_uri, audio_enabled, sort_field, sort_descending, updated_at) '
+          "VALUES (1, 'content://root', 1, 'modified', 1, 0)",
+        );
+        raw.execute(
+          "CREATE TABLE camera_presets (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, "
+          'config_version INTEGER NOT NULL, config_json TEXT NOT NULL, '
+          'created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)',
+        );
+        raw.execute(
+          "INSERT INTO camera_presets VALUES "
+          "('user:1', '夜景', 1, '{\"configVersion\":1}', 0, 0)",
+        );
+        raw.execute('PRAGMA user_version = 3');
+      },
+    );
+    final db = AppDatabase.forTesting(executor);
+    addTearDown(db.close);
+    final store = DriftVaultStore(db);
+    final preferences = await store.loadPreferences();
+    expect(preferences.rootUri, 'content://root');
+    expect(preferences.proCameraEnabled, false);
+    expect(preferences.audioEnabled, true);
+    final presets = await store.userPresets();
+    expect(presets.single.name, '夜景');
+    expect(presets.single.usable, true);
+  });
+
+  test('schema v4 迁移到 v5 增加系统相机录制偏好且保留既有设置', () async {
+    // 以当前 schema 建库后移除 v5 新列，得到真实 v4 结构。
+    final template = AppDatabase.forTesting(NativeDatabase.memory());
+    final statements =
+        (await template
+                .customSelect(
+                  "SELECT sql FROM sqlite_master WHERE type='table' AND name = 'app_settings'",
+                )
+                .get())
+            .map((row) => row.read<String>('sql'))
+            .toList();
+    await template.close();
+
+    final executor = NativeDatabase.memory(
+      setup: (raw) {
+        for (final statement in statements) {
+          raw.execute(statement);
+        }
+        raw.execute(
+          'ALTER TABLE app_settings DROP COLUMN system_camera_recording',
+        );
+        raw.execute(
+          "INSERT INTO app_settings "
+          '(id, root_uri, audio_enabled, sort_field, sort_descending, '
+          'pro_camera_enabled, updated_at) '
+          "VALUES (1, 'content://root', 1, 'modified', 1, 0, 0)",
+        );
+        raw.execute('PRAGMA user_version = 4');
+      },
+    );
+    final db = AppDatabase.forTesting(executor);
+    addTearDown(db.close);
+    final store = DriftVaultStore(db);
+    final preferences = await store.loadPreferences();
+    expect(preferences.rootUri, 'content://root');
+    expect(preferences.proCameraEnabled, false);
+    // v4 旧数据缺少系统相机偏好，迁移后按新默认值读取。
+    expect(preferences.systemCameraRecording, true);
   });
 
   test('用户预设增删改与损坏配置的读取', () async {

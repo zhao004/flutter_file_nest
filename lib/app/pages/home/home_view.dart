@@ -151,10 +151,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _batchZip() async {
-    final outcome = await controller.zipSelected();
-    _notify(outcome.summary);
-  }
+  Future<void> _batchZip() => _zipWithCustomName(controller.selectedEntries());
 
   Future<void> _batchShare() async {
     final outcome = await controller.shareSelected();
@@ -185,6 +182,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (entry.isVideo) {
       await Get.toNamed<void>(Routes.video, arguments: entry);
       await controller.refresh();
+    } else if (entry.isImage) {
+      await Get.toNamed<void>(Routes.imagePreview, arguments: entry);
+    } else if (entry.isPdf) {
+      await Get.toNamed<void>(Routes.pdfPreview, arguments: entry);
     } else {
       await controller.openFile(entry);
     }
@@ -276,11 +277,67 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case 'delete':
         await _delete(entry);
       case 'zip':
-        _notify((await controller.zipEntry(entry)).summary);
+        await _zipWithCustomName([entry]);
       case 'extract':
         _notify((await controller.extractEntry(entry)).summary);
       case 'share':
         _notify((await controller.shareEntry(entry)).summary);
+    }
+  }
+
+  /// 压缩前先确认压缩包名称；缺少 .zip 后缀时由对话框自动补齐。
+  Future<void> _zipWithCustomName(List<StorageEntry> entries) async {
+    if (entries.isEmpty) return;
+    final defaultName = defaultZipFileName(entries.first.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => ZipNameDialog(initialName: defaultName),
+    );
+    if (name == null) return;
+    final outcome = await (entries.length == 1
+        ? controller.zipEntry(entries.single, fileName: name)
+        : controller.zipSelected(fileName: name));
+    _notify(outcome.summary);
+  }
+
+  /// 底部栏“添加”菜单：相册导入、PDF 导入与系统相机拍照。
+  Future<void> _addContent() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('从相册选择图片/视频'),
+              subtitle: const Text('复制到当前文件夹'),
+              onTap: () => Navigator.pop(context, 'media'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('选择 PDF 文件'),
+              subtitle: const Text('复制到当前文件夹'),
+              onTap: () => Navigator.pop(context, 'pdf'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('拍照'),
+              subtitle: const Text('照片保存到当前文件夹'),
+              onTap: () => Navigator.pop(context, 'photo'),
+            ),
+          ],
+        ),
+      ),
+    );
+    switch (action) {
+      case 'media':
+        await controller.importFromPicker(const ['image/*', 'video/*']);
+      case 'pdf':
+        await controller.importFromPicker(const ['application/pdf']);
+      case 'photo':
+        await controller.capturePhoto();
     }
   }
 
@@ -453,7 +510,17 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                               ? null
                               : _nameDialog,
                           icon: const Icon(Icons.create_new_folder_outlined),
-                          label: const Text('新建文件夹'),
+                          label: const Text('新建'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: busy || current?.canCreate != true
+                              ? null
+                              : _addContent,
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          label: const Text('添加'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -462,6 +529,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           onPressed: busy || current?.canCreate != true
                               ? null
                               : () async {
+                                  if (controller
+                                      .preferences
+                                      .value
+                                      .systemCameraRecording) {
+                                    // 系统相机录制：与拍照相同的一次调用流程。
+                                    await controller.captureVideo();
+                                    return;
+                                  }
                                   await Get.toNamed<void>(
                                     Routes.camera,
                                     arguments: current,
@@ -676,7 +751,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
-  /// 浏览行：缩略图（视频）；长按弹出文件功能菜单。
+  /// 浏览行：缩略图（视频与图片）；长按弹出文件功能菜单。
   Widget _browseRow(StorageEntry entry, bool busy) {
     final date = entry.modifiedAt;
     final showCreated = controller.preferences.value.sort == EntrySort.created;
@@ -687,7 +762,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       if (date != null) _formatDate(date),
     ];
     return ListTile(
-      leading: entry.isVideo
+      leading: entry.isVideo || entry.isImage
           ? EntryThumbnail(
               load: () => controller.thumbnailFor(entry),
               fallback: _entryIcon(entry),
@@ -716,14 +791,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Widget _entryIcon(StorageEntry entry) => Icon(
-    entry.isDirectory
-        ? Icons.folder
-        : entry.isVideo
-        ? Icons.movie_outlined
-        : Icons.insert_drive_file_outlined,
+    switch (entry) {
+      _ when entry.isDirectory => Icons.folder,
+      _ when entry.isVideo => Icons.movie_outlined,
+      _ when entry.isImage => Icons.image_outlined,
+      _ when entry.isPdf => Icons.picture_as_pdf_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    },
     color: entry.isDirectory
         ? const Color(0xffb98417)
         : entry.isVideo
+        ? Theme.of(context).colorScheme.primary
+        : entry.isImage || entry.isPdf
         ? Theme.of(context).colorScheme.primary
         : Colors.grey.shade700,
   );

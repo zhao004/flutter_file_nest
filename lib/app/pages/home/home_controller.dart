@@ -1,23 +1,33 @@
+import 'dart:async';
+import 'dart:collection';
+
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../models/archive_models.dart';
+import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/saf_storage.dart';
+import '../../services/thumbnail_service.dart';
 import '../../services/vault_store.dart';
 
 /// 保持当前目录导航和文件快照；所有修改完成后重新向 SAF 读取。
+///
+/// 批量操作仅作用于当前目录快照中的条目：选择集合不会跨目录累积，
+/// 因此父子项不会同时被选中；刷新后自动剔除已消失的选中项。
 class HomeController extends GetxController {
   HomeController({
     required this.storage,
     required this.store,
     required this.archive,
+    this.thumbnails = const NoThumbnails(),
   });
   final StorageGateway storage;
   final VaultStore store;
   final ArchiveGateway archive;
+  final ThumbnailGateway thumbnails;
   late final recordings = RecordingService(storage, store);
   final folders = <StorageEntry>[].obs;
   final entries = <StorageEntry>[].obs;
@@ -27,8 +37,38 @@ class HomeController extends GetxController {
   final error = RxnString();
   final rootRequired = true.obs;
 
+  /// 创建时间元数据（可重建缓存）；键为条目 URI，仅包含本应用登记过的文件。
+  final _createdTimes = <String, DateTime>{};
+
+  // ---- 批量选择（P3B-01）----
+  final selectionMode = false.obs;
+
+  /// 已选中条目的 URI；仅限当前目录，刷新后剔除已不存在的选中项。
+  final selected = RxSet<String>();
+
+  /// 进行中或刚结束的批量任务；用于进度展示与逐项结果对话框。
+  final batchJob = Rxn<BatchJob>();
+
+  // ---- 搜索（P3B-05）----
+  /// null 表示未进入搜索；非空时列表展示搜索结果。
+  final searchQuery = RxnString();
+  final searchResults = <StorageEntry>[].obs;
+  final searchRecursive = false.obs;
+  final searching = false.obs;
+  final searchIncomplete = false.obs;
+  final _searchLocations = <String, String>{};
+  int _searchToken = 0;
+  static const int _searchFlushSize = 20;
+
   StorageEntry? get current => folders.lastOrNull;
   bool get canGoBack => folders.length > 1;
+  int get selectedCount => selected.length;
+
+  /// 本应用登记的创建时间；外部文件无依据时保持未知。
+  DateTime? createdAtOf(StorageEntry entry) => _createdTimes[entry.uri];
+
+  /// 搜索结果的位置标注；用于结果列表展示“位置：xxx”。
+  String? searchLocationOf(StorageEntry entry) => _searchLocations[entry.uri];
 
   @override
   void onInit() {
@@ -78,37 +118,80 @@ class HomeController extends GetxController {
   Future<void> enter(StorageEntry folder) => _run(() async {
     final children = await storage.list(folder);
     folders.add(folder);
+    _loadCreatedTimes(
+      children,
+      await store.createdTimes(children.map((value) => value.uri)),
+    );
     entries.assignAll(
       sortEntries(
         children,
         preferences.value.sort,
         preferences.value.descending,
+        createdAt: _createdTimes,
       ),
     );
+    // 导航进入子目录后，旧目录的选择与搜索上下文失效。
+    exitSelection();
+    if (searchQuery.value != null) exitSearch();
   });
 
   Future<void> back() => goTo(folders.length - 2);
   Future<void> goTo(int index) => _run(() async {
     if (index < 0 || index >= folders.length) return;
+    if (searchQuery.value != null) {
+      _searchToken++;
+      searchQuery.value = null;
+      searchResults.clear();
+      searching.value = false;
+      searchIncomplete.value = false;
+    }
     folders.removeRange(index + 1, folders.length);
     await _load();
   });
 
   Future<void> _load() async {
+    if (current == null) return;
+    final children = await storage.list(current!);
+    _loadCreatedTimes(
+      children,
+      await store.createdTimes(children.map((value) => value.uri)),
+    );
     entries.assignAll(
       sortEntries(
-        await storage.list(current!),
+        children,
         preferences.value.sort,
         preferences.value.descending,
+        createdAt: _createdTimes,
       ),
     );
+    // 刷新后剔除已不存在的选中项（P3B-01）。
+    final existing = children.map((value) => value.uri).toSet();
+    selected.retainAll(existing);
+    if (selectionMode.value && selected.isEmpty) _exitSelectionOnly();
+  }
+
+  void _loadCreatedTimes(
+    List<StorageEntry> children,
+    Map<String, DateTime> loaded,
+  ) {
+    _createdTimes.removeWhere(
+      (uri, _) => !children.any((value) => value.uri == uri),
+    );
+    _createdTimes.addAll(loaded);
   }
 
   Future<void> setSort(EntrySort sort, bool descending) => _run(() async {
     final next = preferences.value.copyWith(sort: sort, descending: descending);
     await store.savePreferences(next);
     preferences.value = next;
-    entries.assignAll(sortEntries(entries, sort, descending));
+    // 创建时间依赖登记元数据，统一从存储刷新一次；其余排序在当前快照上重排。
+    if (sort == EntrySort.created) {
+      await _load();
+    } else {
+      entries.assignAll(
+        sortEntries(entries, sort, descending, createdAt: _createdTimes),
+      );
+    }
   });
 
   Future<void> setAudio(bool enabled) async {
@@ -116,6 +199,20 @@ class HomeController extends GetxController {
     await store.savePreferences(next);
     preferences.value = next;
   }
+
+  /// 切换专业相机后端偏好；后端可用性由设置界面校验后调用。
+  Future<void> setProCameraEnabled(bool enabled) async {
+    final next = preferences.value.copyWith(proCameraEnabled: enabled);
+    await store.savePreferences(next);
+    preferences.value = next;
+  }
+
+  /// 切换录制方式：true 直接调用系统相机，false 使用应用内相机页。
+  Future<void> setSystemCameraRecording(bool enabled) => _run(() async {
+    final next = preferences.value.copyWith(systemCameraRecording: enabled);
+    await store.savePreferences(next);
+    preferences.value = next;
+  });
 
   Future<void> createFolder(String name) => _run(() async {
     final invalid = validateEntryName(name);
@@ -125,24 +222,27 @@ class HomeController extends GetxController {
     final entry = await storage.createFolder(current!, name.trim());
     try {
       await store.recordCreated(entry.uri, DateTime.now());
+      _createdTimes[entry.uri] = DateTime.now();
     } catch (_) {
       /* 元数据可重建。 */
     }
     await _load();
   });
 
-  Future<void> renameFolder(StorageEntry entry, String name) => _run(() async {
+  /// 重命名文件或文件夹（P3B-04 单文件入口）。
+  Future<void> renameEntry(StorageEntry entry, String name) => _run(() async {
     final invalid = validateEntryName(name);
     if (invalid != null) {
       throw PlatformException(code: 'invalid_name', message: invalid);
     }
-    await _protectPendingFolders(entry);
-    await storage.renameFolder(current!, entry, name.trim());
+    await _protectPendingDirectories([entry]);
+    final renamed = await storage.renameEntry(current!, entry, name.trim());
+    await _migrateCreatedAt(entry.uri, renamed.uri);
     await _load();
   });
 
   Future<void> deleteEntry(StorageEntry entry) => _run(() async {
-    await _protectPendingFolders(entry);
+    await _protectPendingDirectories([entry]);
     try {
       await storage.delete(entry);
     } finally {
@@ -150,11 +250,26 @@ class HomeController extends GetxController {
     }
   });
 
-  Future<void> _protectPendingFolders(StorageEntry entry) async {
-    if (!entry.isDirectory) return;
+  /// 目录改名或移动会改变文档 ID；创建时间元数据跟随迁移。
+  ///
+  /// 缓存缺失时回查登记存储，保证外部来源之外的登记时间不丢失。
+  Future<void> _migrateCreatedAt(String oldUri, String newUri) async {
+    var time = _createdTimes.remove(oldUri);
+    time ??= (await store.createdTimes([oldUri]))[oldUri];
+    if (time == null) return;
+    try {
+      await store.recordCreated(newUri, time);
+      _createdTimes[newUri] = time;
+    } catch (_) {
+      /* 元数据可重建。 */
+    }
+  }
+
+  Future<void> _protectPendingDirectories(List<StorageEntry> targets) async {
+    if (!targets.any((entry) => entry.isDirectory)) return;
     pending.assignAll(await store.pendingJobs());
     // SAF 标识不保证包含祖先信息，恢复任务完成前保守保护整个根目录。
-    if (pending.any((job) => job.rootUri == entry.rootUri)) {
+    if (pending.any((job) => job.rootUri == current?.rootUri)) {
       throw PlatformException(
         code: 'pending_recording',
         message: '此存储位置有待保存录像，请先保存或放弃录像，再改名或删除文件夹',
@@ -165,8 +280,292 @@ class HomeController extends GetxController {
   Future<void> openFile(StorageEntry entry) =>
       _run(() => storage.openFile(entry));
 
-  /// 压缩单个条目到当前目录；成功或失败结果由界面提示。
-  Future<ArchiveOutcome> zipEntry(StorageEntry entry) async {
+  // ---- 内容导入（相册 / PDF / 拍照）----
+
+  /// 从系统选择器导入内容到当前目录；取消时不刷新。
+  ///
+  /// 导入内容不是本应用创建的，登记创建时间会倒推不实信息，保持未知。
+  Future<void> importFromPicker(List<String> mimeTypes) => _run(() async {
+    final folder = current;
+    if (folder == null || folder.canCreate != true) {
+      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+    }
+    final imported = await storage.pickImport(mimeTypes, folder);
+    if (imported != null) await _load();
+  });
+
+  /// 系统相机拍摄照片并复制到当前目录；本应用创建的内容登记创建时间。
+  Future<void> capturePhoto() => _run(() async {
+    final folder = current;
+    if (folder == null || folder.canCreate != true) {
+      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+    }
+    final photo = await storage.takePhoto(folder);
+    if (photo == null) return;
+    try {
+      final now = DateTime.now();
+      await store.recordCreated(photo.uri, now);
+      _createdTimes[photo.uri] = now;
+    } catch (_) {
+      /* 元数据可重建。 */
+    }
+    await _load();
+  });
+
+  /// 系统相机录制视频并复制到当前目录；偏好与保存链路和拍照一致。
+  ///
+  /// 应用创建的视频登记创建时间；取消或录制失败不产生任何变更。
+  Future<void> captureVideo() => _run(() async {
+    final folder = current;
+    if (folder == null || folder.canCreate != true) {
+      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+    }
+    final video = await storage.takeVideo(folder);
+    if (video == null) return;
+    try {
+      final now = DateTime.now();
+      await store.recordCreated(video.uri, now);
+      _createdTimes[video.uri] = now;
+    } catch (_) {
+      /* 元数据可重建。 */
+    }
+    await _load();
+  });
+
+  // ---- 批量选择（P3B-01）----
+
+  /// 长按进入选择模式并选中该条目。
+  void beginSelection(StorageEntry entry) {
+    if (searchQuery.value != null) return;
+    selectionMode.value = true;
+    selected.add(entry.uri);
+  }
+
+  void toggleSelect(StorageEntry entry) {
+    if (!selected.remove(entry.uri)) selected.add(entry.uri);
+  }
+
+  /// 全选当前目录条目；再次调用取消全选。
+  void toggleSelectAll() {
+    if (selected.length == entries.length) {
+      selected.clear();
+    } else {
+      selected
+        ..clear()
+        ..addAll(entries.map((value) => value.uri));
+    }
+  }
+
+  /// 退出选择模式；保留最近一次批量任务结果供查看。
+  void exitSelection() {
+    selectionMode.value = false;
+    selected.clear();
+    batchJob.value = null;
+  }
+
+  void _exitSelectionOnly() {
+    selectionMode.value = false;
+    selected.clear();
+  }
+
+  /// 当前选中且仍存在于列表中的条目；顺序与列表一致。
+  List<StorageEntry> selectedEntries() => [
+    for (final entry in entries)
+      if (selected.contains(entry.uri)) entry,
+  ];
+
+  /// 批量删除前的影响汇总；调用方负责展示确认对话框。
+  Future<DeletionImpact> selectedImpact() async {
+    var files = 0;
+    var folders = 0;
+    for (final entry in selectedEntries()) {
+      final impact = await storage.deletionImpact(entry);
+      files += impact.files;
+      folders += impact.folders;
+    }
+    return DeletionImpact(files, folders);
+  }
+
+  // ---- 批量删除（P3B-02）----
+
+  Future<BatchJob?> deleteSelected() => _batchRun(() async {
+    final targets = selectedEntries();
+    if (targets.isEmpty) return null;
+    await _protectPendingDirectories(targets);
+    final job = BatchJob(BatchKind.delete, [
+      for (final target in targets)
+        BatchItemResult.pending(target.uri, target.name),
+    ]);
+    batchJob.value = job;
+    for (final item in job.items) {
+      final entry = targets.firstWhere((value) => value.uri == item.uri);
+      try {
+        await storage.delete(entry);
+        item.status = BatchItemStatus.success;
+      } catch (failure) {
+        item
+          ..status = BatchItemStatus.failed
+          ..message = userError(failure);
+      }
+      batchJob.refresh();
+    }
+    // 失败项保留选中状态以便重试；成功项随刷新消失。
+    selected.removeAll([
+      for (final item in job.items)
+        if (item.status == BatchItemStatus.success) item.uri,
+    ]);
+    await _load();
+    return job;
+  });
+
+  // ---- 批量移动（P3B-03）----
+
+  /// 校验目标目录是否可用：返回 null 表示可移动，否则返回原因。
+  ///
+  /// 目标由应用内目录选择器给出（从根逐级导航），trail 为根到目标路径；
+  /// 祖先关系仅通过导航轨迹判断，不解析 documentId 字符串。
+  String? moveTargetIssue(List<StorageEntry> trail) {
+    if (current == null) return '当前目录不可用';
+    if (trail.isEmpty) return '目标位置无效';
+    final target = trail.last;
+    if (target.documentId == current!.documentId) return '目标位置与来源相同';
+    final selectedFolders = selectedEntries().where(
+      (entry) => entry.isDirectory,
+    );
+    for (final folder in selectedFolders) {
+      if (trail.any((item) => item.documentId == folder.documentId)) {
+        return '目标位于所选文件夹 ${folder.name} 内部';
+      }
+    }
+    return null;
+  }
+
+  Future<BatchJob?> moveSelected(List<StorageEntry> trail) =>
+      _batchRun(() async {
+        final targets = selectedEntries();
+        if (targets.isEmpty) return null;
+        final issue = moveTargetIssue(trail);
+        if (issue != null) {
+          throw PlatformException(code: 'move_invalid_target', message: issue);
+        }
+        final targetFolder = trail.last;
+        final job = BatchJob(BatchKind.move, [
+          for (final target in targets)
+            BatchItemResult.pending(target.uri, target.name),
+        ]);
+        batchJob.value = job;
+        for (final item in job.items) {
+          final entry = targets.firstWhere((value) => value.uri == item.uri);
+          try {
+            final result = await storage.move(current!, entry, targetFolder);
+            if (result.sourceDeleted) {
+              item.status = BatchItemStatus.success;
+              // 目标提交成功且源已删除才迁移创建时间元数据。
+              await _migrateCreatedAt(entry.uri, result.entry.uri);
+            } else {
+              item
+                ..status = BatchItemStatus.copiedSourceKept
+                ..message = '复制完成，源未删除';
+              // 源仍在原位置：为其副本登记创建时间，但不迁移旧键。
+              final time = _createdTimes[entry.uri];
+              if (time != null) {
+                try {
+                  await store.recordCreated(result.entry.uri, time);
+                  _createdTimes[result.entry.uri] = time;
+                } catch (_) {
+                  /* 元数据可重建。 */
+                }
+              }
+            }
+          } catch (failure) {
+            item
+              ..status = BatchItemStatus.failed
+              ..message = userError(failure);
+          }
+          batchJob.refresh();
+        }
+        await _load();
+        return job;
+      });
+
+  // ---- 批量重命名（P3B-04）----
+
+  /// 生成批量重命名预览并逐项校验；界面禁止在有错误项时执行。
+  List<RenamePreview> previewRenameSelected(BatchRenamePlan plan) =>
+      previewRename(selectedEntries(), plan);
+
+  Future<BatchJob?> renameSelected(List<RenamePreview> previews) =>
+      _batchRun(() async {
+        if (previews.isEmpty) return null;
+        if (previews.any((preview) => preview.error != null)) {
+          throw PlatformException(
+            code: 'invalid_name',
+            message: '存在无效名称，已取消批量重命名',
+          );
+        }
+        final job = BatchJob(BatchKind.rename, [
+          for (final preview in previews)
+            BatchItemResult.pending(preview.entry.uri, preview.entry.name),
+        ]);
+        batchJob.value = job;
+        for (final (index, item) in job.items.indexed) {
+          final preview = previews[index];
+          try {
+            final renamed = await storage.renameEntry(
+              current!,
+              preview.entry,
+              preview.name,
+            );
+            await _migrateCreatedAt(preview.entry.uri, renamed.uri);
+            item.status = BatchItemStatus.success;
+          } catch (failure) {
+            item
+              ..status = BatchItemStatus.failed
+              ..message = userError(failure);
+          }
+          batchJob.refresh();
+        }
+        await _load();
+        return job;
+      });
+
+  // ---- 批量压缩与分享（P3A-01 / P3A-03）----
+
+  /// 压缩选中的多个条目到当前目录；[fileName] 为用户自定义名称。
+  Future<ArchiveOutcome> zipSelected({String? fileName}) async {
+    final folder = current;
+    final targets = selectedEntries();
+    if (folder == null || folder.canCreate != true) {
+      return const ArchiveOutcome.failure(
+        ArchiveKind.zip,
+        'read_only',
+        '当前目录不可写入',
+      );
+    }
+    if (targets.isEmpty) {
+      return const ArchiveOutcome.failure(
+        ArchiveKind.zip,
+        'invalid_argument',
+        '没有可压缩的条目',
+      );
+    }
+    return _finishArchive(
+      await archive.zip(
+        entries: targets,
+        targetFolder: folder,
+        fileName: fileName,
+      ),
+    );
+  }
+
+  /// 分享选中的条目；文件夹先压缩为临时缓存 ZIP。
+  Future<ShareOutcome> shareSelected() => archive.share(selectedEntries());
+
+  /// 压缩单个条目到当前目录；[fileName] 为空时使用默认规则命名。
+  Future<ArchiveOutcome> zipEntry(
+    StorageEntry entry, {
+    String? fileName,
+  }) async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
       return const ArchiveOutcome.failure(
@@ -176,7 +575,11 @@ class HomeController extends GetxController {
       );
     }
     return _finishArchive(
-      await archive.zip(entries: [entry], targetFolder: folder),
+      await archive.zip(
+        entries: [entry],
+        targetFolder: folder,
+        fileName: fileName,
+      ),
     );
   }
 
@@ -210,6 +613,122 @@ class HomeController extends GetxController {
     return outcome;
   }
 
+  // ---- 文件名搜索（P3B-05）----
+
+  /// 进入搜索：先在当前目录过滤，递归为显式动作。
+  void beginSearch(String query) {
+    final keyword = query.trim();
+    searchQuery.value = keyword;
+    searchIncomplete.value = false;
+    searchRecursive.value = false;
+    searchResults.assignAll(_filterCurrent(keyword));
+    _searchLocations.clear();
+    final folder = current;
+    if (folder != null) {
+      for (final result in searchResults) {
+        _searchLocations[result.uri] = folder.name;
+      }
+    }
+  }
+
+  List<StorageEntry> _filterCurrent(String keyword) {
+    if (keyword.isEmpty) return List.of(entries);
+    final lowered = keyword.toLowerCase();
+    return [
+      for (final entry in entries)
+        if (entry.name.toLowerCase().contains(lowered)) entry,
+    ];
+  }
+
+  /// 显式递归搜索；异步遍历、可取消、分批显示，失败目录计入未完成。
+  Future<void> searchAll(String query) async {
+    final keyword = query.trim();
+    if (keyword.isEmpty || searching.value || current == null) return;
+    final token = ++_searchToken;
+    final start = current!;
+    searching.value = true;
+    searchRecursive.value = true;
+    searchQuery.value = keyword;
+    searchIncomplete.value = false;
+    searchResults.clear();
+    final lowered = keyword.toLowerCase();
+    final queue = Queue<StorageEntry>()..add(start);
+    final paths = <String, String>{start.documentId: start.name};
+    final seen = <String>{start.documentId};
+    _searchLocations.clear();
+    var buffer = <StorageEntry>[];
+    var cancelled = false;
+    try {
+      while (queue.isNotEmpty) {
+        if (_searchToken != token) {
+          cancelled = true;
+          break;
+        }
+        final folder = queue.removeFirst();
+        List<StorageEntry> children;
+        try {
+          children = await storage.list(folder);
+        } catch (_) {
+          // 递归访问失败显示部分结果和失败位置，保留取消能力。
+          searchIncomplete.value = true;
+          continue;
+        }
+        for (final child in children) {
+          if (!seen.add(child.documentId)) continue;
+          if (child.isDirectory) {
+            // 位置标注取匹配项所在目录；文件夹自身路径仅用于下级标注。
+            paths[child.documentId] =
+                '${paths[folder.documentId]}/${child.name}';
+          }
+          if (child.name.toLowerCase().contains(lowered)) {
+            buffer.add(child);
+            _searchLocations[child.uri] = paths[folder.documentId]!;
+          }
+          if (child.isDirectory) queue.add(child);
+        }
+        if (buffer.length >= _searchFlushSize) {
+          searchResults.addAll(buffer);
+          buffer = <StorageEntry>[];
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
+    } finally {
+      if (!cancelled && _searchToken == token) {
+        searchResults.addAll(buffer);
+      }
+      if (_searchToken == token) searching.value = false;
+    }
+  }
+
+  /// 取消递归搜索；已显示的分批结果保留，界面立即回到非扫描状态。
+  void cancelSearch() {
+    _searchToken++;
+    searching.value = false;
+  }
+
+  /// 退出搜索，恢复当前目录列表。
+  void exitSearch() {
+    _searchToken++;
+    searchQuery.value = null;
+    searchResults.clear();
+    searching.value = false;
+    searchIncomplete.value = false;
+  }
+
+  // ---- 缩略图与详情（P3B-07 / P3B-08）----
+
+  Future<Uint8List?> thumbnailFor(StorageEntry entry) => thumbnails.load(entry);
+
+  /// 视频的可读属性；缺失键按未知处理，不为浏览列表逐个解码。
+  Future<Map<String, Object?>> videoDetails(StorageEntry entry) async {
+    if (!entry.isVideo) return const {};
+    try {
+      return await storage.videoDetails(entry);
+    } catch (_) {
+      return const {};
+    }
+  }
+
   Future<void> retryRecording(RecordingJob job) => _run(() async {
     await recordings.commit(job);
     pending.assignAll(await store.pendingJobs());
@@ -238,6 +757,21 @@ class HomeController extends GetxController {
         rootRequired.value = true;
         entries.clear();
       }
+    } finally {
+      busy.value = false;
+    }
+  }
+
+  /// 批量任务执行器；与 [userError] 相同的错误策略，返回任务供界面展示。
+  Future<T?> _batchRun<T>(Future<T?> Function() action) async {
+    if (busy.value) return null;
+    busy.value = true;
+    error.value = null;
+    try {
+      return await action();
+    } catch (failure) {
+      error.value = userError(failure);
+      return null;
     } finally {
       busy.value = false;
     }

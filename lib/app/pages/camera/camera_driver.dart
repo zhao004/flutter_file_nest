@@ -126,6 +126,7 @@ class PluginCameraDriver implements CameraDriver {
       );
       try {
         await controller.initialize();
+        _controller = controller;
         _accepted =
             '已接受 ${_presetLabels[config.$1]} / '
             '${config.$2 == null ? '自动帧率' : '${config.$2} FPS'}';

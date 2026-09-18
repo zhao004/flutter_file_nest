@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -28,8 +28,21 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await customStatement('DROP TABLE IF EXISTS todos');
         await migrator.createAll();
-      } else if (from < 3) {
+        return;
+      }
+      if (from < 3) {
         await migrator.createTable(cameraPresetRecords);
+      }
+      if (from < 4) {
+        // v4 增加专业相机后端开关；保留现有设置与授权引用。
+        await migrator.addColumn(appSettings, appSettings.proCameraEnabled);
+      }
+      if (from < 5) {
+        // v5 增加系统相机录制偏好；默认直接调用系统相机。
+        await migrator.addColumn(
+          appSettings,
+          appSettings.systemCameraRecording,
+        );
       }
     },
   );

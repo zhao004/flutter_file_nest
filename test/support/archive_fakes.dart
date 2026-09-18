@@ -10,6 +10,7 @@ class FakeArchive implements ArchiveGateway {
   @override
   final active = Rxn<ArchiveTaskState>();
   final zipCalls = <String>[];
+  final zipNames = <String?>[];
   final extractCalls = <String>[];
   final shareCalls = <String>[];
   int cancels = 0;
@@ -34,6 +35,7 @@ class FakeArchive implements ArchiveGateway {
     String? fileName,
   }) async {
     zipCalls.add(entries.map((value) => value.name).join(','));
+    zipNames.add(fileName);
     return zipResult;
   }
 

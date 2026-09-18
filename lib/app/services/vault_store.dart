@@ -10,22 +10,34 @@ class VaultPreferences {
     this.audioEnabled = true,
     this.sort = EntrySort.modified,
     this.descending = true,
+    this.proCameraEnabled = false,
+    this.systemCameraRecording = true,
   });
   final String? rootUri;
   final bool audioEnabled;
   final EntrySort sort;
   final bool descending;
 
+  /// 是否使用专业原生相机后端；默认关闭，待真机验收后评估默认值。
+  final bool proCameraEnabled;
+
+  /// 录制是否直接调用系统相机；关闭则进入应用内相机页。
+  final bool systemCameraRecording;
+
   VaultPreferences copyWith({
     String? rootUri,
     bool? audioEnabled,
     EntrySort? sort,
     bool? descending,
+    bool? proCameraEnabled,
+    bool? systemCameraRecording,
   }) => VaultPreferences(
     rootUri: rootUri ?? this.rootUri,
     audioEnabled: audioEnabled ?? this.audioEnabled,
     sort: sort ?? this.sort,
     descending: descending ?? this.descending,
+    proCameraEnabled: proCameraEnabled ?? this.proCameraEnabled,
+    systemCameraRecording: systemCameraRecording ?? this.systemCameraRecording,
   );
 }
 
@@ -67,6 +79,10 @@ abstract interface class VaultStore {
   Future<void> removeJob(String id);
   Future<void> recordCreated(String uri, DateTime time);
 
+  /// 查询本应用登记的创建时间；返回值仅包含已登记的 URI。
+  /// 用于创建时间排序与详情展示，外部文件无依据时保持未知。
+  Future<Map<String, DateTime>> createdTimes(Iterable<String> uris);
+
   /// 用户预设，按最近更新排序；内置预设不在此列。
   Future<List<CameraPreset>> userPresets();
 
@@ -93,6 +109,8 @@ class DriftVaultStore implements VaultStore {
               .firstOrNull ??
           EntrySort.modified,
       descending: row.sortDescending,
+      proCameraEnabled: row.proCameraEnabled,
+      systemCameraRecording: row.systemCameraRecording,
     );
   }
 
@@ -104,6 +122,8 @@ class DriftVaultStore implements VaultStore {
       audioEnabled: Value(value.audioEnabled),
       sortField: Value(value.sort.name),
       sortDescending: Value(value.descending),
+      proCameraEnabled: Value(value.proCameraEnabled),
+      systemCameraRecording: Value(value.systemCameraRecording),
       updatedAt: Value(DateTime.now().toUtc()),
     ),
   );
@@ -151,6 +171,16 @@ class DriftVaultStore implements VaultStore {
   @override
   Future<void> recordCreated(String uri, DateTime time) =>
       database.saveCreatedEntry(uri, time.toUtc());
+
+  @override
+  Future<Map<String, DateTime>> createdTimes(Iterable<String> uris) async {
+    final keys = uris.toSet().toList();
+    if (keys.isEmpty) return const {};
+    final rows = await (database.select(
+      database.entryMetadata,
+    )..where((table) => table.uri.isIn(keys))).get();
+    return {for (final row in rows) row.uri: row.createdAt.toLocal()};
+  }
 
   @override
   Future<List<CameraPreset>> userPresets() async {

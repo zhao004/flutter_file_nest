@@ -1,4 +1,4 @@
-enum EntrySort { name, modified, size }
+enum EntrySort { name, modified, created, size }
 
 /// 文档提供方返回的当前快照；documentId 与 URI 均为不透明标识。
 class StorageEntry {
@@ -53,13 +53,28 @@ class StorageEntry {
             r'\.(mp4|m4v|mkv|webm|mov|3gp|avi)$',
             caseSensitive: false,
           ).hasMatch(name));
+
+  bool get isImage =>
+      !isDirectory &&
+      (mimeType?.startsWith('image/') == true ||
+          RegExp(
+            r'\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$',
+            caseSensitive: false,
+          ).hasMatch(name));
+
+  bool get isPdf =>
+      !isDirectory &&
+      (mimeType == 'application/pdf' || name.toLowerCase().endsWith('.pdf'));
 }
 
 List<StorageEntry> sortEntries(
   Iterable<StorageEntry> entries,
   EntrySort field,
-  bool descending,
-) {
+  bool descending, {
+
+  /// 按创建时间排序时使用的登记值，键为条目 URI；缺失视为未知并置末尾。
+  Map<String, DateTime> createdAt = const {},
+}) {
   final sorted = entries.toList();
   sorted.sort((a, b) {
     if (a.isDirectory != b.isDirectory) return a.isDirectory ? -1 : 1;
@@ -72,6 +87,10 @@ List<StorageEntry> sortEntries(
       case EntrySort.modified:
         left = a.modifiedAt;
         right = b.modifiedAt;
+      case EntrySort.created:
+        // 创建时间只来自本应用登记的元数据，不用修改时间冒充。
+        left = createdAt[a.uri];
+        right = createdAt[b.uri];
       case EntrySort.size:
         left = a.isDirectory ? null : a.size;
         right = b.isDirectory ? null : b.size;

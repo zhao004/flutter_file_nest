@@ -23,6 +23,36 @@ void main() {
       '未知',
     ]);
   });
+  test('按登记创建时间排序，未知值在末尾且不使用修改时间', () {
+    final base = DateTime(2026);
+    final items = [
+      entry('无登记', modified: DateTime(2027)),
+      entry('晚', size: 1),
+      entry('早', size: 2),
+    ];
+    final created = {
+      items[1].uri: base.add(const Duration(days: 2)),
+      items[2].uri: base,
+    };
+    expect(
+      sortEntries(
+        items,
+        EntrySort.created,
+        false,
+        createdAt: created,
+      ).map((e) => e.name),
+      ['早', '晚', '无登记'],
+    );
+    expect(
+      sortEntries(
+        items,
+        EntrySort.created,
+        true,
+        createdAt: created,
+      ).map((e) => e.name),
+      ['晚', '早', '无登记'],
+    );
+  });
   test('名称拒绝空白、路径穿越、控制字符和过长名称', () {
     for (final name in [
       '',

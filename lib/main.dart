@@ -4,15 +4,25 @@ import 'package:get/get.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
+import 'app/pages/camera/camera_backend.dart';
+import 'app/pages/camera/native_camera_driver.dart';
 import 'app/services/archive_service.dart';
 import 'app/services/saf_storage.dart';
+import 'app/services/thumbnail_service.dart';
 import 'app/services/vault_store.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Get.put<StorageGateway>(SafStorage(), permanent: true);
+  final storage = SafStorage();
+  Get.put<StorageGateway>(storage, permanent: true);
+  Get.put<ThumbnailGateway>(ThumbnailService(storage), permanent: true);
   Get.put<VaultStore>(DriftVaultStore(AppDatabase()), permanent: true);
   Get.put<ArchiveGateway>(ArchiveService(), permanent: true);
+  // 专业后端可用性只探测一次；不可用时保持插件后端。
+  Get.put<CameraBackendResolver>(
+    CameraBackendResolver(proAvailable: await NativeCameraDriver.probe()),
+    permanent: true,
+  );
   runApp(const LensVaultApp());
 }
 

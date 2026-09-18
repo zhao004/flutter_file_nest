@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../camera/camera_backend.dart';
 import '../home/home_controller.dart';
 
 /// 管理单个活动根目录、录音偏好及失败后保留的录像任务。
@@ -40,6 +41,47 @@ class SettingsView extends GetView<HomeController> {
                       await controller.setAudio(value);
                     } catch (_) {
                       controller.error.value = '无法保存录音设置';
+                    }
+                  },
+          ),
+          // 专业后端为实验特性：通道不可用时禁用，避免误以为已生效。
+          Builder(
+            builder: (context) {
+              final backend = Get.find<CameraBackendResolver>();
+              return SwitchListTile(
+                title: const Text('专业录像后端（实验）'),
+                subtitle: Text(
+                  backend.proAvailable
+                      ? '使用原生 Camera2 会话，手动参数将在后续版本开放'
+                      : '当前设备不支持或未接入',
+                ),
+                secondary: const Icon(Icons.videocam_outlined),
+                value: controller.preferences.value.proCameraEnabled,
+                onChanged: !backend.proAvailable || controller.busy.value
+                    ? null
+                    : (value) async {
+                        try {
+                          await controller.setProCameraEnabled(value);
+                        } catch (_) {
+                          controller.error.value = '无法保存相机后端设置';
+                        }
+                      },
+              );
+            },
+          ),
+          // 录制方式决定底部栏“录制”按钮的行为；关闭后进入应用内相机。
+          SwitchListTile(
+            title: const Text('录制时使用系统相机'),
+            subtitle: const Text('关闭则使用应用内相机（变焦、曝光、预设等专业功能）'),
+            secondary: const Icon(Icons.switch_video_outlined),
+            value: controller.preferences.value.systemCameraRecording,
+            onChanged: controller.busy.value
+                ? null
+                : (value) async {
+                    try {
+                      await controller.setSystemCameraRecording(value);
+                    } catch (_) {
+                      controller.error.value = '无法保存录制方式设置';
                     }
                   },
           ),

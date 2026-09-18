@@ -72,6 +72,36 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _proCameraEnabledMeta = const VerificationMeta(
+    'proCameraEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> proCameraEnabled = GeneratedColumn<bool>(
+    'pro_camera_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pro_camera_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _systemCameraRecordingMeta =
+      const VerificationMeta('systemCameraRecording');
+  @override
+  late final GeneratedColumn<bool> systemCameraRecording =
+      GeneratedColumn<bool>(
+        'system_camera_recording',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("system_camera_recording" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -90,6 +120,8 @@ class $AppSettingsTable extends AppSettings
     audioEnabled,
     sortField,
     sortDescending,
+    proCameraEnabled,
+    systemCameraRecording,
     updatedAt,
   ];
   @override
@@ -137,6 +169,24 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('pro_camera_enabled')) {
+      context.handle(
+        _proCameraEnabledMeta,
+        proCameraEnabled.isAcceptableOrUnknown(
+          data['pro_camera_enabled']!,
+          _proCameraEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('system_camera_recording')) {
+      context.handle(
+        _systemCameraRecordingMeta,
+        systemCameraRecording.isAcceptableOrUnknown(
+          data['system_camera_recording']!,
+          _systemCameraRecordingMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -174,6 +224,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}sort_descending'],
       )!,
+      proCameraEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pro_camera_enabled'],
+      )!,
+      systemCameraRecording: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}system_camera_recording'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -193,6 +251,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final bool audioEnabled;
   final String sortField;
   final bool sortDescending;
+
+  /// 是否启用专业原生相机后端（实验特性）；默认关闭，待真机验收后调整。
+  final bool proCameraEnabled;
+
+  /// 录制时是否直接调用系统相机；关闭则使用应用内相机（支持专业参数）。
+  final bool systemCameraRecording;
   final DateTime updatedAt;
   const AppSetting({
     required this.id,
@@ -200,6 +264,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.audioEnabled,
     required this.sortField,
     required this.sortDescending,
+    required this.proCameraEnabled,
+    required this.systemCameraRecording,
     required this.updatedAt,
   });
   @override
@@ -212,6 +278,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['audio_enabled'] = Variable<bool>(audioEnabled);
     map['sort_field'] = Variable<String>(sortField);
     map['sort_descending'] = Variable<bool>(sortDescending);
+    map['pro_camera_enabled'] = Variable<bool>(proCameraEnabled);
+    map['system_camera_recording'] = Variable<bool>(systemCameraRecording);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -225,6 +293,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       audioEnabled: Value(audioEnabled),
       sortField: Value(sortField),
       sortDescending: Value(sortDescending),
+      proCameraEnabled: Value(proCameraEnabled),
+      systemCameraRecording: Value(systemCameraRecording),
       updatedAt: Value(updatedAt),
     );
   }
@@ -240,6 +310,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       audioEnabled: serializer.fromJson<bool>(json['audioEnabled']),
       sortField: serializer.fromJson<String>(json['sortField']),
       sortDescending: serializer.fromJson<bool>(json['sortDescending']),
+      proCameraEnabled: serializer.fromJson<bool>(json['proCameraEnabled']),
+      systemCameraRecording: serializer.fromJson<bool>(
+        json['systemCameraRecording'],
+      ),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -252,6 +326,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'audioEnabled': serializer.toJson<bool>(audioEnabled),
       'sortField': serializer.toJson<String>(sortField),
       'sortDescending': serializer.toJson<bool>(sortDescending),
+      'proCameraEnabled': serializer.toJson<bool>(proCameraEnabled),
+      'systemCameraRecording': serializer.toJson<bool>(systemCameraRecording),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -262,6 +338,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? audioEnabled,
     String? sortField,
     bool? sortDescending,
+    bool? proCameraEnabled,
+    bool? systemCameraRecording,
     DateTime? updatedAt,
   }) => AppSetting(
     id: id ?? this.id,
@@ -269,6 +347,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     audioEnabled: audioEnabled ?? this.audioEnabled,
     sortField: sortField ?? this.sortField,
     sortDescending: sortDescending ?? this.sortDescending,
+    proCameraEnabled: proCameraEnabled ?? this.proCameraEnabled,
+    systemCameraRecording: systemCameraRecording ?? this.systemCameraRecording,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
@@ -282,6 +362,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       sortDescending: data.sortDescending.present
           ? data.sortDescending.value
           : this.sortDescending,
+      proCameraEnabled: data.proCameraEnabled.present
+          ? data.proCameraEnabled.value
+          : this.proCameraEnabled,
+      systemCameraRecording: data.systemCameraRecording.present
+          ? data.systemCameraRecording.value
+          : this.systemCameraRecording,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -294,6 +380,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('audioEnabled: $audioEnabled, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('proCameraEnabled: $proCameraEnabled, ')
+          ..write('systemCameraRecording: $systemCameraRecording, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -306,6 +394,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     audioEnabled,
     sortField,
     sortDescending,
+    proCameraEnabled,
+    systemCameraRecording,
     updatedAt,
   );
   @override
@@ -317,6 +407,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.audioEnabled == this.audioEnabled &&
           other.sortField == this.sortField &&
           other.sortDescending == this.sortDescending &&
+          other.proCameraEnabled == this.proCameraEnabled &&
+          other.systemCameraRecording == this.systemCameraRecording &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -326,6 +418,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> audioEnabled;
   final Value<String> sortField;
   final Value<bool> sortDescending;
+  final Value<bool> proCameraEnabled;
+  final Value<bool> systemCameraRecording;
   final Value<DateTime> updatedAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
@@ -333,6 +427,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.audioEnabled = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.proCameraEnabled = const Value.absent(),
+    this.systemCameraRecording = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
@@ -341,6 +437,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.audioEnabled = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.proCameraEnabled = const Value.absent(),
+    this.systemCameraRecording = const Value.absent(),
     required DateTime updatedAt,
   }) : updatedAt = Value(updatedAt);
   static Insertable<AppSetting> custom({
@@ -349,6 +447,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? audioEnabled,
     Expression<String>? sortField,
     Expression<bool>? sortDescending,
+    Expression<bool>? proCameraEnabled,
+    Expression<bool>? systemCameraRecording,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -357,6 +457,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (audioEnabled != null) 'audio_enabled': audioEnabled,
       if (sortField != null) 'sort_field': sortField,
       if (sortDescending != null) 'sort_descending': sortDescending,
+      if (proCameraEnabled != null) 'pro_camera_enabled': proCameraEnabled,
+      if (systemCameraRecording != null)
+        'system_camera_recording': systemCameraRecording,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -367,6 +470,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? audioEnabled,
     Value<String>? sortField,
     Value<bool>? sortDescending,
+    Value<bool>? proCameraEnabled,
+    Value<bool>? systemCameraRecording,
     Value<DateTime>? updatedAt,
   }) {
     return AppSettingsCompanion(
@@ -375,6 +480,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       audioEnabled: audioEnabled ?? this.audioEnabled,
       sortField: sortField ?? this.sortField,
       sortDescending: sortDescending ?? this.sortDescending,
+      proCameraEnabled: proCameraEnabled ?? this.proCameraEnabled,
+      systemCameraRecording:
+          systemCameraRecording ?? this.systemCameraRecording,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -397,6 +505,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (sortDescending.present) {
       map['sort_descending'] = Variable<bool>(sortDescending.value);
     }
+    if (proCameraEnabled.present) {
+      map['pro_camera_enabled'] = Variable<bool>(proCameraEnabled.value);
+    }
+    if (systemCameraRecording.present) {
+      map['system_camera_recording'] = Variable<bool>(
+        systemCameraRecording.value,
+      );
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -411,6 +527,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('audioEnabled: $audioEnabled, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('proCameraEnabled: $proCameraEnabled, ')
+          ..write('systemCameraRecording: $systemCameraRecording, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1565,6 +1683,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> audioEnabled,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<bool> proCameraEnabled,
+      Value<bool> systemCameraRecording,
       required DateTime updatedAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
@@ -1574,6 +1694,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> audioEnabled,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<bool> proCameraEnabled,
+      Value<bool> systemCameraRecording,
       Value<DateTime> updatedAt,
     });
 
@@ -1606,6 +1728,18 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get sortDescending => $state.composableBuilder(
     column: $state.table.sortDescending,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<bool> get proCameraEnabled => $state.composableBuilder(
+    column: $state.table.proCameraEnabled,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<bool> get systemCameraRecording => $state.composableBuilder(
+    column: $state.table.systemCameraRecording,
     builder: (column, joinBuilders) =>
         ColumnFilters(column, joinBuilders: joinBuilders),
   );
@@ -1646,6 +1780,18 @@ class $$AppSettingsTableOrderingComposer
 
   ColumnOrderings<bool> get sortDescending => $state.composableBuilder(
     column: $state.table.sortDescending,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<bool> get proCameraEnabled => $state.composableBuilder(
+    column: $state.table.proCameraEnabled,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<bool> get systemCameraRecording => $state.composableBuilder(
+    column: $state.table.systemCameraRecording,
     builder: (column, joinBuilders) =>
         ColumnOrderings(column, joinBuilders: joinBuilders),
   );
@@ -1692,6 +1838,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> audioEnabled = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<bool> proCameraEnabled = const Value.absent(),
+                Value<bool> systemCameraRecording = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
@@ -1699,6 +1847,8 @@ class $$AppSettingsTableTableManager
                 audioEnabled: audioEnabled,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                proCameraEnabled: proCameraEnabled,
+                systemCameraRecording: systemCameraRecording,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -1708,6 +1858,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> audioEnabled = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<bool> proCameraEnabled = const Value.absent(),
+                Value<bool> systemCameraRecording = const Value.absent(),
                 required DateTime updatedAt,
               }) => AppSettingsCompanion.insert(
                 id: id,
@@ -1715,6 +1867,8 @@ class $$AppSettingsTableTableManager
                 audioEnabled: audioEnabled,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                proCameraEnabled: proCameraEnabled,
+                systemCameraRecording: systemCameraRecording,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

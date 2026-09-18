@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 分享缓存只暴露 cache/share_cache 子目录，不开放整个私有目录。 -->
+<!-- 分享缓存只暴露 cache/share_cache；拍照与录像临时文件只暴露对应 cache 子目录，不开放整个私有目录。 -->
 <paths>
     <cache-path name="share_cache" path="share_cache/" />
+    <cache-path name="camera_photos" path="photos/" />
+    <cache-path name="camera_videos" path="videos/" />
 </paths>
