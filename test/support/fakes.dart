@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_lens_vault/app/models/batch_models.dart';
-import 'package:flutter_lens_vault/app/models/camera_presets.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
 import 'package:flutter_lens_vault/app/services/saf_storage.dart';
+import 'package:flutter_lens_vault/app/services/thumbnail_service.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
 
 const root = StorageEntry(
@@ -36,27 +36,12 @@ StorageEntry entry(
 
 class MemoryStore implements VaultStore {
   VaultPreferences value = const VaultPreferences();
-  final jobs = <RecordingJob>[];
-  final presets = <CameraPreset>[];
   final created = <String, DateTime>{};
   @override
   Future<VaultPreferences> loadPreferences() async => value;
   @override
   Future<void> savePreferences(VaultPreferences value) async {
     this.value = value;
-  }
-
-  @override
-  Future<List<RecordingJob>> pendingJobs() async => List.of(jobs);
-  @override
-  Future<void> addJob(RecordingJob job) async {
-    jobs.removeWhere((value) => value.id == job.id);
-    jobs.add(job);
-  }
-
-  @override
-  Future<void> removeJob(String id) async {
-    jobs.removeWhere((job) => job.id == id);
   }
 
   @override
@@ -69,23 +54,34 @@ class MemoryStore implements VaultStore {
     for (final uri in uris.toSet())
       if (created[uri] != null) uri: created[uri]!,
   };
+}
+
+/// 可注入的缩略图网关；记录加载与取消次数，便于断言重载与销毁行为。
+class FakeThumbnails implements ThumbnailGateway {
+  final loads = <String>[];
+  final cancels = <String>[];
+  int clears = 0;
+
+  /// 默认返回 null（占位图标），避免测试中解码无效图片。
+  Uint8List? result;
 
   @override
-  Future<List<CameraPreset>> userPresets() async {
-    final sorted = List.of(presets)
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return sorted;
+  Future<Uint8List?> load(
+    StorageEntry entry, {
+    int maxDimension = thumbnailDimension,
+  }) async {
+    loads.add(entry.uri);
+    return result;
   }
 
   @override
-  Future<void> savePreset(CameraPreset preset) async {
-    presets.removeWhere((value) => value.id == preset.id);
-    presets.add(preset);
+  void cancel(StorageEntry entry, {int maxDimension = thumbnailDimension}) {
+    cancels.add(entry.uri);
   }
 
   @override
-  Future<void> deletePreset(String id) async {
-    presets.removeWhere((value) => value.id == id);
+  void clearPending() {
+    clears++;
   }
 }
 
@@ -93,19 +89,16 @@ class FakeStorage implements StorageGateway {
   final contents = <String, List<StorageEntry>>{'root': []};
   StorageEntry? selected = root;
   bool permissionDenied = false;
-  bool failSave = false;
   bool failSourceDelete = false;
   Uint8List? thumbnailResult = Uint8List.fromList([9, 9, 9]);
   final failingFolders = <String>{};
   final failDeleteNames = <String>{};
-  String? deniedSaveRoot;
   StorageEntry? pickImportResult;
   StorageEntry? takePhotoResult;
   StorageEntry? takeVideoResult;
   final imports = <String>[];
   int photoCaptures = 0;
   int videoCaptures = 0;
-  int saves = 0;
   int deletes = 0;
   int creates = 0;
   final moves = <String>[];
@@ -190,7 +183,7 @@ class FakeStorage implements StorageGateway {
   @override
   Future<Uint8List?> thumbnail(
     StorageEntry target, {
-    int maxDimension = 256,
+    int maxDimension = thumbnailDimension,
   }) async {
     thumbnailLoads++;
     return thumbnailResult;
@@ -220,20 +213,6 @@ class FakeStorage implements StorageGateway {
     }
   }
 
-  @override
-  Future<StorageEntry> saveRecording(RecordingJob job) async {
-    saves++;
-    if (deniedSaveRoot == job.rootUri) {
-      throw PlatformException(code: 'permission_denied', message: '旧目录授权已失效');
-    }
-    if (failSave) {
-      throw PlatformException(code: 'write_failed', message: '保存失败，视频已保留');
-    }
-    return entry(job.fileName, mime: 'video/mp4');
-  }
-
-  @override
-  Future<void> forgetRecording(String id) async {}
   @override
   Future<void> openFile(StorageEntry entry) async {}
   @override

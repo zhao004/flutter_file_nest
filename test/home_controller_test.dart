@@ -58,59 +58,21 @@ void main() {
     expect(controller.error.value, isNotNull);
   });
 
-  test('有待保存录像时保护同一根目录的文件夹，处理后允许改名', () async {
+  test('进入与返回目录时清空上一目录的缩略图排队请求', () async {
     final storage = FakeStorage();
-    final store = MemoryStore();
-    final controller = HomeController(
-      storage: storage,
-      store: store,
-      archive: FakeArchive(),
-    );
-    await controller.pickRoot();
-    await controller.createFolder('现场');
-    final folder = controller.entries.single;
-    await store.addJob(
-      RecordingJob(
-        id: 'pending',
-        sourcePath: 'private.mp4',
-        rootUri: root.rootUri,
-        parentId: folder.documentId,
-        fileName: 'video.mp4',
-        createdAt: DateTime.now(),
-      ),
-    );
-    await controller.renameEntry(folder, '改名');
-    expect(controller.entries.single.name, '现场');
-    expect(controller.error.value, contains('待保存录像'));
-    await controller.deleteEntry(folder);
-    expect(storage.deletes, 0);
-    await store.removeJob('pending');
-    await controller.renameEntry(folder, '改名');
-    expect(controller.entries.single.name, '改名');
-  });
-
-  test('旧根目录恢复失败不会使当前根目录失效', () async {
-    final storage = FakeStorage()..deniedSaveRoot = 'content://old';
+    final thumbs = FakeThumbnails();
+    storage.contents['root']!.add(entry('现场', directory: true));
     final controller = HomeController(
       storage: storage,
       store: MemoryStore(),
       archive: FakeArchive(),
+      thumbnails: thumbs,
     );
     await controller.pickRoot();
-    await controller.createFolder('当前文件夹');
-    await controller.retryRecording(
-      RecordingJob(
-        id: 'old',
-        sourcePath: 'private.mp4',
-        rootUri: 'content://old',
-        parentId: 'old',
-        fileName: 'video.mp4',
-        createdAt: DateTime.now(),
-      ),
-    );
-    expect(controller.error.value, contains('旧目录'));
-    expect(controller.rootRequired.value, false);
-    expect(controller.entries.single.name, '当前文件夹');
+    await controller.enter(controller.entries.single);
+    expect(thumbs.clears, 1);
+    await controller.back();
+    expect(thumbs.clears, 2);
   });
 
   test('压缩条目委托归档网关并在成功后刷新列表', () async {
@@ -185,14 +147,16 @@ void main() {
     await controller.pickRoot();
     storage.contents['root']!.add(entry('视频.mp4'));
     await controller.refresh();
-    final outcome = await controller.shareEntry(controller.entries.single);
+    controller.startSelection();
+    controller.toggleSelect(controller.entries.single);
+    final outcome = await controller.shareSelected();
     expect(archive.shareCalls, ['视频.mp4']);
     expect(outcome.summary, contains('未找到'));
     await controller.cancelArchive();
     expect(archive.cancels, 1);
   });
 
-  test('长按进入选择模式，全选与退出数量正确', () async {
+  test('工具栏进入选择模式，全选与退出数量正确', () async {
     final storage = FakeStorage();
     final controller = HomeController(
       storage: storage,
@@ -205,13 +169,14 @@ void main() {
       ..add(entry('b.mp4'));
     await controller.refresh();
     expect(controller.selectionMode.value, false);
-    controller.beginSelection(controller.entries.first);
+    // 工具栏入口初始不选中任何条目。
+    controller.startSelection();
     expect(controller.selectionMode.value, true);
-    expect(controller.selectedCount, 1);
-    controller.toggleSelect(controller.entries.last);
-    expect(controller.selectedCount, 2);
+    expect(controller.selectedCount, 0);
     controller.toggleSelect(controller.entries.last);
     expect(controller.selectedCount, 1);
+    controller.toggleSelect(controller.entries.last);
+    expect(controller.selectedCount, 0);
     controller.toggleSelectAll();
     expect(controller.selectedCount, 2);
     controller.toggleSelectAll();
@@ -232,7 +197,9 @@ void main() {
       ..add(entry('a.mp4'))
       ..add(entry('b.mp4'));
     await controller.refresh();
-    controller.beginSelection(controller.entries.first);
+    controller.startSelection();
+    controller.toggleSelect(controller.entries.first);
+    expect(controller.selectedCount, 1);
     storage.contents['root']!.removeWhere((value) => value.name == 'a.mp4');
     await controller.refresh();
     expect(controller.selectedCount, 0);
@@ -250,7 +217,7 @@ void main() {
       ..add(entry('a.mp4'))
       ..add(entry('b.mp4'));
     await controller.refresh();
-    controller.beginSelection(controller.entries.first);
+    controller.startSelection();
     controller.toggleSelectAll();
     final job = await controller.deleteSelected();
     expect(job, isNotNull);
@@ -265,35 +232,6 @@ void main() {
     expect(retried!.successCount, 1);
     expect(storage.deletes, 2);
     expect(controller.selectionMode.value, false);
-  });
-
-  test('批量删除在待保存录像期间保护文件夹', () async {
-    final storage = FakeStorage();
-    final store = MemoryStore();
-    final controller = HomeController(
-      storage: storage,
-      store: store,
-      archive: FakeArchive(),
-    );
-    await controller.pickRoot();
-    await controller.createFolder('现场');
-    storage.contents['root']!.add(entry('b.mp4'));
-    await controller.refresh();
-    await store.addJob(
-      RecordingJob(
-        id: 'pending',
-        sourcePath: 'private.mp4',
-        rootUri: root.rootUri,
-        parentId: 'root',
-        fileName: 'video.mp4',
-        createdAt: DateTime.now(),
-      ),
-    );
-    controller.toggleSelectAll();
-    final job = await controller.deleteSelected();
-    expect(job, isNull);
-    expect(controller.error.value, contains('待保存录像'));
-    expect(storage.deletes, 0);
   });
 
   test('批量移动：目标校验拒绝移入自身或后代', () async {
@@ -647,7 +585,6 @@ void main() {
     expect(storage.videoCaptures, 1);
     expect(controller.entries.single.name, 'VID_001.mp4');
     expect(store.created.keys.any((uri) => uri.contains('VID_001')), true);
-    expect(store.value.systemCameraRecording, true, reason: '系统相机录制默认开启');
   });
 
   test('取消系统相机录制不产生变更', () async {
@@ -662,19 +599,5 @@ void main() {
     expect(storage.videoCaptures, 1);
     expect(controller.entries, isEmpty);
     expect(controller.error.value, isNull);
-  });
-
-  test('录制方式偏好持久化并可切换回应用内相机', () async {
-    final store = MemoryStore();
-    final controller = HomeController(
-      storage: FakeStorage(),
-      store: store,
-      archive: FakeArchive(),
-    );
-    await controller.pickRoot();
-    await controller.setSystemCameraRecording(false);
-    expect(store.value.systemCameraRecording, false);
-    await controller.setSystemCameraRecording(true);
-    expect(store.value.systemCameraRecording, true);
   });
 }

@@ -1,28 +1,18 @@
 package com.example.flutter_lens_vault
 
-import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.StandardMessageCodec
-import io.flutter.plugin.platform.PlatformView
-import io.flutter.plugin.platform.PlatformViewFactory
-import com.example.flutter_lens_vault.camera.ProCameraFailure
-import com.example.flutter_lens_vault.camera.ProCameraManager
-import com.example.flutter_lens_vault.camera.ProCameraPreviewView
 import com.example.flutter_lens_vault.storage.SafStorage
 import com.example.flutter_lens_vault.storage.archive.ArchiveManager
 import com.example.flutter_lens_vault.storage.share.ShareManager
@@ -30,18 +20,23 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 /**
- * 管理目录选择器、相机权限与平台通道生命周期。
+ * 管理目录选择器与平台通道生命周期。
  *
- * - 文件访问、归档任务与专业相机各自使用串行队列，长任务不会阻塞录像保存。
+ * - 文件访问与归档任务各自使用串行队列，长任务不会阻塞其他操作。
+ * - 拍照与录像交由系统相机应用完成，本应用只负责把结果导入目标目录。
  * - 进度经 EventChannel 上报，回调始终返回主线程。
  */
 class MainActivity : FlutterFragmentActivity() {
+    // 写操作串行以保证顺序；只读元数据与缩略图使用各自线程池，
+    // 缩略图加载不会阻塞目录列表，目录切换因此保持即时响应。
     private val executor = Executors.newSingleThreadExecutor()
+    private val readExecutor = Executors.newFixedThreadPool(4)
+    private val thumbnailExecutor = Executors.newFixedThreadPool(2)
     private val archiveExecutor = Executors.newSingleThreadExecutor()
-    private val proExecutor = Executors.newSingleThreadExecutor()
     private var pickerResult: MethodChannel.Result? = null
     private var importResult: MethodChannel.Result? = null
     private var importTarget: Pair<String, String>? = null
@@ -53,23 +48,9 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingVideoFile: File? = null
     private var channel: MethodChannel? = null
     private var archiveChannel: MethodChannel? = null
-    private var proChannel: MethodChannel? = null
-    private var proCamera: ProCameraManager? = null
-    private var permissionResult: ((Boolean, Boolean) -> Unit)? = null
     private var events: EventChannel.EventSink? = null
     private var archive: ArchiveManager? = null
     private var storageHandler: SafStorage? = null
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { grants ->
-        val result = permissionResult
-        permissionResult = null
-        val camera = grants[Manifest.permission.CAMERA]
-            ?: hasPermission(Manifest.permission.CAMERA)
-        val audio = grants[Manifest.permission.RECORD_AUDIO]
-            ?: hasPermission(Manifest.permission.RECORD_AUDIO)
-        result?.invoke(camera, audio)
-    }
     private val picker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { response ->
         val result = pickerResult
         pickerResult = null
@@ -136,7 +117,16 @@ class MainActivity : FlutterFragmentActivity() {
                         Uri.parse("package:$packageName")))
                     result.success(null)
                 }
-                else -> execute(result) { storage.handle(call.method, call.arguments) }
+                // 缩略图单独并发；只读元数据并发；写操作串行。
+                else -> {
+                    val action = { storage.handle(call.method, call.arguments) }
+                    when {
+                        call.method in THUMBNAIL_METHODS ->
+                            submit(thumbnailExecutor, result, action)
+                        call.method in READ_ONLY_METHODS -> submit(readExecutor, result, action)
+                        else -> submit(executor, result, action)
+                    }
+                }
             }
         }
 
@@ -183,35 +173,6 @@ class MainActivity : FlutterFragmentActivity() {
                     } catch (error: Exception) {
                         val failure = SafStorage.failure(error)
                         runOnUiThread { if (!isDestroyed) result.error(failure.code, failure.message, failure.details) }
-                    }
-                }
-            }
-        }
-
-        val proManager = ProCameraManager(applicationContext)
-        proCamera = proManager
-        engine.platformViewsController.registry.registerViewFactory(
-            "lens_vault/pro_camera_preview",
-            object : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
-                override fun create(context: Context?, viewId: Int, args: Any?): PlatformView =
-                    ProCameraPreviewView(context ?: this@MainActivity, proManager)
-            },
-        )
-        proChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/pro_camera")
-        proChannel!!.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "isAvailable" -> result.success(true)
-                "ensurePermissions" -> ensureProPermissions(call, result)
-                // 预览视图生命周期来自主线程，其余命令统一进入相机串行队列。
-                else -> proExecutor.execute {
-                    try {
-                        val value = proManager.handle(call.method, call.arguments)
-                        runOnUiThread { if (!isDestroyed) result.success(value) }
-                    } catch (error: Exception) {
-                        val failure = ProCameraFailure.failure(error)
-                        runOnUiThread {
-                            if (!isDestroyed) result.error(failure.code, failure.message, null)
-                        }
                     }
                 }
             }
@@ -282,8 +243,7 @@ class MainActivity : FlutterFragmentActivity() {
     /**
      * 拍摄照片：系统相机写入应用私有临时文件，导入成功后删除临时文件。
      *
-     * 应用声明了 CAMERA 权限，因此调用系统相机前必须先取得该权限；
-     * 无可用相机应用时返回错误且不产生残留文件。
+     * 相机权限由系统相机应用自行处理；无可用相机应用时返回错误且不产生残留文件。
      */
     private fun startPhotoCapture(call: MethodCall, result: MethodChannel.Result) {
         val target = pendingTarget(call, result) ?: return
@@ -292,9 +252,7 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
         photoTarget = target
-        ensureCameraPermission(result) {
-            launchCamera(result)
-        }
+        launchCamera(result)
     }
 
     private fun launchCamera(result: MethodChannel.Result) {
@@ -366,9 +324,7 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
         videoTarget = target
-        ensureCameraPermission(result) {
-            launchVideoCamera(result)
-        }
+        launchVideoCamera(result)
     }
 
     private fun launchVideoCamera(result: MethodChannel.Result) {
@@ -440,64 +396,17 @@ class MainActivity : FlutterFragmentActivity() {
         return rootUri to parentId
     }
 
-    /**
-     * 确保相机权限后执行拍摄动作。
-     *
-     * 应用声明了 CAMERA 权限，调用 ACTION_IMAGE_CAPTURE / ACTION_VIDEO_CAPTURE
-     * 前必须已授权，否则系统直接抛出 SecurityException。
-     */
-    private fun ensureCameraPermission(result: MethodChannel.Result, onGranted: () -> Unit) {
-        if (hasPermission(Manifest.permission.CAMERA)) {
-            onGranted()
-            return
-        }
-        if (permissionResult != null) {
-            result.error("busy", "权限请求已在进行", null)
-            return
-        }
-        permissionResult = { camera, _ ->
-            if (camera) {
-                onGranted()
-            } else {
-                result.error("camera_denied", "相机权限未授权，无法拍摄", null)
-            }
-        }
-        permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
-    }
+    /** 串行队列入口（写操作与导入、临时文件流程）。 */
+    private fun execute(result: MethodChannel.Result, action: () -> Any?) =
+        submit(executor, result, action)
 
-    /** 相机与麦克风权限：静音模式不申请麦克风；结果按真实授权状态返回。 */
-    private fun ensureProPermissions(call: MethodCall, result: MethodChannel.Result) {
-        val audio = (call.arguments as? Map<*, *>)?.get("audio") == true
-        val missing = buildList {
-            if (!hasPermission(Manifest.permission.CAMERA)) add(Manifest.permission.CAMERA)
-            if (audio && !hasPermission(Manifest.permission.RECORD_AUDIO)) {
-                add(Manifest.permission.RECORD_AUDIO)
-            }
-        }
-        if (missing.isEmpty()) {
-            result.success(
-                mapOf(
-                    "camera" to true,
-                    "audio" to hasPermission(Manifest.permission.RECORD_AUDIO),
-                ),
-            )
-            return
-        }
-        if (permissionResult != null) {
-            result.error("busy", "权限请求已在进行", null)
-            return
-        }
-        permissionResult = { camera, audioGranted ->
-            result.success(mapOf("camera" to camera, "audio" to audioGranted))
-        }
-        permissionLauncher.launch(missing.toTypedArray())
-    }
-
-    private fun hasPermission(permission: String): Boolean =
-        ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-
-    private fun execute(result: MethodChannel.Result, action: () -> Any?) {
-        executor.execute {
+    /** 在指定队列执行存储调用，并把结果/错误切回主线程。 */
+    private fun submit(
+        pool: Executor,
+        result: MethodChannel.Result,
+        action: () -> Any?,
+    ) {
+        pool.execute {
             try {
                 val value = action()
                 runOnUiThread { if (!isDestroyed) result.success(value) }
@@ -511,18 +420,31 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onDestroy() {
         channel?.setMethodCallHandler(null)
         archiveChannel?.setMethodCallHandler(null)
-        proChannel?.setMethodCallHandler(null)
-        proCamera?.shutdown()
-        proCamera = null
         events = null
         pickerResult = null
         importResult = null
         photoResult = null
         videoResult = null
-        permissionResult = null
         executor.shutdown()
+        readExecutor.shutdown()
+        thumbnailExecutor.shutdown()
         archiveExecutor.shutdown()
-        proExecutor.shutdown()
         super.onDestroy()
+    }
+
+    private companion object {
+        /** 缩略图加载：独立并发队列，避免占用目录列表线程。 */
+        val THUMBNAIL_METHODS = setOf("loadThumbnail")
+
+        /** 不修改存储状态的元数据方法；可安全并发执行。 */
+        val READ_ONLY_METHODS = setOf(
+            "validateRoot",
+            "listChildren",
+            "getDeletionImpact",
+            "videoMetadata",
+            "readDocument",
+            "pdfInfo",
+            "pdfPageBytes",
+        )
     }
 }

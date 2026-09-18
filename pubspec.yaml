@@ -39,15 +39,10 @@ dependencies:
   path_provider: 2.1.4
   sqlite3_flutter_libs: 0.5.42
   json_annotation: 4.9.0
-  camera: ^0.12.1
   video_player: ^2.14.0
 
 dev_dependencies:
   flutter_test:
-    sdk: flutter
-
-  # 在设备/模拟器上验证原生相机后端与会话链路的集成测试入口。
-  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

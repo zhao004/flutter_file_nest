@@ -78,4 +78,14 @@ void main() {
     expect(formatBytes(1024), '1.0 KB');
     expect(formatDuration(const Duration(seconds: 65)), '01:05');
   });
+
+  test('播放时间格式区分小时，负值按 0 处理', () {
+    expect(formatPlaybackTime(Duration.zero), '00:00');
+    expect(formatPlaybackTime(const Duration(seconds: 65)), '01:05');
+    expect(
+      formatPlaybackTime(const Duration(hours: 1, minutes: 1, seconds: 1)),
+      '1:01:01',
+    );
+    expect(formatPlaybackTime(const Duration(seconds: -5)), '00:00');
+  });
 }

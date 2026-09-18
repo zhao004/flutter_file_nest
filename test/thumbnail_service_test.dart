@@ -11,7 +11,7 @@ class _SlowStorage extends FakeStorage {
   final pending = <Completer<void>>[];
   int inflightCount = 0;
   @override
-  Future<Uint8List?> thumbnail(StorageEntry target, {int maxDimension = 256}) {
+  Future<Uint8List?> thumbnail(StorageEntry target, {int maxDimension = 128}) {
     inflightCount++;
     final completer = Completer<void>();
     pending.add(completer);
@@ -79,5 +79,38 @@ void main() {
     }
     expect(service.inflightCount, 0);
     expect(service.pendingCount, 0);
+  });
+
+  test('取消排队请求后不再执行加载，已开始的请求仍可完成', () async {
+    final storage = _SlowStorage();
+    final service = ThumbnailService(storage, maxConcurrency: 1);
+    final running = service.load(entry('a.mp4', mime: 'video/mp4'));
+    final queued = service.load(entry('b.mp4', mime: 'video/mp4'));
+    expect(storage.inflightCount, 1);
+    expect(service.pendingCount, 1);
+    service.cancel(entry('b.mp4', mime: 'video/mp4'));
+    expect(service.pendingCount, 0);
+    // 被取消的等待者立即以 null 结束，且不会触发底层加载。
+    expect(await queued, isNull);
+    expect(storage.inflightCount, 1);
+    // 已开始的请求不受取消影响。
+    storage.pending.first.complete();
+    expect(await running, isNotNull);
+    expect(service.inflightCount, 0);
+  });
+
+  test('清空排队请求后不再执行加载，正在执行的请求仍完成', () async {
+    final storage = _SlowStorage();
+    final service = ThumbnailService(storage, maxConcurrency: 1);
+    final running = service.load(entry('a.mp4', mime: 'video/mp4'));
+    final queued = service.load(entry('b.mp4', mime: 'video/mp4'));
+    expect(service.pendingCount, 1);
+    service.clearPending();
+    expect(service.pendingCount, 0);
+    expect(await queued, isNull);
+    expect(storage.inflightCount, 1);
+    storage.pending.first.complete();
+    expect(await running, isNotNull);
+    expect(service.inflightCount, 0);
   });
 }

@@ -5,21 +5,17 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/app_settings.dart';
-import 'tables/camera_presets.dart';
 import 'tables/entry_metadata.dart';
-import 'tables/pending_recordings.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(
-  tables: [AppSettings, EntryMetadata, PendingRecordings, CameraPresetRecords],
-)
+@DriftDatabase(tables: [AppSettings, EntryMetadata])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,18 +26,30 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createAll();
         return;
       }
-      if (from < 3) {
-        await migrator.createTable(cameraPresetRecords);
-      }
-      if (from < 4) {
-        // v4 增加专业相机后端开关；保留现有设置与授权引用。
-        await migrator.addColumn(appSettings, appSettings.proCameraEnabled);
-      }
-      if (from < 5) {
-        // v5 增加系统相机录制偏好；默认直接调用系统相机。
-        await migrator.addColumn(
-          appSettings,
-          appSettings.systemCameraRecording,
+      if (from < 6) {
+        // v6 移除应用内相机：删除拍摄预设与待保存录像。
+        await customStatement('DROP TABLE IF EXISTS camera_presets');
+        await customStatement('DROP TABLE IF EXISTS pending_recordings');
+        // SQLite 不能直接删除旧列；按官方建议重建设置表并迁移保留字段，
+        // 移除已废弃的录音与相机后端字段。
+        await customStatement(
+          'CREATE TABLE app_settings_new ('
+          'id INTEGER NOT NULL DEFAULT 1, '
+          'root_uri TEXT, '
+          "sort_field TEXT NOT NULL DEFAULT 'modified', "
+          'sort_descending INTEGER NOT NULL DEFAULT 1, '
+          'updated_at INTEGER NOT NULL, '
+          'PRIMARY KEY (id))',
+        );
+        await customStatement(
+          'INSERT INTO app_settings_new '
+          '(id, root_uri, sort_field, sort_descending, updated_at) '
+          'SELECT id, root_uri, sort_field, sort_descending, updated_at '
+          'FROM app_settings',
+        );
+        await customStatement('DROP TABLE app_settings');
+        await customStatement(
+          'ALTER TABLE app_settings_new RENAME TO app_settings',
         );
       }
     },

@@ -21,25 +21,19 @@ import java.io.IOException
 import java.util.ArrayDeque
 
 /**
- * SAF 是文件树的权威来源。调用方必须在 IO 队列执行；保存日志使复制重试不会生成重复视频。
+ * SAF 是文件树的权威来源。调用方必须在 IO 队列执行。
  * 不解析或拼接 documentId，也不把内容 URI 当作普通路径。
  */
 class SafStorage(private val context: Context) {
     private val resolver = context.contentResolver
     private val documentTree = DocumentTree(context)
-    private val journal = context.getSharedPreferences("recording_transfers", Context.MODE_PRIVATE)
 
     fun handle(method: String, arguments: Any?): Any? {
         val args = arguments as? Map<*, *> ?: throw StorageFailure("invalid_argument", "参数格式错误")
-        if (method == "forgetRecording") {
-            val id = StorageRules.string(args, "operationId")
-            checkJournal(journal.edit().remove(id).remove("$id.complete").commit())
-            return null
-        }
         val rootUri = Uri.parse(StorageRules.string(args, "rootUri"))
         val root = root(rootUri)
         if (method == "validateRoot") return root
-        val parentKey = if (method in setOf("listChildren", "createFolder", "saveRecording", "importDocument")) "parentDocumentId" else "documentId"
+        val parentKey = if (method in setOf("listChildren", "createFolder", "importDocument")) "parentDocumentId" else "documentId"
         val id = StorageRules.string(args, parentKey)
         val document = read(rootUri, id)
         return when (method) {
@@ -64,7 +58,7 @@ class SafStorage(private val context: Context) {
                 read(rootUri, DocumentsContract.getDocumentId(renamed))
             }
             "moveEntry" -> move(rootUri, document, args)
-            "loadThumbnail" -> thumbnail(uri(rootUri, id), (args["maxDimension"] as? Number)?.toInt() ?: 256)
+            "loadThumbnail" -> thumbnail(uri(rootUri, id), (args["maxDimension"] as? Number)?.toInt() ?: 128)
             "getDeletionImpact" -> {
                 protectRoot(rootUri, id)
                 val entries = descendants(rootUri, document)
@@ -76,7 +70,6 @@ class SafStorage(private val context: Context) {
                 deleteEntryInternal(rootUri, document)
                 null
             }
-            "saveRecording" -> save(rootUri, document, args)
             "importDocument" -> import(sourceUri(args), rootUri, document)
             "readDocument" -> readBytes(uri(rootUri, id))
             "pdfInfo" -> pdfInfo(uri(rootUri, id))
@@ -213,9 +206,14 @@ class SafStorage(private val context: Context) {
         if (Build.VERSION.SDK_INT >= 29) {
             try {
                 val bitmap = resolver.loadThumbnail(target, Size(size, size), null)
-                val output = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output)
-                return output.toByteArray()
+                try {
+                    val output = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output)
+                    return output.toByteArray()
+                } finally {
+                    // 及时回收原生位图，避免连续加载造成内存抖动。
+                    bitmap.recycle()
+                }
             } catch (_: Exception) {
                 // 图片或视频格式不受支持时回退到帧解码。
             }
@@ -226,53 +224,20 @@ class SafStorage(private val context: Context) {
             val frame = retriever.getFrameAtTime(0) ?: return null
             val scale = size.toDouble() / maxOf(frame.width, frame.height).coerceAtLeast(1)
             val bitmap = Bitmap.createScaledBitmap(frame, (frame.width * scale).toInt().coerceAtLeast(1), (frame.height * scale).toInt().coerceAtLeast(1), true)
-            val output = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output)
-            output.toByteArray()
+            try {
+                val output = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output)
+                output.toByteArray()
+            } finally {
+                // createScaledBitmap 可能原样返回源位图，避免重复回收。
+                if (bitmap !== frame) bitmap.recycle()
+                frame.recycle()
+            }
         } catch (_: Exception) {
             null
         } finally {
             retriever.release()
         }
-    }
-
-    private fun save(tree: Uri, parent: Map<String, Any?>, args: Map<*, *>): Map<String, Any?> {
-        requireFlag(parent, "canCreate")
-        val id = StorageRules.string(args, "operationId")
-        val parentId = parent["documentId"] as String
-        val source = File(StorageRules.string(args, "sourcePath")).canonicalFile
-        val staging = File(context.filesDir, "recordings").canonicalFile
-        if (source.parentFile != staging || !source.isFile || source.length() == 0L) {
-            throw StorageFailure("recording_missing", "待保存视频不可用")
-        }
-        val previous = journal.getString(id, null)?.let(Uri::parse)
-        if (previous != null) {
-            if (journal.getBoolean("$id.complete", false)) return read(tree, DocumentsContract.getDocumentId(previous))
-            try {
-                if (!DocumentsContract.deleteDocument(resolver, previous)) throw IOException()
-            } catch (error: java.io.FileNotFoundException) {
-                // 中断前创建的部分文件已由用户移除，可以重新创建。
-            } catch (_: Exception) {
-                throw StorageFailure("partial_file", "上次保存的部分文件无法清理，原视频仍保留")
-            }
-        }
-        val name = StorageRules.uniqueName(StorageRules.string(args, "fileName"), children(tree, parentId).map { it["name"] as String })
-        val destination = DocumentsContract.createDocument(resolver, uri(tree, parentId), "video/mp4", name)
-            ?: throw StorageFailure("create_failed", "无法创建视频文件")
-        checkJournal(journal.edit().putString(id, destination.toString()).putBoolean("$id.complete", false).commit())
-        try {
-            source.inputStream().buffered().use { input ->
-                resolver.openOutputStream(destination, "w")?.use { output ->
-                    val bytes = input.copyTo(output)
-                    output.flush()
-                    if (bytes != source.length()) throw IOException("copy length mismatch")
-                } ?: throw IOException("output unavailable")
-            }
-            checkJournal(journal.edit().putBoolean("$id.complete", true).commit())
-        } catch (_: Exception) {
-            throw StorageFailure("write_failed", "保存失败，视频已保留，可稍后重试")
-        }
-        return read(tree, DocumentsContract.getDocumentId(destination)) + metadata(destination)
     }
 
     /**
@@ -416,10 +381,6 @@ class SafStorage(private val context: Context) {
 
     private fun requireFlag(entry: Map<String, Any?>, flag: String) {
         if (entry[flag] != true) throw StorageFailure("read_only", "该存储位置不支持此操作")
-    }
-
-    private fun checkJournal(success: Boolean) {
-        if (!success) throw StorageFailure("journal_failed", "无法记录保存进度，视频已保留")
     }
 
     private fun uri(tree: Uri, id: String) = documentTree.uri(tree, id)

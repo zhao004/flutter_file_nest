@@ -8,7 +8,6 @@ import '../../models/archive_models.dart';
 import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
-import '../../services/recording_service.dart';
 import '../../services/saf_storage.dart';
 import '../../services/thumbnail_service.dart';
 import '../../services/vault_store.dart';
@@ -28,10 +27,8 @@ class HomeController extends GetxController {
   final VaultStore store;
   final ArchiveGateway archive;
   final ThumbnailGateway thumbnails;
-  late final recordings = RecordingService(storage, store);
   final folders = <StorageEntry>[].obs;
   final entries = <StorageEntry>[].obs;
-  final pending = <RecordingJob>[].obs;
   final preferences = const VaultPreferences().obs;
   final busy = false.obs;
   final error = RxnString();
@@ -78,7 +75,6 @@ class HomeController extends GetxController {
 
   Future<void> initialize() => _run(() async {
     preferences.value = await store.loadPreferences();
-    pending.assignAll(await store.pendingJobs());
     final uri = preferences.value.rootUri;
     if (uri != null) {
       folders.assignAll([await storage.validateRoot(uri)]);
@@ -100,7 +96,6 @@ class HomeController extends GetxController {
 
   @override
   Future<void> refresh() => _run(() async {
-    pending.assignAll(await store.pendingJobs());
     if (current == null) return;
     final StorageEntry root;
     try {
@@ -117,6 +112,8 @@ class HomeController extends GetxController {
 
   Future<void> enter(StorageEntry folder) => _run(() async {
     final children = await storage.list(folder);
+    // 目录已切换，丢弃上一目录尚未开始的缩略图请求。
+    thumbnails.clearPending();
     folders.add(folder);
     _loadCreatedTimes(
       children,
@@ -146,12 +143,14 @@ class HomeController extends GetxController {
       searchIncomplete.value = false;
     }
     folders.removeRange(index + 1, folders.length);
-    await _load();
+    await _load(resetThumbnails: true);
   });
 
-  Future<void> _load() async {
+  /// 读取当前目录快照；[resetThumbnails] 为真时丢弃上一目录的缩略图排队请求。
+  Future<void> _load({bool resetThumbnails = false}) async {
     if (current == null) return;
     final children = await storage.list(current!);
+    if (resetThumbnails) thumbnails.clearPending();
     _loadCreatedTimes(
       children,
       await store.createdTimes(children.map((value) => value.uri)),
@@ -194,26 +193,6 @@ class HomeController extends GetxController {
     }
   });
 
-  Future<void> setAudio(bool enabled) async {
-    final next = preferences.value.copyWith(audioEnabled: enabled);
-    await store.savePreferences(next);
-    preferences.value = next;
-  }
-
-  /// 切换专业相机后端偏好；后端可用性由设置界面校验后调用。
-  Future<void> setProCameraEnabled(bool enabled) async {
-    final next = preferences.value.copyWith(proCameraEnabled: enabled);
-    await store.savePreferences(next);
-    preferences.value = next;
-  }
-
-  /// 切换录制方式：true 直接调用系统相机，false 使用应用内相机页。
-  Future<void> setSystemCameraRecording(bool enabled) => _run(() async {
-    final next = preferences.value.copyWith(systemCameraRecording: enabled);
-    await store.savePreferences(next);
-    preferences.value = next;
-  });
-
   Future<void> createFolder(String name) => _run(() async {
     final invalid = validateEntryName(name);
     if (invalid != null) {
@@ -235,14 +214,12 @@ class HomeController extends GetxController {
     if (invalid != null) {
       throw PlatformException(code: 'invalid_name', message: invalid);
     }
-    await _protectPendingDirectories([entry]);
     final renamed = await storage.renameEntry(current!, entry, name.trim());
     await _migrateCreatedAt(entry.uri, renamed.uri);
     await _load();
   });
 
   Future<void> deleteEntry(StorageEntry entry) => _run(() async {
-    await _protectPendingDirectories([entry]);
     try {
       await storage.delete(entry);
     } finally {
@@ -262,18 +239,6 @@ class HomeController extends GetxController {
       _createdTimes[newUri] = time;
     } catch (_) {
       /* 元数据可重建。 */
-    }
-  }
-
-  Future<void> _protectPendingDirectories(List<StorageEntry> targets) async {
-    if (!targets.any((entry) => entry.isDirectory)) return;
-    pending.assignAll(await store.pendingJobs());
-    // SAF 标识不保证包含祖先信息，恢复任务完成前保守保护整个根目录。
-    if (pending.any((job) => job.rootUri == current?.rootUri)) {
-      throw PlatformException(
-        code: 'pending_recording',
-        message: '此存储位置有待保存录像，请先保存或放弃录像，再改名或删除文件夹',
-      );
     }
   }
 
@@ -334,11 +299,10 @@ class HomeController extends GetxController {
 
   // ---- 批量选择（P3B-01）----
 
-  /// 长按进入选择模式并选中该条目。
-  void beginSelection(StorageEntry entry) {
+  /// 从工具栏进入选择模式，初始不选中任何条目；搜索中不允许进入。
+  void startSelection() {
     if (searchQuery.value != null) return;
     selectionMode.value = true;
-    selected.add(entry.uri);
   }
 
   void toggleSelect(StorageEntry entry) {
@@ -391,7 +355,6 @@ class HomeController extends GetxController {
   Future<BatchJob?> deleteSelected() => _batchRun(() async {
     final targets = selectedEntries();
     if (targets.isEmpty) return null;
-    await _protectPendingDirectories(targets);
     final job = BatchJob(BatchKind.delete, [
       for (final target in targets)
         BatchItemResult.pending(target.uri, target.name),
@@ -598,9 +561,6 @@ class HomeController extends GetxController {
     );
   }
 
-  /// 通过系统 Sharesheet 分享条目；文件夹先压缩为临时缓存 ZIP。
-  Future<ShareOutcome> shareEntry(StorageEntry entry) => archive.share([entry]);
-
   Future<void> cancelArchive() => archive.cancelActive();
 
   /// 归档成功且产生了新条目时刷新列表；失败写入错误横幅，取消不报错。
@@ -719,6 +679,9 @@ class HomeController extends GetxController {
 
   Future<Uint8List?> thumbnailFor(StorageEntry entry) => thumbnails.load(entry);
 
+  /// 行销毁时取消尚未开始的缩略图请求，避免离屏项占用加载通道。
+  void cancelThumbnail(StorageEntry entry) => thumbnails.cancel(entry);
+
   /// 视频的可读属性；缺失键按未知处理，不为浏览列表逐个解码。
   Future<Map<String, Object?>> videoDetails(StorageEntry entry) async {
     if (!entry.isVideo) return const {};
@@ -729,21 +692,7 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> retryRecording(RecordingJob job) => _run(() async {
-    await recordings.commit(job);
-    pending.assignAll(await store.pendingJobs());
-    if (current != null && !rootRequired.value) await _load();
-  }, operationRoot: job.rootUri);
-
-  Future<void> discardRecording(RecordingJob job) => _run(() async {
-    await recordings.discard(job);
-    pending.assignAll(await store.pendingJobs());
-  });
-
-  Future<void> _run(
-    Future<void> Function() action, {
-    String? operationRoot,
-  }) async {
+  Future<void> _run(Future<void> Function() action) async {
     if (busy.value) return;
     busy.value = true;
     error.value = null;
@@ -752,8 +701,7 @@ class HomeController extends GetxController {
     } catch (failure) {
       error.value = userError(failure);
       if (failure is PlatformException &&
-          ['permission_denied', 'invalid_root'].contains(failure.code) &&
-          (operationRoot == null || operationRoot == current?.rootUri)) {
+          ['permission_denied', 'invalid_root'].contains(failure.code)) {
         rootRequired.value = true;
         entries.clear();
       }

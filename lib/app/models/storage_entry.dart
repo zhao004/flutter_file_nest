@@ -134,3 +134,15 @@ String formatDuration(Duration value) {
   final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
   return '$minutes:${(seconds % 60).toString().padLeft(2, '0')}';
 }
+
+/// 播放时间格式：不足 1 小时为 MM:SS，达到 1 小时为 H:MM:SS；负值按 0 处理。
+String formatPlaybackTime(Duration value) {
+  final total = value.inSeconds < 0 ? 0 : value.inSeconds;
+  String two(int part) => part.toString().padLeft(2, '0');
+  final hours = total ~/ 3600;
+  final minutes = (total % 3600) ~/ 60;
+  final seconds = total % 60;
+  return hours > 0
+      ? '$hours:${two(minutes)}:${two(seconds)}'
+      : '${two(minutes)}:${two(seconds)}';
+}

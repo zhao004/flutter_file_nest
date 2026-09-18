@@ -131,10 +131,20 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (root == null) return;
     final trail = await showDialog<List<StorageEntry>>(
       context: context,
-      builder: (_) =>
-          FolderPickerDialog(storage: controller.storage, root: root),
+      builder: (_) => FolderPickerDialog(
+        storage: controller.storage,
+        root: root,
+        selectedCount: controller.selectedCount,
+        validate: controller.moveTargetIssue,
+        // 所选文件夹禁止进入，避免把目标选到自身或其后代。
+        blockedDocumentIds: {
+          for (final entry in controller.selectedEntries())
+            if (entry.isDirectory) entry.documentId,
+        },
+      ),
     );
     if (trail == null) return;
+    // 弹窗已实时校验，这里仅作兜底。
     final issue = controller.moveTargetIssue(trail);
     if (issue != null) {
       controller.error.value = issue;
@@ -155,6 +165,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   Future<void> _batchShare() async {
     final outcome = await controller.shareSelected();
+    // 打开系统分享面板本身即为反馈，成功时不再弹出提示。
+    if (outcome.ok) return;
     _notify(outcome.summary);
   }
 
@@ -191,8 +203,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
   }
 
-  /// 长按文件/文件夹弹出的功能菜单；菜单关闭后按选择执行对应操作，
-  /// “多选”项用于进入批量选择模式。
+  /// 长按文件/文件夹弹出的功能菜单；菜单关闭后按选择执行对应操作。
   Future<void> _actions(StorageEntry entry) async {
     final canWrite = controller.current?.canCreate == true;
     final archiving = controller.archive.active.value != null;
@@ -211,11 +222,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.checklist),
-                title: const Text('多选'),
-                onTap: () => Navigator.pop(context, 'select'),
-              ),
               if (entry.canRename)
                 ListTile(
                   leading: const Icon(Icons.drive_file_rename_outline),
@@ -228,14 +234,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 title: const Text('详情'),
                 onTap: () => Navigator.pop(context, 'details'),
               ),
-              if (canWrite)
-                ListTile(
-                  leading: const Icon(Icons.folder_zip_outlined),
-                  title: const Text('压缩为 ZIP'),
-                  subtitle: const Text('输出到当前文件夹，不覆盖同名文件'),
-                  enabled: !archiving,
-                  onTap: () => Navigator.pop(context, 'zip'),
-                ),
               if (looksLikeZip(entry))
                 ListTile(
                   leading: const Icon(Icons.unarchive_outlined),
@@ -244,15 +242,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   enabled: canWrite && !archiving,
                   onTap: () => Navigator.pop(context, 'extract'),
                 ),
-              ListTile(
-                leading: const Icon(Icons.ios_share),
-                title: const Text('分享'),
-                subtitle: entry.isDirectory
-                    ? const Text('先生成临时 ZIP，再打开系统分享')
-                    : null,
-                enabled: !archiving,
-                onTap: () => Navigator.pop(context, 'share'),
-              ),
               ListTile(
                 leading: Icon(
                   Icons.delete_outline,
@@ -268,20 +257,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       ),
     );
     switch (action) {
-      case 'select':
-        controller.beginSelection(entry);
       case 'rename':
         await _nameDialog(entry: entry);
       case 'details':
         await _showDetails(entry);
       case 'delete':
         await _delete(entry);
-      case 'zip':
-        await _zipWithCustomName([entry]);
       case 'extract':
         _notify((await controller.extractEntry(entry)).summary);
-      case 'share':
-        _notify((await controller.shareEntry(entry)).summary);
     }
   }
 
@@ -298,47 +281,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         ? controller.zipEntry(entries.single, fileName: name)
         : controller.zipSelected(fileName: name));
     _notify(outcome.summary);
-  }
-
-  /// 底部栏“添加”菜单：相册导入、PDF 导入与系统相机拍照。
-  Future<void> _addContent() async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('从相册选择图片/视频'),
-              subtitle: const Text('复制到当前文件夹'),
-              onTap: () => Navigator.pop(context, 'media'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf_outlined),
-              title: const Text('选择 PDF 文件'),
-              subtitle: const Text('复制到当前文件夹'),
-              onTap: () => Navigator.pop(context, 'pdf'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('拍照'),
-              subtitle: const Text('照片保存到当前文件夹'),
-              onTap: () => Navigator.pop(context, 'photo'),
-            ),
-          ],
-        ),
-      ),
-    );
-    switch (action) {
-      case 'media':
-        await controller.importFromPicker(const ['image/*', 'video/*']);
-      case 'pdf':
-        await controller.importFromPicker(const ['application/pdf']);
-      case 'photo':
-        await controller.capturePhoto();
-    }
   }
 
   void _notify(String message) {
@@ -398,6 +340,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final selectionMode = controller.selectionMode.value;
     final searching = controller.searching.value;
     final inSearch = controller.searchQuery.value != null;
+    // 搜索状态行仅在扫描中或结果不完整时出现，不再常驻结果数量提示。
+    final searchStatus = inSearch ? _searchStatus() : null;
     return PopScope(
       canPop:
           !selectionMode && !inSearch && (!controller.canGoBack || needsRoot),
@@ -405,7 +349,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         if (!didPop) _handlePop();
       },
       child: Scaffold(
-        appBar: inSearch ? _searchBar(busy) : _appBar(busy, needsRoot, current),
+        appBar: inSearch ? _searchBar(busy) : _appBar(busy, needsRoot),
         body: Column(
           children: [
             SizedBox(
@@ -429,42 +373,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-            if (controller.pending.isNotEmpty)
-              ListTile(
-                leading: const Icon(
-                  Icons.save_outlined,
-                  color: Colors.deepOrange,
-                ),
-                title: Text('${controller.pending.length} 段录像待保存'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed<void>(Routes.settings),
-              ),
-            if (inSearch)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.search),
-                title: Text(
-                  '“${controller.searchQuery.value}”的搜索结果'
-                  '（${controller.searchResults.length} 项）',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: searching
-                    ? const Text('正在扫描子文件夹…')
-                    : controller.searchIncomplete.value
-                    ? const Text('部分文件夹无法访问，结果不完整')
-                    : null,
-                trailing: searching
-                    ? TextButton(
-                        onPressed: controller.cancelSearch,
-                        child: const Text('取消'),
-                      )
-                    : IconButton(
-                        tooltip: '退出搜索',
-                        onPressed: controller.exitSearch,
-                        icon: const Icon(Icons.close),
-                      ),
-              ),
+            ?searchStatus,
             if (!needsRoot && current != null && !inSearch)
               SizedBox(
                 height: 44,
@@ -495,138 +404,233 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             ),
           ],
         ),
-        bottomNavigationBar: needsRoot
-            ? null
-            : selectionMode
+        // 多选模式保留批量操作栏；浏览模式改用可展开悬浮按钮。
+        bottomNavigationBar: !needsRoot && selectionMode
             ? _selectionBar(busy)
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Row(
+            : null,
+        floatingActionButton:
+            !needsRoot &&
+                !selectionMode &&
+                !inSearch &&
+                current?.canCreate == true
+            ? ExpandableActionFab(
+                enabled: !busy,
+                actions: [
+                  FabAction(
+                    label: '新建文件夹',
+                    icon: Icons.create_new_folder_outlined,
+                    onPressed: () => _nameDialog(),
+                  ),
+                  FabAction(
+                    label: '选择文件',
+                    icon: Icons.insert_drive_file_outlined,
+                    onPressed: () => controller.importFromPicker(const ['*/*']),
+                  ),
+                  FabAction(
+                    label: '拍照',
+                    icon: Icons.photo_camera_outlined,
+                    onPressed: controller.capturePhoto,
+                  ),
+                  FabAction(
+                    label: '录制',
+                    icon: Icons.videocam_outlined,
+                    onPressed: controller.captureVideo,
+                  ),
+                ],
+              )
+            : null,
+      ),
+    );
+  });
+
+  PreferredSizeWidget _appBar(bool busy, bool needsRoot) => AppBar(
+    // 标题固定为应用名，不随目录导航变化；返回改用系统返回与路径栏。
+    title: const Text('LensVault'),
+    actions: [
+      // 搜索与多选保留独立按钮，排序与设置收进“更多”菜单。
+      if (!needsRoot)
+        IconButton(
+          tooltip: '搜索文件',
+          onPressed: busy ? null : _beginSearch,
+          icon: const Icon(Icons.search),
+        ),
+      if (!needsRoot)
+        IconButton(
+          tooltip: controller.selectionMode.value ? '退出多选' : '多选',
+          onPressed: busy
+              ? null
+              : controller.selectionMode.value
+              ? controller.exitSelection
+              : controller.startSelection,
+          icon: Icon(
+            controller.selectionMode.value ? Icons.check_box : Icons.checklist,
+            color: controller.selectionMode.value
+                ? Theme.of(context).colorScheme.primary
+                : null,
+          ),
+        ),
+      PopupMenuButton<_HomeMenuAction>(
+        tooltip: '更多',
+        enabled: !busy,
+        icon: const Icon(Icons.more_vert),
+        onSelected: _handleMenuAction,
+        itemBuilder: (context) => [
+          if (!needsRoot) ...[
+            const PopupMenuItem(
+              value: _HomeMenuAction.chooseSort,
+              child: _MenuRow(icon: Icons.sort, label: '排序方式'),
+            ),
+            const PopupMenuDivider(),
+          ],
+          const PopupMenuItem(
+            value: _HomeMenuAction.settings,
+            child: _MenuRow(icon: Icons.settings_outlined, label: '设置'),
+          ),
+        ],
+      ),
+    ],
+  );
+
+  /// 处理“更多”菜单选择；排序方式与方向都经弹窗确认。
+  Future<void> _handleMenuAction(_HomeMenuAction action) async {
+    switch (action) {
+      case _HomeMenuAction.chooseSort:
+        await _chooseSort();
+      case _HomeMenuAction.settings:
+        await Get.toNamed<void>(Routes.settings);
+        await controller.refresh();
+    }
+  }
+
+  /// 弹出“排序方式”弹窗；字段与升降序都需点击确定后应用，取消不改变现有排序。
+  Future<void> _chooseSort() async {
+    final preferences = controller.preferences.value;
+    var selected = preferences.sort;
+    var descending = preferences.descending;
+    final confirmed = await showDialog<(EntrySort, bool)>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('排序方式'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 每行两个：两行排布四个排序字段，窄屏也无需横向滚动。
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var index = 0; index < _sortOptions.length; index += 2)
+                      Row(
+                        children: [
+                          for (var offset = 0; offset < 2; offset++)
+                            Expanded(
+                              child: index + offset < _sortOptions.length
+                                  ? _SortOptionTile(
+                                      label: _sortOptions[index + offset].$2,
+                                      selected:
+                                          selected ==
+                                          _sortOptions[index + offset].$1,
+                                      fontSize: _sortOptionFontSize,
+                                      onTap: () => setState(
+                                        () => selected =
+                                            _sortOptions[index + offset].$1,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: busy || current?.canCreate != true
-                              ? null
-                              : _nameDialog,
-                          icon: const Icon(Icons.create_new_folder_outlined),
-                          label: const Text('新建'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: busy || current?.canCreate != true
-                              ? null
-                              : _addContent,
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                          label: const Text('添加'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: busy || current?.canCreate != true
-                              ? null
-                              : () async {
-                                  if (controller
-                                      .preferences
-                                      .value
-                                      .systemCameraRecording) {
-                                    // 系统相机录制：与拍照相同的一次调用流程。
-                                    await controller.captureVideo();
-                                    return;
-                                  }
-                                  await Get.toNamed<void>(
-                                    Routes.camera,
-                                    arguments: current,
-                                  );
-                                  await controller.refresh();
-                                },
-                          icon: const Icon(Icons.videocam_outlined),
-                          label: const Text('录制'),
+                      const Text('排序方向'),
+                      const SizedBox(height: 4),
+                      // 两个单选按钮横排；整块区域可点，避免只能点中圆圈。
+                      RadioGroup<bool>(
+                        groupValue: descending,
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => descending = value);
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            _DirectionOption(
+                              label: '升序',
+                              value: false,
+                              onTap: () => setState(() => descending = false),
+                            ),
+                            const SizedBox(width: 12),
+                            _DirectionOption(
+                              label: '降序',
+                              value: true,
+                              onTap: () => setState(() => descending = true),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-      ),
-    );
-  });
-
-  PreferredSizeWidget _appBar(
-    bool busy,
-    bool needsRoot,
-    StorageEntry? current,
-  ) => AppBar(
-    title: Text(
-      needsRoot ? 'Lens Vault' : current?.name ?? 'Lens Vault',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    ),
-    leading: !needsRoot && controller.canGoBack
-        ? IconButton(
-            tooltip: '上一级',
-            onPressed: busy ? null : controller.back,
-            icon: const Icon(Icons.arrow_back),
-          )
-        : null,
-    actions: [
-      if (!needsRoot)
-        IconButton(
-          tooltip: '搜索文件',
-          onPressed: busy ? null : () => _beginSearch(),
-          icon: const Icon(Icons.search),
-        ),
-      if (!needsRoot)
-        PopupMenuButton<EntrySort>(
-          tooltip: '排序',
-          enabled: !busy,
-          icon: const Icon(Icons.sort),
-          initialValue: controller.preferences.value.sort,
-          onSelected: (sort) =>
-              controller.setSort(sort, controller.preferences.value.descending),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: EntrySort.name, child: Text('名称')),
-            PopupMenuItem(value: EntrySort.modified, child: Text('修改时间')),
-            PopupMenuItem(value: EntrySort.created, child: Text('创建时间')),
-            PopupMenuItem(value: EntrySort.size, child: Text('文件大小')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, (selected, descending)),
+              child: const Text('确定'),
+            ),
           ],
         ),
-      if (!needsRoot)
-        IconButton(
-          tooltip: controller.preferences.value.descending ? '改为升序' : '改为降序',
-          onPressed: busy
-              ? null
-              : () => controller.setSort(
-                  controller.preferences.value.sort,
-                  !controller.preferences.value.descending,
-                ),
-          icon: Icon(
-            controller.preferences.value.descending ? Icons.south : Icons.north,
-          ),
-        ),
-      IconButton(
-        tooltip: '设置',
-        icon: const Icon(Icons.settings_outlined),
-        onPressed: busy
-            ? null
-            : () async {
-                await Get.toNamed<void>(Routes.settings);
-                await controller.refresh();
-              },
       ),
-    ],
-  );
+    );
+    if (confirmed != null) {
+      await controller.setSort(confirmed.$1, confirmed.$2);
+    }
+  }
 
-  /// 搜索模式的应用栏；关闭即退出搜索（系统返回同样退出）。
+  /// 搜索状态行：扫描中显示可取消，结果不完整时给出原因；其余情况不显示。
+  Widget? _searchStatus() {
+    if (controller.searching.value) {
+      return ListTile(
+        dense: true,
+        title: const Text('正在扫描子文件夹…'),
+        trailing: TextButton(
+          onPressed: controller.cancelSearch,
+          child: const Text('取消'),
+        ),
+      );
+    }
+    if (controller.searchIncomplete.value) {
+      return const ListTile(
+        dense: true,
+        leading: Icon(Icons.info_outline),
+        title: Text('部分文件夹无法访问，结果不完整'),
+      );
+    }
+    return null;
+  }
+
+  /// 搜索模式的应用栏；放大镜作为输入框前缀，关闭即退出搜索。
   PreferredSizeWidget _searchBar(bool busy) => AppBar(
     automaticallyImplyLeading: false,
     title: TextField(
       controller: _searchText,
       autofocus: false,
       decoration: const InputDecoration(
+        prefixIcon: Icon(Icons.search),
         hintText: '搜索文件名',
         border: InputBorder.none,
       ),
@@ -683,6 +687,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (controller.searchResults.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: _listPadding,
         children: const [
           SizedBox(height: 100),
           Icon(Icons.search_off, size: 56, color: Colors.grey),
@@ -693,6 +698,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: _listPadding,
       itemCount: controller.searchResults.length,
       separatorBuilder: (_, _) => const Divider(height: 1, indent: 64),
       itemBuilder: (context, index) =>
@@ -724,10 +730,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
+  /// 列表底部内边距：为悬浮按钮与系统底部安全区留出空间。
+  EdgeInsets get _listPadding =>
+      EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom);
+
   Widget _entryList(bool busy, bool selectionMode) {
     if (controller.entries.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: _listPadding,
         children: const [
           SizedBox(height: 100),
           Icon(Icons.folder_open_outlined, size: 56, color: Colors.grey),
@@ -740,6 +751,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       onRefresh: controller.refresh,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: _listPadding,
         itemCount: controller.entries.length,
         separatorBuilder: (_, _) => const Divider(height: 1, indent: 64),
         itemBuilder: (context, index) {
@@ -751,41 +763,68 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
-  /// 浏览行：缩略图（视频与图片）；长按弹出文件功能菜单。
-  Widget _browseRow(StorageEntry entry, bool busy) {
+  /// 文件行详情：大小、创建时间（仅按创建时间排序时）与修改时间；无数据显示 null。
+  String? _entryDetail(StorageEntry entry) {
     final date = entry.modifiedAt;
     final showCreated = controller.preferences.value.sort == EntrySort.created;
     final created = controller.createdAtOf(entry);
     final detail = [
       if (!entry.isDirectory) formatBytes(entry.size),
-      if (showCreated && created != null) _formatDate(created),
-      if (date != null) _formatDate(date),
+      if (showCreated && created != null) _formatDateTime(created),
+      if (date != null) _formatDateTime(date),
     ];
+    return detail.isEmpty ? null : detail.join(' · ');
+  }
+
+  /// 视频与图片使用惰性缩略图，其余类型回退为类型图标。
+  Widget _entryThumbnail(StorageEntry entry) => entry.isVideo || entry.isImage
+      ? EntryThumbnail(
+          identity: _thumbnailIdentity(entry),
+          load: () => controller.thumbnailFor(entry),
+          onCancel: () => controller.cancelThumbnail(entry),
+          fallback: _entryIcon(entry),
+        )
+      : _entryIcon(entry);
+
+  /// 缩略图重载标识：URI 加修改时间指纹，条目变化即重新加载。
+  String _thumbnailIdentity(StorageEntry entry) =>
+      '${entry.uri}|${entry.modifiedAt?.millisecondsSinceEpoch ?? 0}';
+
+  /// 浏览行：缩略图（视频与图片）；长按弹出文件功能菜单。
+  Widget _browseRow(StorageEntry entry, bool busy) {
+    final detail = _entryDetail(entry);
     return ListTile(
-      leading: entry.isVideo || entry.isImage
-          ? EntryThumbnail(
-              load: () => controller.thumbnailFor(entry),
-              fallback: _entryIcon(entry),
-            )
-          : _entryIcon(entry),
+      leading: _entryThumbnail(entry),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: detail.isEmpty ? null : Text(detail.join(' · ')),
+      subtitle: detail == null ? null : Text(detail),
       enabled: !busy,
       onTap: () => _open(entry),
       onLongPress: busy ? null : () => _actions(entry),
     );
   }
 
-  /// 选择行：勾选状态直接反映在头部图标上，点击切换。
+  /// 选择行：缩略图左侧是选择按钮，文件信息与浏览行一致，点击整行切换选中。
   Widget _selectionRow(StorageEntry entry) {
     final checked = controller.selected.contains(entry.uri);
+    final detail = _entryDetail(entry);
     return ListTile(
-      leading: Icon(
-        checked ? Icons.check_box : Icons.check_box_outline_blank,
-        color: checked ? Theme.of(context).colorScheme.primary : null,
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: checked ? '取消选择' : '选择',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => controller.toggleSelect(entry),
+            icon: Icon(
+              checked ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: checked ? Theme.of(context).colorScheme.primary : null,
+            ),
+          ),
+          _entryThumbnail(entry),
+        ],
       ),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: entry.isDirectory ? null : Text(formatBytes(entry.size)),
+      subtitle: detail == null ? null : Text(detail),
       onTap: () => controller.toggleSelect(entry),
     );
   }
@@ -882,8 +921,120 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   );
 }
 
-String _formatDate(DateTime time) {
-  return '${time.year}/'
-      '${time.month.toString().padLeft(2, '0')}/'
-      '${time.day.toString().padLeft(2, '0')}';
+/// 时间显示格式：年-月-日 时:分。
+String _formatDateTime(DateTime time) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${time.year}-${two(time.month)}-${two(time.day)} '
+      '${two(time.hour)}:${two(time.minute)}';
+}
+
+/// “排序方式”弹窗的可选项，顺序与展示名称。
+const _sortOptions = <(EntrySort, String)>[
+  (EntrySort.name, '按名称'),
+  (EntrySort.modified, '按修改时间'),
+  (EntrySort.created, '按创建时间'),
+  (EntrySort.size, '按文件大小'),
+];
+
+/// “排序方式”字段选项的字号；需要调整四项文本大小时集中改这里。
+const double _sortOptionFontSize = 13;
+
+/// “更多”菜单项；搜索为独立按钮，排序字段与升降序在“排序方式”弹窗中完成。
+enum _HomeMenuAction { chooseSort, settings }
+
+/// “排序方式”字段选项：选中图标 + 文本，字号由外部传入以便统一调整。
+class _SortOptionTile extends StatelessWidget {
+  const _SortOptionTile({
+    required this.label,
+    required this.selected,
+    required this.fontSize,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final double fontSize;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(6),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            selected
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            size: fontSize + 7,
+            color: selected ? Theme.of(context).colorScheme.primary : null,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: fontSize),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// “排序方向”横排单选：整块区域可点，Radio 仅作为选中指示。
+class _DirectionOption extends StatelessWidget {
+  const _DirectionOption({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(4),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<bool>(
+            value: value,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          const SizedBox(width: 4),
+          Text(label),
+        ],
+      ),
+    ),
+  );
+}
+
+/// 菜单项统一布局：固定宽度的前置图标槽保证各项文本对齐。
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.label, this.icon});
+
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SizedBox(width: 20, child: icon == null ? null : Icon(icon, size: 18)),
+      const SizedBox(width: 12),
+      Text(label),
+    ],
+  );
 }

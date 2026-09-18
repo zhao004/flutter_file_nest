@@ -2,7 +2,10 @@ import 'package:flutter/services.dart';
 
 import '../models/batch_models.dart';
 import '../models/storage_entry.dart';
-import 'vault_store.dart';
+
+/// 缩略图请求的最长边像素；列表显示区域仅 48 逻辑像素，
+/// 采用较小尺寸可降低原生解码、通道传输与 Dart 解码成本。
+const int thumbnailDimension = 128;
 
 /// 封装平台协议，测试通过替代此接口覆盖权限与文件失败状态。
 abstract interface class StorageGateway {
@@ -29,14 +32,15 @@ abstract interface class StorageGateway {
   );
 
   /// 视频或图片的缩略图 PNG 数据；失败或不可解码时返回 null。
-  Future<Uint8List?> thumbnail(StorageEntry entry, {int maxDimension});
+  Future<Uint8List?> thumbnail(
+    StorageEntry entry, {
+    int maxDimension = thumbnailDimension,
+  });
 
   /// 视频的可读属性（时长/尺寸等）；缺失的键按未知处理。
   Future<Map<String, Object?>> videoDetails(StorageEntry entry);
   Future<DeletionImpact> deletionImpact(StorageEntry entry);
   Future<void> delete(StorageEntry entry);
-  Future<StorageEntry> saveRecording(RecordingJob job);
-  Future<void> forgetRecording(String id);
   Future<void> openFile(StorageEntry entry);
   Future<void> openAppSettings();
 
@@ -151,11 +155,13 @@ class SafStorage implements StorageGateway {
   }
 
   @override
-  Future<Uint8List?> thumbnail(StorageEntry entry, {int maxDimension = 256}) =>
-      channel.invokeMethod<Uint8List>('loadThumbnail', {
-        ..._entry(entry),
-        'maxDimension': maxDimension,
-      });
+  Future<Uint8List?> thumbnail(
+    StorageEntry entry, {
+    int maxDimension = thumbnailDimension,
+  }) => channel.invokeMethod<Uint8List>('loadThumbnail', {
+    ..._entry(entry),
+    'maxDimension': maxDimension,
+  });
 
   @override
   Future<Map<String, Object?>> videoDetails(StorageEntry entry) async {
@@ -181,20 +187,6 @@ class SafStorage implements StorageGateway {
   @override
   Future<void> delete(StorageEntry entry) =>
       channel.invokeMethod<void>('deleteEntry', _entry(entry));
-
-  @override
-  Future<StorageEntry> saveRecording(RecordingJob job) =>
-      _document('saveRecording', {
-        'rootUri': job.rootUri,
-        'parentDocumentId': job.parentId,
-        'sourcePath': job.sourcePath,
-        'fileName': job.fileName,
-        'operationId': job.id,
-      });
-
-  @override
-  Future<void> forgetRecording(String id) =>
-      channel.invokeMethod<void>('forgetRecording', {'operationId': id});
 
   @override
   Future<void> openFile(StorageEntry entry) =>
