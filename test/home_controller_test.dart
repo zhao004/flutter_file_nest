@@ -60,6 +60,27 @@ void main() {
     expect(controller.error.value, isNotNull);
   });
 
+  test('新建空文件到当前目录并登记创建时间', () async {
+    final storage = FakeStorage();
+    final controller = HomeController(
+      storage: storage,
+      store: MemoryStore(),
+      archive: FakeArchive(),
+    );
+    await controller.pickRoot();
+    await controller.createFile('说明.txt');
+    expect(storage.fileCreates, 1);
+    final created = controller.entries.single;
+    expect(created.name, '说明.txt');
+    expect(created.isDirectory, false);
+    expect(controller.createdAtOf(created), isNotNull);
+
+    // 非法名称不触发原生调用。
+    await controller.createFile('..');
+    expect(storage.fileCreates, 1);
+    expect(controller.error.value, isNotNull);
+  });
+
   test('进入与返回目录时清空上一目录的缩略图排队请求', () async {
     final storage = FakeStorage();
     final thumbs = FakeThumbnails();

@@ -131,6 +131,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
   }
 
+  /// 新建空文件：扩展名由用户输入决定，用于后续类型识别。
+  Future<void> _createFileDialog() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => const EntryNameDialog(title: '新建文件', fieldLabel: '文件名称'),
+    );
+    if (name == null) return;
+    await controller.createFile(name);
+  }
+
   Future<void> _delete(StorageEntry entry) async {
     try {
       controller.busy.value = true;
@@ -490,6 +500,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       folderState: FolderIconState.create,
                     ),
                     onPressed: () => _nameDialog(),
+                  ),
+                  FabAction(
+                    label: '新建文件',
+                    icon: const Icon(Icons.note_add_outlined),
+                    onPressed: _createFileDialog,
                   ),
                   FabAction(
                     label: '选择文件',

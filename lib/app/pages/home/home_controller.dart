@@ -235,6 +235,23 @@ class HomeController extends GetxController {
     await _load();
   });
 
+  /// 在当前目录新建空文件；扩展名由用户输入决定，用于后续类型识别。
+  Future<void> createFile(String name) => _run(() async {
+    final invalid = validateEntryName(name);
+    if (invalid != null) {
+      throw PlatformException(code: 'invalid_name', message: invalid);
+    }
+    final entry = await storage.createFile(current!, name.trim());
+    try {
+      final now = DateTime.now();
+      await store.recordCreated(entry.uri, now);
+      _createdTimes[entry.uri] = now;
+    } catch (_) {
+      /* 元数据可重建。 */
+    }
+    await _load();
+  });
+
   /// 重命名文件或文件夹（P3B-04 单文件入口）。
   Future<void> renameEntry(StorageEntry entry, String name) => _run(() async {
     final invalid = validateEntryName(name);

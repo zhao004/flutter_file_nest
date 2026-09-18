@@ -19,6 +19,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.util.ArrayDeque
+import java.util.Locale
 
 /**
  * SAF 是文件树的权威来源。调用方必须在 IO 队列执行。
@@ -33,7 +34,7 @@ class SafStorage(private val context: Context) {
         val rootUri = Uri.parse(StorageRules.string(args, "rootUri"))
         val root = root(rootUri)
         if (method == "validateRoot") return root
-        val parentKey = if (method in setOf("listChildren", "createFolder", "importDocument")) "parentDocumentId" else "documentId"
+        val parentKey = if (method in setOf("listChildren", "createFolder", "createFile", "importDocument")) "parentDocumentId" else "documentId"
         val id = StorageRules.string(args, parentKey)
         val document = read(rootUri, id)
         return when (method) {
@@ -44,6 +45,14 @@ class SafStorage(private val context: Context) {
                 checkName(rootUri, id, name)
                 val created = DocumentsContract.createDocument(resolver, uri(rootUri, id), Document.MIME_TYPE_DIR, name)
                     ?: throw StorageFailure("create_failed", "无法创建文件夹")
+                read(rootUri, DocumentsContract.getDocumentId(created))
+            }
+            "createFile" -> {
+                requireFlag(document, "canCreate")
+                val name = StorageRules.name(StorageRules.string(args, "name"))
+                checkName(rootUri, id, name)
+                val created = DocumentsContract.createDocument(resolver, uri(rootUri, id), mimeTypeForName(name), name)
+                    ?: throw StorageFailure("create_failed", "无法创建文件")
                 read(rootUri, DocumentsContract.getDocumentId(created))
             }
             "renameEntry" -> {
@@ -394,6 +403,25 @@ class SafStorage(private val context: Context) {
                 "width" to retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull(),
                 "height" to retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull())
         } catch (_: Exception) { emptyMap() } finally { retriever.release() }
+    }
+
+    /** 新建文件的 MIME 推断：优先系统扩展名映射，其次常见代码/文本类型。 */
+    private fun mimeTypeForName(name: String): String {
+        val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+        if (extension.isNotEmpty()) {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)?.let { return it }
+        }
+        return when (extension) {
+            "md", "markdown" -> "text/markdown"
+            "dart", "kt", "kts", "java", "js", "ts", "tsx", "py", "c", "h",
+            "cpp", "hpp", "cs", "rs", "go", "php", "sh", "yaml", "yml",
+            "toml", "ini", "cfg", "conf", "properties", "sql" -> "text/plain"
+            "json" -> "application/json"
+            "xml" -> "application/xml"
+            "html", "htm" -> "text/html"
+            "csv" -> "text/csv"
+            else -> "application/octet-stream"
+        }
     }
 
     private fun checkName(tree: Uri, parent: String, name: String, except: String? = null) {

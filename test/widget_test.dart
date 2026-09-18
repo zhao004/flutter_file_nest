@@ -53,6 +53,34 @@ void main() {
     expect(storage.creates, 1);
   });
 
+  testWidgets('新建文件并校验非法名称', (tester) async {
+    final storage = FakeStorage();
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
+        archive: FakeArchive(),
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+    // 操作入口为可展开悬浮按钮；点击展开后的小按钮。
+    await tester.tap(find.byTooltip('更多操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('新建文件'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '../不合法');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    expect(find.text('名称不能含路径或控制字符'), findsOneWidget);
+    expect(storage.fileCreates, 0);
+    await tester.enterText(find.byType(TextFormField), '笔记.txt');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    expect(find.text('笔记.txt'), findsOneWidget);
+    expect(storage.fileCreates, 1);
+  });
+
   testWidgets('删除前显示影响数量，取消不会删除，确认后刷新', (tester) async {
     final storage = FakeStorage();
     storage.contents['root']!.add(entry('现场', directory: true));

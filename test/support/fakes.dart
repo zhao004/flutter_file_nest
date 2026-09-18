@@ -52,6 +52,20 @@ StorageEntry entry(
   mimeType: mime,
 );
 
+/// 测试用 MIME 推断；仅覆盖常见扩展名，其余返回 null 由分类按扩展名判定。
+String? _mimeFromName(String name) {
+  final dot = name.lastIndexOf('.');
+  if (dot < 0 || dot == name.length - 1) return null;
+  return switch (name.substring(dot + 1).toLowerCase()) {
+    'txt' => 'text/plain',
+    'md' => 'text/markdown',
+    'json' => 'application/json',
+    'png' => 'image/png',
+    'jpg' || 'jpeg' => 'image/jpeg',
+    _ => null,
+  };
+}
+
 class MemoryStore implements VaultStore {
   VaultPreferences value = const VaultPreferences();
   final created = <String, DateTime>{};
@@ -163,6 +177,7 @@ class FakeStorage implements StorageGateway {
   int videoCaptures = 0;
   int deletes = 0;
   int creates = 0;
+  int fileCreates = 0;
   final moves = <String>[];
   final renames = <String>[];
   int thumbnailLoads = 0;
@@ -188,6 +203,14 @@ class FakeStorage implements StorageGateway {
   Future<StorageEntry> createFolder(StorageEntry parent, String name) async {
     creates++;
     final created = entry(name, directory: true);
+    contents.putIfAbsent(parent.documentId, () => []).add(created);
+    return created;
+  }
+
+  @override
+  Future<StorageEntry> createFile(StorageEntry parent, String name) async {
+    fileCreates++;
+    final created = entry(name, mime: _mimeFromName(name));
     contents.putIfAbsent(parent.documentId, () => []).add(created);
     return created;
   }

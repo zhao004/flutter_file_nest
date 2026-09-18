@@ -14,6 +14,9 @@ abstract interface class StorageGateway {
   Future<List<StorageEntry>> list(StorageEntry folder);
   Future<StorageEntry> createFolder(StorageEntry parent, String name);
 
+  /// 在目标目录新建空文件；MIME 由文件名扩展名推断，无法推断时为通用二进制。
+  Future<StorageEntry> createFile(StorageEntry parent, String name);
+
   /// 重命名文件或文件夹；返回新标识的条目，调用方须以返回值为准。
   Future<StorageEntry> renameEntry(
     StorageEntry parent,
@@ -146,6 +149,10 @@ class SafStorage implements StorageGateway {
   @override
   Future<StorageEntry> createFolder(StorageEntry parent, String name) =>
       _document('createFolder', {..._parent(parent), 'name': name});
+
+  @override
+  Future<StorageEntry> createFile(StorageEntry parent, String name) =>
+      _document('createFile', {..._parent(parent), 'name': name});
 
   @override
   Future<StorageEntry> renameEntry(
