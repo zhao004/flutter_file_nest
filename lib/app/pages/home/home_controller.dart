@@ -6,8 +6,10 @@ import 'package:get/get.dart';
 
 import '../../models/archive_models.dart';
 import '../../models/batch_models.dart';
+import '../../models/incoming_share.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
+import '../../services/incoming_share_service.dart';
 import '../../services/saf_storage.dart';
 import '../../services/thumbnail_service.dart';
 import '../../services/vault_store.dart';
@@ -22,13 +24,19 @@ class HomeController extends GetxController {
     required this.store,
     required this.archive,
     this.thumbnails = const NoThumbnails(),
+    this.incoming,
   });
   final StorageGateway storage;
   final VaultStore store;
   final ArchiveGateway archive;
   final ThumbnailGateway thumbnails;
+  final IncomingShareGateway? incoming;
   final folders = <StorageEntry>[].obs;
   final entries = <StorageEntry>[].obs;
+
+  /// 来自其他应用、等待选择目标文件夹保存的文件。
+  final incomingShares = <IncomingShare>[].obs;
+  StreamSubscription<List<IncomingShare>>? _incomingSub;
   final preferences = const VaultPreferences().obs;
   final busy = false.obs;
   final error = RxnString();
@@ -70,8 +78,27 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    startIncoming();
     initialize();
   }
+
+  /// 订阅外部打开/分享事件；重复调用无副作用，测试也可直接调用。
+  void startIncoming() {
+    // 事件通道仅在真实运行时可用；缺失时静默忽略。
+    _incomingSub ??= incoming?.shares.listen(
+      incomingShares.addAll,
+      onError: (_) {},
+    );
+  }
+
+  @override
+  void onClose() {
+    _incomingSub?.cancel();
+    super.onClose();
+  }
+
+  /// 放弃当前待保存的外部分享文件。
+  void clearIncoming() => incomingShares.clear();
 
   Future<void> initialize() => _run(() async {
     preferences.value = await store.loadPreferences();
@@ -264,6 +291,28 @@ class HomeController extends GetxController {
       rethrow;
     }
   });
+
+  /// 将外部分享的文件保存到 [folder]；成功返回 true。
+  ///
+  /// 确认保存后即消费待保存列表；部分失败仍刷新已成功条目并上报错误，
+  /// 避免重复保存同一批文件。
+  Future<bool> importIncoming(StorageEntry folder) async {
+    final sources = [for (final share in incomingShares) share.uri];
+    if (sources.isEmpty) return false;
+    incomingShares.clear();
+    var saved = false;
+    await _run(() async {
+      try {
+        final imported = await storage.importDocuments(sources, folder);
+        if (imported.isNotEmpty) await _load();
+        saved = true;
+      } catch (_) {
+        await _load();
+        rethrow;
+      }
+    });
+    return saved;
+  }
 
   /// 系统相机拍摄照片并复制到当前目录；本应用创建的内容登记创建时间。
   Future<void> capturePhoto() => _run(() async {

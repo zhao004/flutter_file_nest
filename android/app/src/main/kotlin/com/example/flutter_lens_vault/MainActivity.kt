@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
@@ -49,6 +50,9 @@ class MainActivity : FlutterFragmentActivity() {
     private var channel: MethodChannel? = null
     private var archiveChannel: MethodChannel? = null
     private var events: EventChannel.EventSink? = null
+    // 来自其他应用（微信/QQ 等）的待保存文件；Flutter 未监听时先缓冲。
+    private var incomingSink: EventChannel.EventSink? = null
+    private var pendingShares: List<Map<String, Any?>>? = null
     private var archive: ArchiveManager? = null
     private var storageHandler: SafStorage? = null
     private val picker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { response ->
@@ -105,6 +109,7 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
                 "pickImport" -> startImport(call, result)
+                "importDocuments" -> startImportDocuments(call, result)
                 "takePhoto" -> startPhotoCapture(call, result)
                 "takeVideo" -> startVideoCapture(call, result)
                 "openAppSettings" -> {
@@ -140,6 +145,23 @@ class MainActivity : FlutterFragmentActivity() {
                     events = null
                 }
             })
+        EventChannel(engine.dartExecutor.binaryMessenger, "lens_vault/incoming")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                    incomingSink = sink
+                    pendingShares?.let { shares ->
+                        pendingShares = null
+                        sink.success(shares)
+                    }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    incomingSink = null
+                }
+            })
+        // 冷启动时可能已带着分享 Intent，先解析并按需缓冲。
+        dispatchIncomingShares(intent)
+
         archiveChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/archive")
         archiveChannel!!.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -216,30 +238,59 @@ class MainActivity : FlutterFragmentActivity() {
             result.success(emptyList<Any>())
             return
         }
-        execute(result) {
-            val entries = mutableListOf<Map<String, Any?>>()
-            var failed = 0
-            for (uri in uris) {
-                try {
-                    val entry = storageHandler?.handle(
-                        "importDocument",
-                        mapOf(
-                            "sourceUri" to uri.toString(),
-                            "rootUri" to target.first,
-                            "parentDocumentId" to target.second,
-                        ),
-                    ) as? Map<String, Any?>
-                    if (entry != null) entries.add(entry) else failed++
-                } catch (_: Exception) {
-                    // 单个文件失败不阻塞其余导入，最后统一上报失败数量。
-                    failed++
-                }
-            }
-            if (failed > 0) {
-                throw StorageFailure("import_partial", "已导入 ${entries.size} 个文件，$failed 个失败")
-            }
-            entries
+        execute(result) { importSources(uris.map { it.toString() }, target) }
+    }
+
+    /**
+     * 按来源 URI 批量导入到指定目录；供外部分享保存流程调用。
+     * 只接受 content:// 与 file:// 来源，避免任意输入。
+     */
+    private fun startImportDocuments(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+        val rootUri = args["rootUri"] as? String
+        val parentId = args["parentDocumentId"] as? String
+        if (rootUri.isNullOrBlank() || parentId.isNullOrBlank()) {
+            result.error("invalid_argument", "缺少目标目录", null)
+            return
         }
+        val sources = (args["sources"] as? List<*>)
+            ?.filterIsInstance<String>()
+            ?.filter { it.startsWith("content://") || it.startsWith("file://") }
+            .orEmpty()
+        if (sources.isEmpty()) {
+            result.success(emptyList<Any>())
+            return
+        }
+        execute(result) { importSources(sources, rootUri to parentId) }
+    }
+
+    /** 逐个导入来源到目标目录；单个失败不阻塞其余，最后按失败数量上报。 */
+    private fun importSources(
+        sources: List<String>,
+        target: Pair<String, String>,
+    ): List<Map<String, Any?>> {
+        val entries = mutableListOf<Map<String, Any?>>()
+        var failed = 0
+        for (source in sources) {
+            try {
+                val entry = storageHandler?.handle(
+                    "importDocument",
+                    mapOf(
+                        "sourceUri" to source,
+                        "rootUri" to target.first,
+                        "parentDocumentId" to target.second,
+                    ),
+                ) as? Map<String, Any?>
+                if (entry != null) entries.add(entry) else failed++
+            } catch (_: Exception) {
+                // 单个文件失败不阻塞其余导入，最后统一上报失败数量。
+                failed++
+            }
+        }
+        if (failed > 0) {
+            throw StorageFailure("import_partial", "已导入 ${entries.size} 个文件，$failed 个失败")
+        }
+        return entries
     }
 
     /**
@@ -419,10 +470,73 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    /** 应用已在前台时收到新的打开/分享请求。 */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        dispatchIncomingShares(intent)
+    }
+
+    /** 解析并下发外部文件；Flutter 尚未监听时先缓冲。 */
+    private fun dispatchIncomingShares(intent: Intent?) {
+        val shares = extractIncomingShares(intent) ?: return
+        val sink = incomingSink
+        if (sink != null) sink.success(shares) else pendingShares = shares
+    }
+
+    /** 从 VIEW / SEND / SEND_MULTIPLE 中提取可读文件；无有效来源返回 null。 */
+    @Suppress("DEPRECATION")
+    private fun extractIncomingShares(intent: Intent?): List<Map<String, Any?>>? {
+        if (intent == null) return null
+        val uris = when (intent.action) {
+            Intent.ACTION_VIEW -> listOfNotNull(intent.data)
+            Intent.ACTION_SEND -> listOfNotNull(intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+            Intent.ACTION_SEND_MULTIPLE ->
+                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+            else -> return null
+        }
+        val readable = uris.filter { it.scheme == "content" || it.scheme == "file" }
+        if (readable.isEmpty()) return null
+        return readable.map { uri ->
+            val (name, size) = shareMeta(uri)
+            mapOf("uri" to uri.toString(), "name" to name, "size" to size)
+        }
+    }
+
+    /** 读取分享文件的显示名与大小；不可用时返回 null，保存阶段再解析。 */
+    private fun shareMeta(uri: Uri): Pair<String?, Long?> {
+        if (uri.scheme == "file") {
+            val file = File(uri.path ?: return null to null)
+            return file.name to file.length()
+        }
+        return try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null to null
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                val name = if (nameIndex >= 0 && !cursor.isNull(nameIndex)) {
+                    cursor.getString(nameIndex)
+                } else {
+                    null
+                }
+                val size = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                    cursor.getLong(sizeIndex).takeIf { it >= 0 }
+                } else {
+                    null
+                }
+                name to size
+            } ?: (null to null)
+        } catch (_: Exception) {
+            null to null
+        }
+    }
+
     override fun onDestroy() {
         channel?.setMethodCallHandler(null)
         archiveChannel?.setMethodCallHandler(null)
         events = null
+        incomingSink = null
+        pendingShares = null
         pickerResult = null
         importResult = null
         photoResult = null

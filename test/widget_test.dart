@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:flutter_lens_vault/app/models/archive_models.dart';
+import 'package:flutter_lens_vault/app/models/incoming_share.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_controller.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_view.dart';
@@ -476,6 +477,34 @@ void main() {
     await tester.tap(find.descendant(of: dialog, matching: find.text('取消')));
     await tester.pumpAndSettle();
     expect(storage.moves, isEmpty);
+  });
+
+  testWidgets('收到外部文件后选择目标文件夹保存', (tester) async {
+    final storage = FakeStorage()
+      ..importResults = [entry('分享.pdf', mime: 'application/pdf')];
+    final incoming = FakeIncomingShares();
+    addTearDown(incoming.close);
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
+        archive: FakeArchive(),
+        incoming: incoming,
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+    // 模拟微信/QQ“打开方式/分享”把文件送入应用。
+    incoming.emit([const IncomingShare(uri: 'content://wx/9', name: '分享.pdf')]);
+    await tester.pumpAndSettle();
+    // 默认位于根目录，直接确认保存到根。
+    expect(find.text('保存到此文件夹'), findsOneWidget);
+    expect(find.textContaining('保存到：'), findsOneWidget);
+    await tester.tap(find.text('保存到此文件夹'));
+    await tester.pumpAndSettle();
+    expect(storage.importDocumentCalls, ['content://wx/9']);
+    expect(find.text('分享.pdf'), findsOneWidget);
+    expect(find.textContaining('已保存 1 个文件'), findsOneWidget);
   });
 
   testWidgets('视频预览页初始化失败时展示错误态与外部打开入口', (tester) async {

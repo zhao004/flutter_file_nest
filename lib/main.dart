@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
 import 'app/services/archive_service.dart';
+import 'app/services/incoming_share_service.dart';
 import 'app/services/saf_storage.dart';
 import 'app/services/thumbnail_service.dart';
 import 'app/services/vault_store.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
   Get.put<ThumbnailGateway>(ThumbnailService(storage), permanent: true);
   Get.put<VaultStore>(DriftVaultStore(AppDatabase()), permanent: true);
   Get.put<ArchiveGateway>(ArchiveService(), permanent: true);
+  Get.put<IncomingShareGateway>(const IncomingShareService(), permanent: true);
   runApp(const LensVaultApp());
 }
 

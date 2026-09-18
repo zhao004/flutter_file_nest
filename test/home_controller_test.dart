@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_lens_vault/app/models/archive_models.dart';
 import 'package:flutter_lens_vault/app/models/batch_models.dart';
+import 'package:flutter_lens_vault/app/models/incoming_share.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
 import 'package:flutter_lens_vault/app/pages/home/home_controller.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
@@ -471,6 +472,55 @@ void main() {
       containsAll(['照片.jpg', '合同.pdf']),
     );
     expect(controller.error.value, isNull);
+  });
+
+  test('接收外部分享并保存到指定文件夹', () async {
+    final storage = FakeStorage()
+      ..importResults = [entry('文档.pdf', mime: 'application/pdf')];
+    final incoming = FakeIncomingShares();
+    addTearDown(incoming.close);
+    final controller = HomeController(
+      storage: storage,
+      store: MemoryStore(),
+      archive: FakeArchive(),
+      incoming: incoming,
+    );
+    controller.startIncoming();
+    await controller.pickRoot();
+    incoming.emit([const IncomingShare(uri: 'content://wx/1', name: '文档.pdf')]);
+    await pumpEventQueue();
+    expect(controller.incomingShares, hasLength(1));
+
+    final saved = await controller.importIncoming(controller.folders.first);
+    expect(saved, true);
+    expect(storage.importDocumentCalls, ['content://wx/1']);
+    expect(controller.incomingShares, isEmpty);
+    expect(controller.entries.single.name, '文档.pdf');
+  });
+
+  test('外部分享保存失败时上报错误并消费待保存项', () async {
+    final storage = FakeStorage()
+      ..importDocumentsFailure = PlatformException(
+        code: 'read_failed',
+        message: '无法读取所选内容',
+      );
+    final incoming = FakeIncomingShares();
+    addTearDown(incoming.close);
+    final controller = HomeController(
+      storage: storage,
+      store: MemoryStore(),
+      archive: FakeArchive(),
+      incoming: incoming,
+    );
+    controller.startIncoming();
+    await controller.pickRoot();
+    incoming.emit([const IncomingShare(uri: 'content://wx/2')]);
+    await pumpEventQueue();
+
+    final saved = await controller.importIncoming(controller.folders.first);
+    expect(saved, false);
+    expect(controller.error.value, contains('无法读取'));
+    expect(controller.incomingShares, isEmpty);
   });
 
   test('部分导入失败仍刷新已成功文件并上报错误', () async {

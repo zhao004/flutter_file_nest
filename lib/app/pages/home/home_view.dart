@@ -20,16 +20,90 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   HomeController get controller => Get.find<HomeController>();
 
+  /// 待保存外部分享的处理状态；避免重复弹窗。
+  Worker? _incomingWorker;
+  bool _promptingIncoming = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _incomingWorker = ever(controller.incomingShares, (_) => _handleIncoming());
+    // 冷启动时可能已存在待保存项，构建完成后补处理一次。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleIncoming());
   }
 
   @override
   void dispose() {
+    _incomingWorker?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// 处理来自其他应用的文件：先确保已授权根目录，再选择目标文件夹保存。
+  Future<void> _handleIncoming() async {
+    if (_promptingIncoming || !mounted || controller.incomingShares.isEmpty) {
+      return;
+    }
+    _promptingIncoming = true;
+    try {
+      if (controller.rootRequired.value &&
+          await _pickRootForIncoming() != true) {
+        controller.clearIncoming();
+        return;
+      }
+      final root = controller.folders.firstOrNull;
+      if (root == null) {
+        controller.clearIncoming();
+        return;
+      }
+      if (!mounted) return;
+      final trail = await showDialog<List<StorageEntry>>(
+        context: context,
+        builder: (_) => FolderPickerDialog(
+          storage: controller.storage,
+          root: root,
+          hintPrefix: '保存到：',
+          confirmLabel: '保存到此文件夹',
+        ),
+      );
+      if (trail == null || trail.isEmpty) {
+        controller.clearIncoming();
+        return;
+      }
+      final target = trail.last;
+      final count = controller.incomingShares.length;
+      if (await controller.importIncoming(target)) {
+        _notify('已保存 $count 个文件到「${target.name}」');
+      }
+    } finally {
+      _promptingIncoming = false;
+    }
+  }
+
+  /// 未授权根目录时提示先选择存储文件夹；确认选择返回 true。
+  Future<bool?> _pickRootForIncoming() async {
+    if (!mounted) return false;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('请先选择存储文件夹'),
+        content: const Text('有其他应用的文件待保存，请先授权一个文件夹，再选择保存位置。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('选择文件夹'),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true) return false;
+    await controller.pickRoot();
+    return !controller.rootRequired.value;
   }
 
   @override

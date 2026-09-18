@@ -52,6 +52,14 @@ abstract interface class StorageGateway {
     StorageEntry targetFolder,
   );
 
+  /// 将外部来源（content:// 或 file://）批量复制到目标目录；来源为空返回空列表。
+  ///
+  /// 用于接收其他应用“打开方式/分享”的文件；部分失败由实现上报。
+  Future<List<StorageEntry>> importDocuments(
+    List<String> sourceUris,
+    StorageEntry targetFolder,
+  );
+
   /// 系统相机拍摄照片并复制到目标目录；取消或拍摄失败返回 null。
   Future<StorageEntry?> takePhoto(StorageEntry targetFolder);
 
@@ -203,6 +211,21 @@ class SafStorage implements StorageGateway {
   ) async {
     final values = await channel.invokeListMethod<Object?>('pickImport', {
       'mimeTypes': mimeTypes,
+      'rootUri': targetFolder.rootUri,
+      'parentDocumentId': targetFolder.documentId,
+    });
+    return (values ?? [])
+        .map((value) => StorageEntry.fromMap(value as Map<Object?, Object?>))
+        .toList();
+  }
+
+  @override
+  Future<List<StorageEntry>> importDocuments(
+    List<String> sourceUris,
+    StorageEntry targetFolder,
+  ) async {
+    final values = await channel.invokeListMethod<Object?>('importDocuments', {
+      'sources': sourceUris,
       'rootUri': targetFolder.rootUri,
       'parentDocumentId': targetFolder.documentId,
     });

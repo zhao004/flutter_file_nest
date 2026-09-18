@@ -1,9 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_lens_vault/app/models/batch_models.dart';
+import 'package:flutter_lens_vault/app/models/incoming_share.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
+import 'package:flutter_lens_vault/app/services/incoming_share_service.dart';
 import 'package:flutter_lens_vault/app/services/saf_storage.dart';
 import 'package:flutter_lens_vault/app/services/thumbnail_service.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
+
+/// 可手动推送事件的外部分享来源。
+class FakeIncomingShares implements IncomingShareGateway {
+  final _controller = StreamController<List<IncomingShare>>.broadcast();
+
+  @override
+  Stream<List<IncomingShare>> get shares => _controller.stream;
+
+  void emit(List<IncomingShare> shares) => _controller.add(shares);
+
+  Future<void> close() => _controller.close();
+}
 
 const root = StorageEntry(
   rootUri: 'content://test/tree/root',
@@ -94,12 +110,17 @@ class FakeStorage implements StorageGateway {
   final failingFolders = <String>{};
   final failDeleteNames = <String>{};
   List<StorageEntry> pickImportResults = [];
+  List<StorageEntry> importResults = [];
+  final importDocumentCalls = <String>[];
   StorageEntry? takePhotoResult;
   StorageEntry? takeVideoResult;
   final imports = <String>[];
 
   /// 非空时模拟导入失败：先写入已成功项，再抛出，用于覆盖部分失败路径。
   PlatformException? pickImportFailure;
+
+  /// 非空时模拟外部分享保存失败。
+  PlatformException? importDocumentsFailure;
   int photoCaptures = 0;
   int videoCaptures = 0;
   int deletes = 0;
@@ -233,6 +254,20 @@ class FakeStorage implements StorageGateway {
     final failure = pickImportFailure;
     if (failure != null) throw failure;
     return List.of(pickImportResults);
+  }
+
+  @override
+  Future<List<StorageEntry>> importDocuments(
+    List<String> sourceUris,
+    StorageEntry targetFolder,
+  ) async {
+    importDocumentCalls.addAll(sourceUris);
+    for (final entry in importResults) {
+      contents.putIfAbsent(targetFolder.documentId, () => []).add(entry);
+    }
+    final failure = importDocumentsFailure;
+    if (failure != null) throw failure;
+    return List.of(importResults);
   }
 
   @override
