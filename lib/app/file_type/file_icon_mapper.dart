@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import 'file_category.dart';
 import 'file_type_info.dart';
@@ -23,34 +24,34 @@ enum FolderIconState {
 
 /// 分类到图标的映射；UI 只依赖分类，不感知扩展名。
 ///
-/// [folderState] 仅在分类为 [FileCategory.folder] 时生效。
-IconData fileCategoryIcon(
+/// 图标来自 hugeicons 免费 stroke-rounded 集；[folderState] 仅在分类为
+/// [FileCategory.folder] 时生效。渲染请使用 `FileCategoryIcon`。
+FileIcon fileCategoryIcon(
   FileCategory category, {
   FolderIconState folderState = FolderIconState.closed,
 }) => switch (category) {
   FileCategory.folder => switch (folderState) {
-    FolderIconState.closed => Icons.folder,
-    FolderIconState.open => Icons.folder_open,
-    FolderIconState.create => Icons.create_new_folder_outlined,
-    // Material Icons 没有 folder_lock，用锁形图标表达受保护/只读。
-    FolderIconState.locked => Icons.lock_outline,
+    FolderIconState.closed => HugeIcons.strokeRoundedFolder01,
+    FolderIconState.open => HugeIcons.strokeRoundedFolderOpen,
+    FolderIconState.create => HugeIcons.strokeRoundedFolderAdd,
+    FolderIconState.locked => HugeIcons.strokeRoundedFolderLocked,
   },
-  FileCategory.image => Icons.image_outlined,
-  FileCategory.video => Icons.movie_outlined,
-  FileCategory.audio => Icons.music_note_outlined,
-  FileCategory.pdf => Icons.picture_as_pdf_outlined,
-  FileCategory.document => Icons.description_outlined,
-  FileCategory.spreadsheet => Icons.table_chart_outlined,
-  FileCategory.presentation => Icons.slideshow_outlined,
-  FileCategory.archive => Icons.archive_outlined,
-  FileCategory.apk => Icons.android_outlined,
-  FileCategory.text => Icons.notes_outlined,
-  FileCategory.code => Icons.code_outlined,
-  FileCategory.database => Icons.storage_outlined,
-  FileCategory.font => Icons.text_fields_outlined,
-  FileCategory.ebook => Icons.menu_book_outlined,
-  FileCategory.subtitle => Icons.subtitles_outlined,
-  FileCategory.unknown => Icons.insert_drive_file_outlined,
+  FileCategory.image => HugeIcons.strokeRoundedImage01,
+  FileCategory.video => HugeIcons.strokeRoundedVideo01,
+  FileCategory.audio => HugeIcons.strokeRoundedMusicNote01,
+  FileCategory.pdf => HugeIcons.strokeRoundedPdf01,
+  FileCategory.document => HugeIcons.strokeRoundedDoc01,
+  FileCategory.spreadsheet => HugeIcons.strokeRoundedXls01,
+  FileCategory.presentation => HugeIcons.strokeRoundedPpt01,
+  FileCategory.archive => HugeIcons.strokeRoundedZip01,
+  FileCategory.apk => HugeIcons.strokeRoundedAndroid,
+  FileCategory.text => HugeIcons.strokeRoundedNote01,
+  FileCategory.code => HugeIcons.strokeRoundedSourceCode,
+  FileCategory.database => HugeIcons.strokeRoundedDatabase,
+  FileCategory.font => HugeIcons.strokeRoundedTextFont,
+  FileCategory.ebook => HugeIcons.strokeRoundedBook01,
+  FileCategory.subtitle => HugeIcons.strokeRoundedSubtitle,
+  FileCategory.unknown => HugeIcons.strokeRoundedFileUnknown,
 };
 
 /// 分类到图标配色的映射；集中管理以免 UI 各处硬编码颜色。

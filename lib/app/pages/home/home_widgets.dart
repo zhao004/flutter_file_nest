@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../file_type/file_category.dart';
+import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
@@ -542,8 +543,9 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
             : FolderIconState.closed;
         return ListTile(
           enabled: !blocked,
-          leading: Icon(
-            fileCategoryIcon(FileCategory.folder, folderState: folderState),
+          leading: FileCategoryIcon(
+            category: FileCategory.folder,
+            folderState: folderState,
             color: fileCategoryColor(
               context,
               FileCategory.folder,
@@ -956,7 +958,7 @@ class FabAction {
   });
 
   final String label;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback onPressed;
 }
 
@@ -1072,7 +1074,7 @@ class _MiniAction extends StatelessWidget {
                   heroTag: null,
                   tooltip: action.label,
                   onPressed: enabled ? onPressed : null,
-                  child: Icon(action.icon),
+                  child: action.icon,
                 ),
               ],
             ),

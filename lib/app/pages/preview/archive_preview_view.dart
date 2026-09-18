@@ -5,8 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 import '../../file_type/file_category.dart';
+import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_extension_map.dart';
-import '../../file_type/file_icon_mapper.dart';
 import '../../file_type/file_type_detector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/archive_reader.dart';
@@ -140,11 +140,12 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
   );
 
   Widget _rowTile(ArchiveContents contents, _ArchiveRow row) {
-    final icon = row.isDirectory
-        ? fileCategoryIcon(FileCategory.folder)
-        : fileCategoryIcon(detectFileCategory(name: row.name));
     return ListTile(
-      leading: Icon(icon),
+      leading: FileCategoryIcon(
+        category: row.isDirectory
+            ? FileCategory.folder
+            : detectFileCategory(name: row.name),
+      ),
       title: Text(row.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: row.isDirectory ? null : Text(formatBytes(row.size)),
       trailing: row.isDirectory

@@ -51,6 +51,7 @@ dependencies:
   flutter_widget_from_html_core: ^0.17.4
   xml: ^7.0.1
   flutter_highlight: ^0.7.0
+  hugeicons: ^1.1.7
 
 dev_dependencies:
   flutter_test:

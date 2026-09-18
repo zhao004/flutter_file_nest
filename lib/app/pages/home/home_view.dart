@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../file_type/file_category.dart';
+import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../models/archive_models.dart';
 import '../../models/storage_entry.dart';
@@ -484,25 +485,25 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 actions: [
                   FabAction(
                     label: '新建文件夹',
-                    icon: fileCategoryIcon(
-                      FileCategory.folder,
+                    icon: const FileCategoryIcon(
+                      category: FileCategory.folder,
                       folderState: FolderIconState.create,
                     ),
                     onPressed: () => _nameDialog(),
                   ),
                   FabAction(
                     label: '选择文件',
-                    icon: Icons.insert_drive_file_outlined,
+                    icon: const Icon(Icons.insert_drive_file_outlined),
                     onPressed: () => controller.importFromPicker(const ['*/*']),
                   ),
                   FabAction(
                     label: '拍照',
-                    icon: Icons.photo_camera_outlined,
+                    icon: const Icon(Icons.photo_camera_outlined),
                     onPressed: controller.capturePhoto,
                   ),
                   FabAction(
                     label: '录制',
-                    icon: Icons.videocam_outlined,
+                    icon: const Icon(Icons.videocam_outlined),
                     onPressed: controller.captureVideo,
                   ),
                 ],
@@ -734,11 +735,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            fileCategoryIcon(
-              FileCategory.folder,
-              folderState: FolderIconState.open,
-            ),
+          FileCategoryIcon(
+            category: FileCategory.folder,
+            folderState: FolderIconState.open,
             size: 64,
             color: fileCategoryColor(context, FileCategory.folder),
           ),
@@ -928,8 +927,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Widget _entryIcon(StorageEntry entry) {
     final category = entry.fileCategory;
     final folderState = _folderState(entry);
-    return Icon(
-      fileCategoryIcon(category, folderState: folderState),
+    return FileCategoryIcon(
+      category: category,
+      folderState: folderState,
       color: fileCategoryColor(context, category, folderState: folderState),
     );
   }

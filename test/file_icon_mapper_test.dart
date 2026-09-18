@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lens_vault/app/file_type/file_category.dart';
+import 'package:flutter_lens_vault/app/file_type/file_category_icon.dart';
 import 'package:flutter_lens_vault/app/file_type/file_icon_mapper.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 void main() {
   test('每个分类都有非空标签与图标', () {
     for (final category in FileCategory.values) {
       final info = fileTypeInfo(category);
       expect(info.label, isNotEmpty, reason: category.name);
-      expect(info.icon, isNotNull, reason: category.name);
+      expect(info.icon, isNotEmpty, reason: category.name);
     }
   });
 
   test('文件夹四种状态使用互不相同的图标', () {
     final icons = {
       for (final state in FolderIconState.values)
-        fileCategoryIcon(FileCategory.folder, folderState: state),
+        identityHashCode(
+          fileCategoryIcon(FileCategory.folder, folderState: state),
+        ),
     };
     expect(icons.length, FolderIconState.values.length);
+  });
+
+  testWidgets('FileCategoryIcon 渲染 hugeicons 图标', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: FileCategoryIcon(category: FileCategory.image)),
+      ),
+    );
+    expect(find.byType(HugeIcon), findsOneWidget);
   });
 
   testWidgets('文件夹与媒体分类的配色有别，其余分类统一', (tester) async {

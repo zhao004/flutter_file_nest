@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../file_type/file_type_info.dart';
 import '../../models/storage_entry.dart';
@@ -33,8 +34,8 @@ class UnsupportedPreviewView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                fileCategoryIcon(category),
+              FileCategoryIcon(
+                category: category,
                 size: 64,
                 color: fileCategoryColor(context, category),
               ),

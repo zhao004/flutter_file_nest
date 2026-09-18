@@ -1,6 +1,10 @@
-import 'package:flutter/material.dart';
-
 import 'file_category.dart';
+
+/// 文件分类图标的数据类型；由 hugeicons 的 `HugeIcons.strokeRoundedX` 提供。
+///
+/// 该结构是 hugeicons 的图标描述（SVG 路径 JSON），不是字体 `IconData`，
+/// 必须通过 `FileCategoryIcon` 组件渲染。
+typedef FileIcon = List<List<dynamic>>;
 
 /// 文件分类的展示信息：中文标签与图标。
 ///
@@ -15,7 +19,7 @@ class FileTypeInfo {
 
   final FileCategory category;
   final String label;
-  final IconData icon;
+  final FileIcon icon;
 }
 
 /// 分类的中文名称；未知类型不暴露原始扩展名。
