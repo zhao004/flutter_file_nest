@@ -964,8 +964,9 @@ class FabAction {
 
 /// 可展开悬浮按钮：点击主按钮后在**上方**逐个显示带标签的小按钮。
 ///
-/// 收起时子按钮透明且不接收点击，主按钮位置保持不变；[enabled] 为 false
-/// 时主按钮与子按钮均不可点。
+/// 展开后点击菜单以外的任意位置（列表空白、目录行、面包屑等）自动收起，
+/// 且不拦截该次点击。收起时子按钮透明且不接收点击，主按钮位置保持不变；
+/// [enabled] 为 false 时主按钮与子按钮均不可点。
 class ExpandableActionFab extends StatefulWidget {
   const ExpandableActionFab({
     required this.actions,
@@ -997,29 +998,36 @@ class _ExpandableActionFabState extends State<ExpandableActionFab> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      for (final action in widget.actions)
-        _MiniAction(
-          action: action,
-          visible: _open,
-          enabled: widget.enabled,
-          duration: _duration,
-          onPressed: () => _run(action),
+  Widget build(BuildContext context) => TapRegion(
+    // 展开时点击菜单以外的任意位置（列表空白、目录行、面包屑等）自动收起。
+    // TapRegion 只监听外部点击而不消费事件，被点中的控件仍会正常响应。
+    onTapOutside: (_) {
+      if (_open) setState(() => _open = false);
+    },
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final action in widget.actions)
+          _MiniAction(
+            action: action,
+            visible: _open,
+            enabled: widget.enabled,
+            duration: _duration,
+            onPressed: () => _run(action),
+          ),
+        FloatingActionButton(
+          heroTag: 'home-actions-fab',
+          tooltip: widget.tooltip,
+          onPressed: widget.enabled ? _toggle : null,
+          child: AnimatedRotation(
+            turns: _open ? 0.125 : 0,
+            duration: _duration,
+            child: const Icon(Icons.add),
+          ),
         ),
-      FloatingActionButton(
-        heroTag: 'home-actions-fab',
-        tooltip: widget.tooltip,
-        onPressed: widget.enabled ? _toggle : null,
-        child: AnimatedRotation(
-          turns: _open ? 0.125 : 0,
-          duration: _duration,
-          child: const Icon(Icons.add),
-        ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 

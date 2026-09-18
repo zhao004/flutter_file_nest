@@ -257,6 +257,46 @@ void main() {
     expect(find.text('照片.jpg'), findsOneWidget);
   });
 
+  testWidgets('悬浮菜单点击空白或目录行自动收起', (tester) async {
+    final storage = FakeStorage();
+    storage.contents['root']!.add(entry('子目录', directory: true));
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
+        archive: FakeArchive(),
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+    // 展开状态由主按钮旋转角标识：展开 0.125 圈，收起为 0。
+    double fabTurns() => tester
+        .widget<AnimatedRotation>(
+          find.descendant(
+            of: find.byType(ExpandableActionFab),
+            matching: find.byType(AnimatedRotation),
+          ),
+        )
+        .turns;
+
+    await tester.tap(find.byTooltip('更多操作'));
+    await tester.pumpAndSettle();
+    expect(fabTurns(), 0.125);
+    // 点击菜单外的空白区域自动收起。
+    await tester.tapAt(const Offset(20, 300));
+    await tester.pumpAndSettle();
+    expect(fabTurns(), 0);
+
+    // 再次展开并点击目录行：正常跳转目录的同时菜单收起。
+    await tester.tap(find.byTooltip('更多操作'));
+    await tester.pumpAndSettle();
+    expect(fabTurns(), 0.125);
+    await tester.tap(find.text('子目录'));
+    await tester.pumpAndSettle();
+    expect(fabTurns(), 0);
+    expect(find.text('文件夹为空'), findsOneWidget);
+  });
+
   testWidgets('悬浮菜单拍照与录制调用系统相机', (tester) async {
     final storage = FakeStorage()
       ..takePhotoResult = entry('IMG_001.jpg', mime: 'image/jpeg')
