@@ -235,8 +235,6 @@ class FolderPickerDialog extends StatefulWidget {
     this.selectedCount = 0,
     this.validate,
     this.blockedDocumentIds = const {},
-    this.hintPrefix = '将移动到：',
-    this.confirmLabel = '移动到此文件夹',
     super.key,
   });
   final StorageGateway storage;
@@ -244,12 +242,6 @@ class FolderPickerDialog extends StatefulWidget {
   final int selectedCount;
   final String? Function(List<StorageEntry> trail)? validate;
   final Set<String> blockedDocumentIds;
-
-  /// 合法目标提示的前缀；保存流程传“保存到：”。
-  final String hintPrefix;
-
-  /// 确认按钮文案；保存流程传“保存到此文件夹”。
-  final String confirmLabel;
 
   @override
   State<FolderPickerDialog> createState() => _FolderPickerDialogState();
@@ -349,7 +341,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
           onPressed: (_loading || issue != null)
               ? null
               : () => Navigator.pop(context, _confirm()),
-          child: Text(widget.confirmLabel),
+          child: const Text('移动到此文件夹'),
         ),
       ],
     );
@@ -414,7 +406,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              issue ?? '${widget.hintPrefix}$_path',
+              issue ?? '将移动到：$_path',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

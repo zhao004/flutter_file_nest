@@ -40,7 +40,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// 处理来自其他应用的文件：先确保已授权根目录，再选择目标文件夹保存。
+  /// 处理来自其他应用的文件：保存到当前打开的文件夹。
+  ///
+  /// 当前文件夹不可写时回退到授权根目录；完全没有可用目录（首次或授权失效）
+  /// 时弹一次授权，授权后保存到根目录。
   Future<void> _handleIncoming() async {
     if (_promptingIncoming || !mounted || controller.incomingShares.isEmpty) {
       return;
@@ -52,26 +55,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         controller.clearIncoming();
         return;
       }
-      final root = controller.folders.firstOrNull;
-      if (root == null) {
+      final target = controller.current?.canCreate == true
+          ? controller.current
+          : controller.folders.firstOrNull;
+      if (target == null) {
         controller.clearIncoming();
         return;
       }
-      if (!mounted) return;
-      final trail = await showDialog<List<StorageEntry>>(
-        context: context,
-        builder: (_) => FolderPickerDialog(
-          storage: controller.storage,
-          root: root,
-          hintPrefix: '保存到：',
-          confirmLabel: '保存到此文件夹',
-        ),
-      );
-      if (trail == null || trail.isEmpty) {
-        controller.clearIncoming();
-        return;
-      }
-      final target = trail.last;
       final count = controller.incomingShares.length;
       if (await controller.importIncoming(target)) {
         _notify('已保存 $count 个文件到「${target.name}」');
@@ -82,13 +72,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   /// 未授权根目录时提示先选择存储文件夹；确认选择返回 true。
+  ///
+  /// SAF 写权限只能通过用户授权获得，因此首次仍必须由用户选择一次目录。
   Future<bool?> _pickRootForIncoming() async {
     if (!mounted) return false;
     final proceed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('请先选择存储文件夹'),
-        content: const Text('有其他应用的文件待保存，请先授权一个文件夹，再选择保存位置。'),
+        content: const Text('有其他应用的文件待保存，请先授权一个文件夹作为保存位置。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),

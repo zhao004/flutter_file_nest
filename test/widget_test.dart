@@ -479,9 +479,10 @@ void main() {
     expect(storage.moves, isEmpty);
   });
 
-  testWidgets('收到外部文件后选择目标文件夹保存', (tester) async {
+  testWidgets('收到外部文件保存到当前打开的文件夹', (tester) async {
     final storage = FakeStorage()
       ..importResults = [entry('分享.pdf', mime: 'application/pdf')];
+    storage.contents['root']!.add(entry('子目录', directory: true));
     final incoming = FakeIncomingShares();
     addTearDown(incoming.close);
     Get.put(
@@ -494,17 +495,49 @@ void main() {
     );
     await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
-    // 模拟微信/QQ“打开方式/分享”把文件送入应用。
+    // 先进入子目录，分享应保存到该目录而非根目录。
+    await tester.tap(find.text('子目录'));
+    await tester.pumpAndSettle();
     incoming.emit([const IncomingShare(uri: 'content://wx/9', name: '分享.pdf')]);
     await tester.pumpAndSettle();
-    // 默认位于根目录，直接确认保存到根。
-    expect(find.text('保存到此文件夹'), findsOneWidget);
-    expect(find.textContaining('保存到：'), findsOneWidget);
-    await tester.tap(find.text('保存到此文件夹'));
-    await tester.pumpAndSettle();
+    // 不再弹出文件夹选择器，直接保存到当前目录。
+    expect(find.text('保存到此文件夹'), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(storage.importDocumentCalls, ['content://wx/9']);
     expect(find.text('分享.pdf'), findsOneWidget);
-    expect(find.textContaining('已保存 1 个文件'), findsOneWidget);
+    expect(find.textContaining('已保存 1 个文件到「子目录」'), findsOneWidget);
+  });
+
+  testWidgets('未授权时先弹一次授权再直接保存', (tester) async {
+    final storage = FakeStorage()
+      ..importResults = [entry('分享.pdf', mime: 'application/pdf')];
+    final incoming = FakeIncomingShares();
+    addTearDown(incoming.close);
+    // 无持久化根目录：首次收到分享应先弹出授权提示。
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore(),
+        archive: FakeArchive(),
+        incoming: incoming,
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+    incoming.emit([const IncomingShare(uri: 'content://wx/7', name: '分享.pdf')]);
+    await tester.pumpAndSettle();
+    expect(find.text('请先选择存储文件夹'), findsOneWidget);
+    // 授权后直接保存，不再二次选择。
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('选择文件夹'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(storage.importDocumentCalls, ['content://wx/7']);
+    expect(find.text('分享.pdf'), findsOneWidget);
+    expect(find.text('保存到此文件夹'), findsNothing);
   });
 
   testWidgets('视频预览页初始化失败时展示错误态与外部打开入口', (tester) async {
