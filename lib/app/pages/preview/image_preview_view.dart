@@ -8,6 +8,7 @@ import '../../file_type/file_type_info.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
 import '../../services/saf_storage.dart';
+import 'preview_app_bar.dart';
 
 /// 应用内图片预览：经内容 URI 读取字节，支持缩放、双击与拖动查看。
 ///
@@ -117,8 +118,8 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
       foregroundColor: Colors.white,
       // 沉浸式黑底查看器需显式指定图标色：主题的 AppBar 图标色会覆盖
       // foregroundColor，浅色模式下为深色，在黑底上不可见。
-      iconTheme: const IconThemeData(color: Colors.white),
-      actionsIconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: immersivePreviewIconTheme,
+      actionsIconTheme: immersivePreviewIconTheme,
       title: Text(
         widget.entry.name,
         maxLines: 1,

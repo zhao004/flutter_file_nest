@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
+import 'preview_app_bar.dart';
 
 /// 应用内 PDF 预览：原生 PdfRenderer 按页渲染，页面视图支持滑动与缩放。
 ///
@@ -55,6 +56,9 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
     appBar: AppBar(
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
+      // 主题的 AppBar 图标色会覆盖 foregroundColor，黑底上需显式改白。
+      iconTheme: immersivePreviewIconTheme,
+      actionsIconTheme: immersivePreviewIconTheme,
       title: Text(
         widget.entry.name,
         maxLines: 1,

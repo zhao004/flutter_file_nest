@@ -9,6 +9,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
 import '../../services/vault_store.dart';
+import '../preview/preview_app_bar.dart';
 
 /// 沉浸式视频预览：全屏播放，控件以渐变浮层叠加，播放时自动隐藏。
 ///
@@ -518,7 +519,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
         children: [
           IconButton(
             tooltip: '返回',
-            color: Colors.white,
+            color: immersivePreviewIconTheme.color,
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.arrow_back),
           ),
@@ -532,7 +533,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
           ),
           PopupMenuButton<double>(
             tooltip: '播放速度',
-            iconColor: Colors.white,
+            iconColor: immersivePreviewIconTheme.color,
             onSelected: _setSpeed,
             itemBuilder: (context) => [
               for (final speed in _speeds)
@@ -558,7 +559,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
           ),
           IconButton(
             tooltip: '用其他应用打开',
-            color: Colors.white,
+            color: immersivePreviewIconTheme.color,
             onPressed: _openExternally,
             icon: const Icon(Icons.open_in_new),
           ),

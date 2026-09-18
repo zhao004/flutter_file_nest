@@ -610,4 +610,22 @@ void main() {
       Colors.white,
     );
   });
+
+  testWidgets('PDF 预览页顶部按钮在黑色背景上保持白色图标', (tester) async {
+    Get.put<StorageGateway>(FakeStorage(), permanent: true);
+    // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
+    await tester.pumpWidget(
+      GetMaterialApp(
+        theme: buildLightTheme(FlexScheme.blue),
+        home: PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final actionIcon = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byIcon(Icons.open_in_new),
+    );
+    expect(IconTheme.of(tester.element(actionIcon)).color, Colors.white);
+  });
 }
