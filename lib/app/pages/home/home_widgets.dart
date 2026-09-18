@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
+import '../../theme/app_colors.dart';
 import 'home_controller.dart';
 
 /// 压缩包名称对话框：默认名称预填，缺少 .zip 后缀时自动补齐并校验。
@@ -447,7 +448,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
             Icon(
               Icons.folder_off_outlined,
               size: 40,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).colorScheme.outline,
             ),
             const SizedBox(height: 8),
             const Text('没有子文件夹'),
@@ -465,7 +466,9 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
           enabled: !blocked,
           leading: Icon(
             Icons.folder,
-            color: blocked ? Colors.grey.shade400 : const Color(0xffb98417),
+            color: blocked
+                ? Theme.of(context).colorScheme.outline
+                : Theme.of(context).colorScheme.tertiary,
           ),
           title: Text(
             folder.name,
@@ -647,7 +650,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
                                 ? Icons.check
                                 : Icons.error_outline,
                             color: preview.error == null
-                                ? Colors.green
+                                ? AppColors.success(context)
                                 : Theme.of(context).colorScheme.error,
                           ),
                         );
@@ -696,15 +699,21 @@ void showBatchResult(BuildContext context, BatchJob job) {
           itemBuilder: (context, index) {
             final item = job.items[index];
             final (icon, color) = switch (item.status) {
-              BatchItemStatus.pending => (Icons.schedule, Colors.grey),
-              BatchItemStatus.success => (Icons.check_circle, Colors.green),
+              BatchItemStatus.pending => (
+                Icons.schedule,
+                AppColors.neutral(context),
+              ),
+              BatchItemStatus.success => (
+                Icons.check_circle,
+                AppColors.success(context),
+              ),
               BatchItemStatus.failed => (
                 Icons.error_outline,
                 Theme.of(context).colorScheme.error,
               ),
               BatchItemStatus.copiedSourceKept => (
                 Icons.warning_amber,
-                Colors.orange,
+                AppColors.warning(context),
               ),
             };
             return ListTile(
@@ -773,7 +782,9 @@ class EntryDetailsDialog extends StatelessWidget {
                       width: 72,
                       child: Text(
                         label,
-                        style: const TextStyle(color: Colors.blueGrey),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                     Expanded(child: SelectableText(value)),
@@ -792,6 +803,7 @@ class EntryDetailsDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _detailRow(
+                        context,
                         '时长',
                         durationMs == null
                             ? '未知'
@@ -800,6 +812,7 @@ class EntryDetailsDialog extends StatelessWidget {
                               ),
                       ),
                       _detailRow(
+                        context,
                         '尺寸',
                         width == null || height == null
                             ? '未知'
@@ -821,18 +834,24 @@ class EntryDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 72,
-          child: Text(label, style: const TextStyle(color: Colors.blueGrey)),
+  Widget _detailRow(BuildContext context, String label, String value) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 72,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Expanded(child: SelectableText(value)),
+          ],
         ),
-        Expanded(child: SelectableText(value)),
-      ],
-    ),
-  );
+      );
 }
 
 String _formatTime(DateTime time) {

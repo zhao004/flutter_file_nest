@@ -9,15 +9,25 @@ import 'app/services/incoming_share_service.dart';
 import 'app/services/saf_storage.dart';
 import 'app/services/thumbnail_service.dart';
 import 'app/services/vault_store.dart';
+import 'app/theme/theme_controller.dart';
+import 'app/theme/theme_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storage = SafStorage();
   Get.put<StorageGateway>(storage, permanent: true);
   Get.put<ThumbnailGateway>(ThumbnailService(storage), permanent: true);
-  Get.put<VaultStore>(DriftVaultStore(AppDatabase()), permanent: true);
+  // 主题与库偏好共用同一数据库连接。
+  final database = AppDatabase();
+  Get.put<VaultStore>(DriftVaultStore(database), permanent: true);
+  final themeController = Get.put<ThemeController>(
+    ThemeController(DriftThemeStore(database)),
+    permanent: true,
+  );
   Get.put<ArchiveGateway>(ArchiveService(), permanent: true);
   Get.put<IncomingShareGateway>(const IncomingShareService(), permanent: true);
+  // 首帧前完成主题加载，避免启动时先亮后暗的闪烁。
+  await themeController.initialize();
   runApp(const LensVaultApp());
 }
 
@@ -26,22 +36,16 @@ class LensVaultApp extends StatelessWidget {
   const LensVaultApp({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      GetMaterialApp(
-        title: 'LensVault',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff16766c)),
-          scaffoldBackgroundColor: const Color(0xfff6f7f8),
-          appBarTheme: const AppBarTheme(centerTitle: false),
-          dialogTheme: const DialogThemeData(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
-          ),
-        ),
-        initialRoute: AppPages.initial,
-        getPages: AppPages.routes,
-      );
+  Widget build(BuildContext context) => Obx(() {
+    final theme = Get.find<ThemeController>();
+    return GetMaterialApp(
+      title: 'LensVault',
+      debugShowCheckedModeBanner: false,
+      theme: theme.lightTheme,
+      darkTheme: theme.darkTheme,
+      themeMode: theme.mode.value,
+      initialRoute: AppPages.initial,
+      getPages: AppPages.routes,
+    );
+  });
 }

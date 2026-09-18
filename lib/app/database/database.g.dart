@@ -57,6 +57,30 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _themeSchemeMeta = const VerificationMeta(
+    'themeScheme',
+  );
+  @override
+  late final GeneratedColumn<String> themeScheme = GeneratedColumn<String>(
+    'theme_scheme',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultThemeSchemeName),
+  );
+  static const VerificationMeta _themeModeMeta = const VerificationMeta(
+    'themeMode',
+  );
+  @override
+  late final GeneratedColumn<String> themeMode = GeneratedColumn<String>(
+    'theme_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultThemeModeName),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -74,6 +98,8 @@ class $AppSettingsTable extends AppSettings
     rootUri,
     sortField,
     sortDescending,
+    themeScheme,
+    themeMode,
     updatedAt,
   ];
   @override
@@ -112,6 +138,21 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('theme_scheme')) {
+      context.handle(
+        _themeSchemeMeta,
+        themeScheme.isAcceptableOrUnknown(
+          data['theme_scheme']!,
+          _themeSchemeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('theme_mode')) {
+      context.handle(
+        _themeModeMeta,
+        themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -145,6 +186,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}sort_descending'],
       )!,
+      themeScheme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_scheme'],
+      )!,
+      themeMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_mode'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -163,12 +212,20 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final String? rootUri;
   final String sortField;
   final bool sortDescending;
+
+  /// 当前配色方案名称；对应 FlexScheme 枚举的 name。
+  final String themeScheme;
+
+  /// 当前外观模式名称；system / light / dark。
+  final String themeMode;
   final DateTime updatedAt;
   const AppSetting({
     required this.id,
     this.rootUri,
     required this.sortField,
     required this.sortDescending,
+    required this.themeScheme,
+    required this.themeMode,
     required this.updatedAt,
   });
   @override
@@ -180,6 +237,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     map['sort_field'] = Variable<String>(sortField);
     map['sort_descending'] = Variable<bool>(sortDescending);
+    map['theme_scheme'] = Variable<String>(themeScheme);
+    map['theme_mode'] = Variable<String>(themeMode);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -192,6 +251,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           : Value(rootUri),
       sortField: Value(sortField),
       sortDescending: Value(sortDescending),
+      themeScheme: Value(themeScheme),
+      themeMode: Value(themeMode),
       updatedAt: Value(updatedAt),
     );
   }
@@ -206,6 +267,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       rootUri: serializer.fromJson<String?>(json['rootUri']),
       sortField: serializer.fromJson<String>(json['sortField']),
       sortDescending: serializer.fromJson<bool>(json['sortDescending']),
+      themeScheme: serializer.fromJson<String>(json['themeScheme']),
+      themeMode: serializer.fromJson<String>(json['themeMode']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -217,6 +280,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'rootUri': serializer.toJson<String?>(rootUri),
       'sortField': serializer.toJson<String>(sortField),
       'sortDescending': serializer.toJson<bool>(sortDescending),
+      'themeScheme': serializer.toJson<String>(themeScheme),
+      'themeMode': serializer.toJson<String>(themeMode),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -226,12 +291,16 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<String?> rootUri = const Value.absent(),
     String? sortField,
     bool? sortDescending,
+    String? themeScheme,
+    String? themeMode,
     DateTime? updatedAt,
   }) => AppSetting(
     id: id ?? this.id,
     rootUri: rootUri.present ? rootUri.value : this.rootUri,
     sortField: sortField ?? this.sortField,
     sortDescending: sortDescending ?? this.sortDescending,
+    themeScheme: themeScheme ?? this.themeScheme,
+    themeMode: themeMode ?? this.themeMode,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
@@ -242,6 +311,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       sortDescending: data.sortDescending.present
           ? data.sortDescending.value
           : this.sortDescending,
+      themeScheme: data.themeScheme.present
+          ? data.themeScheme.value
+          : this.themeScheme,
+      themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -253,14 +326,23 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('rootUri: $rootUri, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('themeScheme: $themeScheme, ')
+          ..write('themeMode: $themeMode, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, rootUri, sortField, sortDescending, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    rootUri,
+    sortField,
+    sortDescending,
+    themeScheme,
+    themeMode,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -269,6 +351,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.rootUri == this.rootUri &&
           other.sortField == this.sortField &&
           other.sortDescending == this.sortDescending &&
+          other.themeScheme == this.themeScheme &&
+          other.themeMode == this.themeMode &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -277,12 +361,16 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<String?> rootUri;
   final Value<String> sortField;
   final Value<bool> sortDescending;
+  final Value<String> themeScheme;
+  final Value<String> themeMode;
   final Value<DateTime> updatedAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.rootUri = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.themeScheme = const Value.absent(),
+    this.themeMode = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
@@ -290,6 +378,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.rootUri = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.themeScheme = const Value.absent(),
+    this.themeMode = const Value.absent(),
     required DateTime updatedAt,
   }) : updatedAt = Value(updatedAt);
   static Insertable<AppSetting> custom({
@@ -297,6 +387,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<String>? rootUri,
     Expression<String>? sortField,
     Expression<bool>? sortDescending,
+    Expression<String>? themeScheme,
+    Expression<String>? themeMode,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -304,6 +396,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (rootUri != null) 'root_uri': rootUri,
       if (sortField != null) 'sort_field': sortField,
       if (sortDescending != null) 'sort_descending': sortDescending,
+      if (themeScheme != null) 'theme_scheme': themeScheme,
+      if (themeMode != null) 'theme_mode': themeMode,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -313,6 +407,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<String?>? rootUri,
     Value<String>? sortField,
     Value<bool>? sortDescending,
+    Value<String>? themeScheme,
+    Value<String>? themeMode,
     Value<DateTime>? updatedAt,
   }) {
     return AppSettingsCompanion(
@@ -320,6 +416,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       rootUri: rootUri ?? this.rootUri,
       sortField: sortField ?? this.sortField,
       sortDescending: sortDescending ?? this.sortDescending,
+      themeScheme: themeScheme ?? this.themeScheme,
+      themeMode: themeMode ?? this.themeMode,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -339,6 +437,12 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (sortDescending.present) {
       map['sort_descending'] = Variable<bool>(sortDescending.value);
     }
+    if (themeScheme.present) {
+      map['theme_scheme'] = Variable<String>(themeScheme.value);
+    }
+    if (themeMode.present) {
+      map['theme_mode'] = Variable<String>(themeMode.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -352,6 +456,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('rootUri: $rootUri, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('themeScheme: $themeScheme, ')
+          ..write('themeMode: $themeMode, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -593,6 +699,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<String?> rootUri,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<String> themeScheme,
+      Value<String> themeMode,
       required DateTime updatedAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
@@ -601,6 +709,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<String?> rootUri,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<String> themeScheme,
+      Value<String> themeMode,
       Value<DateTime> updatedAt,
     });
 
@@ -627,6 +737,18 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get sortDescending => $state.composableBuilder(
     column: $state.table.sortDescending,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<String> get themeScheme => $state.composableBuilder(
+    column: $state.table.themeScheme,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<String> get themeMode => $state.composableBuilder(
+    column: $state.table.themeMode,
     builder: (column, joinBuilders) =>
         ColumnFilters(column, joinBuilders: joinBuilders),
   );
@@ -661,6 +783,18 @@ class $$AppSettingsTableOrderingComposer
 
   ColumnOrderings<bool> get sortDescending => $state.composableBuilder(
     column: $state.table.sortDescending,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<String> get themeScheme => $state.composableBuilder(
+    column: $state.table.themeScheme,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<String> get themeMode => $state.composableBuilder(
+    column: $state.table.themeMode,
     builder: (column, joinBuilders) =>
         ColumnOrderings(column, joinBuilders: joinBuilders),
   );
@@ -706,12 +840,16 @@ class $$AppSettingsTableTableManager
                 Value<String?> rootUri = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<String> themeScheme = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 rootUri: rootUri,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                themeScheme: themeScheme,
+                themeMode: themeMode,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -720,12 +858,16 @@ class $$AppSettingsTableTableManager
                 Value<String?> rootUri = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<String> themeScheme = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
                 required DateTime updatedAt,
               }) => AppSettingsCompanion.insert(
                 id: id,
                 rootUri: rootUri,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                themeScheme: themeScheme,
+                themeMode: themeMode,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

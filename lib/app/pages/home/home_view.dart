@@ -408,6 +408,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final inSearch = controller.searchQuery.value != null;
     // 搜索状态行仅在扫描中或结果不完整时出现，不再常驻结果数量提示。
     final searchStatus = inSearch ? _searchStatus() : null;
+    // 项目固定的 build_runner/analyzer 无法解析 `?element` 空安全元素新语法，
+    // 用可空列表配合展开运算符达到同等效果。
+    final statusWidgets = searchStatus == null ? null : <Widget>[searchStatus];
     return PopScope(
       canPop:
           !selectionMode && !inSearch && (!controller.canGoBack || needsRoot),
@@ -439,7 +442,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-            ?searchStatus,
+            ...?statusWidgets,
             if (!needsRoot && current != null && !inSearch)
               SizedBox(
                 height: 44,
@@ -754,11 +757,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: _listPadding,
-        children: const [
-          SizedBox(height: 100),
-          Icon(Icons.search_off, size: 56, color: Colors.grey),
-          SizedBox(height: 16),
-          Center(child: Text('没有匹配的文件')),
+        children: [
+          const SizedBox(height: 100),
+          Icon(
+            Icons.search_off,
+            size: 56,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          const Center(child: Text('没有匹配的文件')),
         ],
       );
     }
@@ -780,8 +787,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       leading: Icon(
         entry.isDirectory ? Icons.folder : Icons.insert_drive_file_outlined,
         color: entry.isDirectory
-            ? const Color(0xffb98417)
-            : Colors.grey.shade700,
+            ? Theme.of(context).colorScheme.tertiary
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text('位置：${location ?? '未知'}'),
@@ -805,11 +812,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: _listPadding,
-        children: const [
-          SizedBox(height: 100),
-          Icon(Icons.folder_open_outlined, size: 56, color: Colors.grey),
-          SizedBox(height: 16),
-          Center(child: Text('文件夹为空')),
+        children: [
+          const SizedBox(height: 100),
+          Icon(
+            Icons.folder_open_outlined,
+            size: 56,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          const Center(child: Text('文件夹为空')),
         ],
       );
     }
@@ -904,12 +915,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       _ => Icons.insert_drive_file_outlined,
     },
     color: entry.isDirectory
-        ? const Color(0xffb98417)
+        ? Theme.of(context).colorScheme.tertiary
         : entry.isVideo
         ? Theme.of(context).colorScheme.primary
         : entry.isImage || entry.isPdf
         ? Theme.of(context).colorScheme.primary
-        : Colors.grey.shade700,
+        : Theme.of(context).colorScheme.onSurfaceVariant,
   );
 
   /// 选择模式底部操作栏：退出、全选、删除、移动、重命名、压缩与分享。

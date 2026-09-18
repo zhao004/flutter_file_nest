@@ -8,6 +8,7 @@ import 'package:flutter_lens_vault/app/services/incoming_share_service.dart';
 import 'package:flutter_lens_vault/app/services/saf_storage.dart';
 import 'package:flutter_lens_vault/app/services/thumbnail_service.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
+import 'package:flutter_lens_vault/app/theme/theme_store.dart';
 
 /// 可手动推送事件的外部分享来源。
 class FakeIncomingShares implements IncomingShareGateway {
@@ -70,6 +71,23 @@ class MemoryStore implements VaultStore {
     for (final uri in uris.toSet())
       if (created[uri] != null) uri: created[uri]!,
   };
+}
+
+/// 内存主题存储；可注入初值、统计保存次数并模拟保存失败。
+class MemoryThemeStore implements ThemeStore {
+  ThemePreferences value = const ThemePreferences();
+  int saves = 0;
+  bool failSaves = false;
+
+  @override
+  Future<ThemePreferences> load() async => value;
+
+  @override
+  Future<void> save(ThemePreferences value) async {
+    if (failSaves) throw StateError('save failed');
+    this.value = value;
+    saves++;
+  }
 }
 
 /// 可注入的缩略图网关；记录加载与取消次数，便于断言重载与销毁行为。

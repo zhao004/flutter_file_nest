@@ -6,6 +6,7 @@ import '../models/storage_entry.dart';
 import '../pages/preview/image_preview_view.dart';
 import '../pages/preview/pdf_preview_view.dart';
 import '../pages/settings/settings_view.dart';
+import '../pages/settings/theme_picker_view.dart';
 import '../pages/video/video_view.dart';
 
 part 'app_routes.dart';
@@ -34,5 +35,6 @@ class AppPages {
       page: () => PdfPreviewView(entry: Get.arguments as StorageEntry),
     ),
     GetPage(name: Routes.settings, page: () => const SettingsView()),
+    GetPage(name: Routes.themePicker, page: () => const ThemePickerView()),
   ];
 }

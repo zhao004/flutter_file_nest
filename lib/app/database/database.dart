@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'tables/app_settings.dart';
 import 'tables/entry_metadata.dart';
+import '../theme/theme_defaults.dart';
 
 part 'database.g.dart';
 
@@ -15,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -50,6 +51,17 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('DROP TABLE app_settings');
         await customStatement(
           'ALTER TABLE app_settings_new RENAME TO app_settings',
+        );
+      }
+      if (from < 7) {
+        // v7 新增主题配色与外观模式，默认值由常量统一维护。
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN theme_scheme TEXT NOT NULL '
+          "DEFAULT '$kDefaultThemeSchemeName'",
+        );
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN theme_mode TEXT NOT NULL '
+          "DEFAULT '$kDefaultThemeModeName'",
         );
       }
     },
