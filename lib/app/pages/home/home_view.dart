@@ -533,7 +533,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     title: const Text('LensVault'),
     actions: [
       // 搜索与多选保留独立按钮，排序与设置收进“更多”菜单。
-      if (!needsRoot)
+      // 多选模式下隐藏搜索与“更多”，避免与批量操作混淆。
+      if (!needsRoot && !controller.selectionMode.value)
         IconButton(
           tooltip: '搜索文件',
           onPressed: busy ? null : _beginSearch,
@@ -554,25 +555,26 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 : null,
           ),
         ),
-      PopupMenuButton<_HomeMenuAction>(
-        tooltip: '更多',
-        enabled: !busy,
-        icon: const Icon(Icons.more_vert),
-        onSelected: _handleMenuAction,
-        itemBuilder: (context) => [
-          if (!needsRoot) ...[
+      if (!controller.selectionMode.value)
+        PopupMenuButton<_HomeMenuAction>(
+          tooltip: '更多',
+          enabled: !busy,
+          icon: const Icon(Icons.more_vert),
+          onSelected: _handleMenuAction,
+          itemBuilder: (context) => [
+            if (!needsRoot) ...[
+              const PopupMenuItem(
+                value: _HomeMenuAction.chooseSort,
+                child: _MenuRow(icon: Icons.sort, label: '排序方式'),
+              ),
+              const PopupMenuDivider(),
+            ],
             const PopupMenuItem(
-              value: _HomeMenuAction.chooseSort,
-              child: _MenuRow(icon: Icons.sort, label: '排序方式'),
+              value: _HomeMenuAction.settings,
+              child: _MenuRow(icon: Icons.settings_outlined, label: '设置'),
             ),
-            const PopupMenuDivider(),
           ],
-          const PopupMenuItem(
-            value: _HomeMenuAction.settings,
-            child: _MenuRow(icon: Icons.settings_outlined, label: '设置'),
-          ),
-        ],
-      ),
+        ),
     ],
   );
 
