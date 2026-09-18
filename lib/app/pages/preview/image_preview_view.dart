@@ -126,16 +126,6 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
         overflow: TextOverflow.ellipsis,
       ),
       actions: [
-        PopupMenuButton<double>(
-          tooltip: '缩放',
-          iconColor: Colors.white,
-          onSelected: _zoomTo,
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 1.0, child: Text('适配窗口')),
-            PopupMenuItem(value: 2.0, child: Text('2 倍')),
-            PopupMenuItem(value: 4.0, child: Text('4 倍')),
-          ],
-        ),
         IconButton(
           tooltip: '图片信息',
           onPressed: _showInfo,
