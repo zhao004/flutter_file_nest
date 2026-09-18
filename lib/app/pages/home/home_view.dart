@@ -853,6 +853,17 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return detail.isEmpty ? null : detail.join(' · ');
   }
 
+  /// 行字幕：视频异步补充分辨率并置于文件信息左侧；其余条目直接显示详情。
+  Widget? _entrySubtitle(StorageEntry entry, String? detail) {
+    if (detail == null) return null;
+    if (!entry.isVideo) return Text(detail);
+    return EntryVideoDetail(
+      detail: detail,
+      identity: _thumbnailIdentity(entry),
+      load: () => controller.videoDetails(entry),
+    );
+  }
+
   /// 视频与图片使用惰性缩略图，其余类型回退为类型图标。
   Widget _entryThumbnail(StorageEntry entry) => entry.isVideo || entry.isImage
       ? EntryThumbnail(
@@ -873,7 +884,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return ListTile(
       leading: _entryThumbnail(entry),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: detail == null ? null : Text(detail),
+      subtitle: _entrySubtitle(entry, detail),
       enabled: !busy,
       onTap: () => _open(entry),
       onLongPress: busy ? null : () => _actions(entry),
@@ -901,7 +912,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         ],
       ),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: detail == null ? null : Text(detail),
+      subtitle: _entrySubtitle(entry, detail),
       onTap: () => controller.toggleSelect(entry),
     );
   }

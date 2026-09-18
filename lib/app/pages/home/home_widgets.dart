@@ -224,6 +224,79 @@ class _EntryThumbnailState extends State<EntryThumbnail> {
   );
 }
 
+/// 视频行详情：异步解析分辨率并置于文件信息左侧。
+///
+/// 仅在条目为视频且已有详情文本时使用；解析失败或缺少尺寸时退化为原详情。
+/// [identity] 变化（行被复用为另一视频）时重新请求，避免展示旧分辨率。
+class EntryVideoDetail extends StatefulWidget {
+  const EntryVideoDetail({
+    required this.detail,
+    required this.load,
+    this.identity,
+    super.key,
+  });
+
+  /// 不含分辨率的详情文本，例如“2.0 MB · 2026/09/18 12:00”。
+  final String detail;
+
+  /// 读取视频属性；返回的 width/height 缺失时忽略分辨率。
+  final Future<Map<String, Object?>> Function() load;
+
+  /// 条目身份指纹；变化时重新加载。
+  final Object? identity;
+
+  @override
+  State<EntryVideoDetail> createState() => _EntryVideoDetailState();
+}
+
+class _EntryVideoDetailState extends State<EntryVideoDetail> {
+  String? _resolution;
+  int _requestToken = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(EntryVideoDetail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity != widget.identity) {
+      _resolution = null;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final token = ++_requestToken;
+    try {
+      final details = await widget.load();
+      final width = details['width'] as num?;
+      final height = details['height'] as num?;
+      if (!mounted ||
+          token != _requestToken ||
+          width == null ||
+          height == null) {
+        return;
+      }
+      setState(() => _resolution = '${width.toInt()} × ${height.toInt()}');
+    } catch (_) {
+      // 无法读取分辨率时仅显示文件信息。
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final resolution = _resolution;
+    return Text(
+      resolution == null ? widget.detail : '$resolution · ${widget.detail}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
 /// 应用内目录选择器：仅限当前已授权根目录内的导航。
 ///
 /// 祖先关系通过导航轨迹 [trail] 表达，不解析 documentId 字符串。

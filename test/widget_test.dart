@@ -338,7 +338,8 @@ void main() {
     await tester.pumpAndSettle();
     // 窄屏下列表不溢出。
     expect(tester.takeException(), isNull);
-    // 文件信息与浏览行一致：大小、时间与缩略图。
+    // 文件信息与浏览行一致：分辨率在大小左侧，含时间与缩略图。
+    expect(find.textContaining('640 × 480 · 2.0 KB'), findsOneWidget);
     expect(find.textContaining('2.0 KB'), findsOneWidget);
     expect(find.textContaining('2026-09-18 00:00'), findsOneWidget);
     expect(find.byType(EntryThumbnail), findsOneWidget);
@@ -544,7 +545,7 @@ void main() {
   });
 
   testWidgets('视频预览页初始化失败时展示错误态与外部打开入口', (tester) async {
-    // 测试环境没有 video_player 平台实现，初始化失败应回落到错误态。
+    // 测试环境没有 media_kit 原生库（libmpv），初始化失败应回落到错误态。
     await tester.pumpWidget(
       GetMaterialApp(
         home: VideoView(entry: entry('视频.mp4', mime: 'video/mp4')),

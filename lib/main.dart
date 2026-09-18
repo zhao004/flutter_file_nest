@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
@@ -14,6 +15,8 @@ import 'app/theme/theme_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // media_kit 使用 libmpv，需在创建 Player 前完成初始化。
+  MediaKit.ensureInitialized();
   final storage = SafStorage();
   Get.put<StorageGateway>(storage, permanent: true);
   Get.put<ThumbnailGateway>(ThumbnailService(storage), permanent: true);
