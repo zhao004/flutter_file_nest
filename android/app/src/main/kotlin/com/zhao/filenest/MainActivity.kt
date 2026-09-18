@@ -1,4 +1,4 @@
-package com.zhao.lens.vault
+package com.zhao.filenest
 
 import android.content.Intent
 import android.net.Uri
@@ -13,11 +13,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import com.zhao.lens.vault.editor.CodeEditorViewFactory
-import com.zhao.lens.vault.storage.SafStorage
-import com.zhao.lens.vault.storage.StorageFailure
-import com.zhao.lens.vault.storage.archive.ArchiveManager
-import com.zhao.lens.vault.storage.share.ShareManager
+import com.zhao.filenest.editor.CodeEditorViewFactory
+import com.zhao.filenest.storage.SafStorage
+import com.zhao.filenest.storage.StorageFailure
+import com.zhao.filenest.storage.archive.ArchiveManager
+import com.zhao.filenest.storage.share.ShareManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,12 +89,12 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(engine)
         // 代码编辑器平台视图：文本/代码文件的应用内编辑。
         engine.platformViewsController.registry.registerViewFactory(
-            "lens_vault/code_editor",
+            "filenest/code_editor",
             CodeEditorViewFactory(engine.dartExecutor.binaryMessenger),
         )
         val storage = SafStorage(applicationContext)
         storageHandler = storage
-        channel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/saf_storage")
+        channel = MethodChannel(engine.dartExecutor.binaryMessenger, "filenest/saf_storage")
         channel!!.setMethodCallHandler { call, result ->
             when (call.method) {
                 "pickRoot" -> {
@@ -141,7 +141,7 @@ class MainActivity : FlutterFragmentActivity() {
         }
         archive = archiveManager
         val shareManager = ShareManager(applicationContext)
-        EventChannel(engine.dartExecutor.binaryMessenger, "lens_vault/archive_events")
+        EventChannel(engine.dartExecutor.binaryMessenger, "filenest/archive_events")
             .setStreamHandler(object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
                     events = sink
@@ -151,7 +151,7 @@ class MainActivity : FlutterFragmentActivity() {
                     events = null
                 }
             })
-        EventChannel(engine.dartExecutor.binaryMessenger, "lens_vault/incoming")
+        EventChannel(engine.dartExecutor.binaryMessenger, "filenest/incoming")
             .setStreamHandler(object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
                     incomingSink = sink
@@ -168,7 +168,7 @@ class MainActivity : FlutterFragmentActivity() {
         // 冷启动时可能已带着分享 Intent，先解析并按需缓冲。
         dispatchIncomingShares(intent)
 
-        archiveChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/archive")
+        archiveChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "filenest/archive")
         archiveChannel!!.setMethodCallHandler { call, result ->
             when (call.method) {
                 "cancel" -> {

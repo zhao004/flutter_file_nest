@@ -3,13 +3,13 @@ import 'package:drift/native.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_lens_vault/app/database/database.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
-import 'package:flutter_lens_vault/app/preview/preview_defaults.dart';
-import 'package:flutter_lens_vault/app/services/vault_store.dart';
-import 'package:flutter_lens_vault/app/theme/app_theme.dart';
-import 'package:flutter_lens_vault/app/theme/theme_defaults.dart';
-import 'package:flutter_lens_vault/app/theme/theme_store.dart';
+import 'package:filenest/app/database/database.dart';
+import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/preview/preview_defaults.dart';
+import 'package:filenest/app/services/vault_store.dart';
+import 'package:filenest/app/theme/app_theme.dart';
+import 'package:filenest/app/theme/theme_defaults.dart';
+import 'package:filenest/app/theme/theme_store.dart';
 
 Future<Set<String>> _tables(AppDatabase db) async => {
   for (final row

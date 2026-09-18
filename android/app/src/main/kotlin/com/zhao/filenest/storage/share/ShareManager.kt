@@ -1,4 +1,4 @@
-package com.zhao.lens.vault.storage.share
+package com.zhao.filenest.storage.share
 
 import android.content.ClipData
 import android.content.Context
@@ -6,7 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.FileProvider
-import com.zhao.lens.vault.storage.StorageFailure
+import com.zhao.filenest.storage.StorageFailure
 import java.io.File
 
 /**

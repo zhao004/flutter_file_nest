@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_lens_vault/app/models/archive_models.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
+import 'package:filenest/app/models/archive_models.dart';
+import 'package:filenest/app/models/storage_entry.dart';
 
 StorageEntry _entry(String name, {bool directory = false, String? mime}) =>
     StorageEntry(

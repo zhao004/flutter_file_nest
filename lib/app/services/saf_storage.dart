@@ -106,7 +106,7 @@ class DeletionImpact {
 }
 
 class SafStorage implements StorageGateway {
-  static const channel = MethodChannel('lens_vault/saf_storage');
+  static const channel = MethodChannel('filenest/saf_storage');
 
   Map<String, Object> _entry(StorageEntry entry) => {
     'rootUri': entry.rootUri,

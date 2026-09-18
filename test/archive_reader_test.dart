@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:flutter_lens_vault/app/preview/archive_reader.dart';
+import 'package:filenest/app/preview/archive_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List _zipBytes() {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
+import 'package:filenest/app/models/storage_entry.dart';
 import 'support/fakes.dart';
 
 void main() {

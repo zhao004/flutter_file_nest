@@ -1,6 +1,6 @@
-import 'package:flutter_lens_vault/app/file_type/file_extension_map.dart';
-import 'package:flutter_lens_vault/app/preview/preview_kind.dart';
-import 'package:flutter_lens_vault/app/preview/preview_resolver.dart';
+import 'package:filenest/app/file_type/file_extension_map.dart';
+import 'package:filenest/app/preview/preview_kind.dart';
+import 'package:filenest/app/preview/preview_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

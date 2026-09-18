@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
-import 'package:flutter_lens_vault/app/models/archive_models.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
-import 'package:flutter_lens_vault/app/services/archive_service.dart';
+import 'package:filenest/app/models/archive_models.dart';
+import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/services/archive_service.dart';
 
 import 'fakes.dart';
 

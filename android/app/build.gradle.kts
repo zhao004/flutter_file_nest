@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.zhao.lens.vault"
+    namespace = "com.zhao.filenest"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.zhao.lens.vault"
+        applicationId = "com.zhao.filenest"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

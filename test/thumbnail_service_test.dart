@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
-import 'package:flutter_lens_vault/app/services/thumbnail_service.dart';
+import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/services/thumbnail_service.dart';
 
 import 'support/fakes.dart';
 

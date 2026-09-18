@@ -530,7 +530,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   PreferredSizeWidget _appBar(bool busy, bool needsRoot) => AppBar(
     // 标题固定为应用名，不随目录导航变化；返回改用系统返回与路径栏。
-    title: const Text('LensVault'),
+    title: const Text('FileNest'),
     actions: [
       // 搜索与多选保留独立按钮，排序与设置收进“更多”菜单。
       // 多选模式下隐藏搜索与“更多”，避免与批量操作混淆。

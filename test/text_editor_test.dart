@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_lens_vault/app/pages/preview/text_editor_view.dart';
-import 'package:flutter_lens_vault/app/preview/editor_surface.dart';
-import 'package:flutter_lens_vault/app/services/saf_storage.dart';
+import 'package:filenest/app/pages/preview/text_editor_view.dart';
+import 'package:filenest/app/preview/editor_surface.dart';
+import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

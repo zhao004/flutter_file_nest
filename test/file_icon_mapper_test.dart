@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_lens_vault/app/file_type/file_category.dart';
-import 'package:flutter_lens_vault/app/file_type/file_category_icon.dart';
-import 'package:flutter_lens_vault/app/file_type/file_icon_mapper.dart';
+import 'package:filenest/app/file_type/file_category.dart';
+import 'package:filenest/app/file_type/file_category_icon.dart';
+import 'package:filenest/app/file_type/file_icon_mapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
 

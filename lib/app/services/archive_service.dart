@@ -44,8 +44,8 @@ class ArchiveService implements ArchiveGateway {
     unawaited(_cleanup());
   }
 
-  static const _channel = MethodChannel('lens_vault/archive');
-  static const _events = EventChannel('lens_vault/archive_events');
+  static const _channel = MethodChannel('filenest/archive');
+  static const _events = EventChannel('filenest/archive_events');
 
   @override
   final active = Rxn<ArchiveTaskState>();

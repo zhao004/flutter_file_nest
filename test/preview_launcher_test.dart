@@ -1,5 +1,5 @@
-import 'package:flutter_lens_vault/app/preview/preview_launcher.dart';
-import 'package:flutter_lens_vault/app/preview/preview_limits.dart';
+import 'package:filenest/app/preview/preview_launcher.dart';
+import 'package:filenest/app/preview/preview_limits.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

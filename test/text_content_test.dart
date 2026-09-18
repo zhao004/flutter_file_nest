@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter_lens_vault/app/preview/text_content.dart';
+import 'package:filenest/app/preview/text_content.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('严格 UTF-8 与 UTF-8 BOM 解码', () async {
     final plain = await decodeTextBytes(
-      Uint8List.fromList(utf8.encode('你好，LensVault')),
+      Uint8List.fromList(utf8.encode('你好，FileNest')),
     );
-    expect(plain.text, '你好，LensVault');
+    expect(plain.text, '你好，FileNest');
     expect(plain.encoding, 'UTF-8');
 
     final withBom = Uint8List.fromList([

@@ -37,18 +37,18 @@ Future<void> main() async {
   Get.put<IncomingShareGateway>(const IncomingShareService(), permanent: true);
   // 首帧前完成主题加载，避免启动时先亮后暗的闪烁。
   await themeController.initialize();
-  runApp(const LensVaultApp());
+  runApp(const FileNestApp());
 }
 
 /// Android 文件与录制应用入口；功能控制器通过各页 Binding 管理生命周期。
-class LensVaultApp extends StatelessWidget {
-  const LensVaultApp({super.key});
+class FileNestApp extends StatelessWidget {
+  const FileNestApp({super.key});
 
   @override
   Widget build(BuildContext context) => Obx(() {
     final theme = Get.find<ThemeController>();
     return GetMaterialApp(
-      title: 'LensVault',
+      title: 'FileNest',
       debugShowCheckedModeBanner: false,
       theme: theme.lightTheme,
       darkTheme: theme.darkTheme,

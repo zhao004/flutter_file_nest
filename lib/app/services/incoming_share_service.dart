@@ -8,11 +8,11 @@ abstract interface class IncomingShareGateway {
   Stream<List<IncomingShare>> get shares;
 }
 
-/// `lens_vault/incoming` 事件通道封装。
+/// `filenest/incoming` 事件通道封装。
 class IncomingShareService implements IncomingShareGateway {
   const IncomingShareService();
 
-  static const channel = EventChannel('lens_vault/incoming');
+  static const channel = EventChannel('filenest/incoming');
 
   @override
   Stream<List<IncomingShare>> get shares =>

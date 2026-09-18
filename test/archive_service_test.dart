@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_lens_vault/app/models/archive_models.dart';
-import 'package:flutter_lens_vault/app/models/storage_entry.dart';
-import 'package:flutter_lens_vault/app/services/archive_service.dart';
+import 'package:filenest/app/models/archive_models.dart';
+import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/services/archive_service.dart';
 
 StorageEntry _entry(String name, {bool directory = false, String? mime}) =>
     StorageEntry(
@@ -18,8 +18,8 @@ StorageEntry _entry(String name, {bool directory = false, String? mime}) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('lens_vault/archive');
-  const events = EventChannel('lens_vault/archive_events');
+  const channel = MethodChannel('filenest/archive');
+  const events = EventChannel('filenest/archive_events');
   late List<MethodCall> calls;
   late MockStreamHandlerEventSink eventSink;
 

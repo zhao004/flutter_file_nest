@@ -1,4 +1,4 @@
-package com.zhao.lens.vault.editor
+package com.zhao.filenest.editor
 
 import android.content.Context
 import android.graphics.Typeface
@@ -17,7 +17,7 @@ import io.github.rosemoe.sora.widget.schemes.SchemeGitHub
  * 基于 sora-editor 的代码编辑器平台视图。
  *
  * 每个实例对应一个 Flutter 平台视图，并创建独立的 MethodChannel
- * （`lens_vault/code_editor/<viewId>`）用于文本读写、可编辑性、主题与撤销重做。
+ * （`filenest/code_editor/<viewId>`）用于文本读写、可编辑性、主题与撤销重做。
  * 内容变化通过 `onChanged` 事件回推，供 Dart 侧维护“未保存”状态。
  */
 class CodeEditorPlatformView(
@@ -87,6 +87,6 @@ class CodeEditorPlatformView(
     }
 
     companion object {
-        const val CHANNEL_PREFIX = "lens_vault/code_editor/"
+        const val CHANNEL_PREFIX = "filenest/code_editor/"
     }
 }

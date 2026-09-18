@@ -2,10 +2,10 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
-import 'package:flutter_lens_vault/app/pages/home/home_controller.dart';
-import 'package:flutter_lens_vault/app/pages/settings/settings_view.dart';
-import 'package:flutter_lens_vault/app/pages/settings/theme_picker_view.dart';
-import 'package:flutter_lens_vault/app/theme/theme_controller.dart';
+import 'package:filenest/app/pages/home/home_controller.dart';
+import 'package:filenest/app/pages/settings/settings_view.dart';
+import 'package:filenest/app/pages/settings/theme_picker_view.dart';
+import 'package:filenest/app/theme/theme_controller.dart';
 
 import 'support/archive_fakes.dart';
 import 'support/fakes.dart';

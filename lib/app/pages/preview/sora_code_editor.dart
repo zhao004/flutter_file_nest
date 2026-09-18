@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import '../../preview/editor_surface.dart';
 
 /// 原生平台视图类型；与 MainActivity 注册的工厂名一致。
-const String soraEditorViewType = 'lens_vault/code_editor';
+const String soraEditorViewType = 'filenest/code_editor';
 
-/// 通道名前缀；实际通道为 `lens_vault/code_editor/<viewId>`。
-const String _channelPrefix = 'lens_vault/code_editor/';
+/// 通道名前缀；实际通道为 `filenest/code_editor/<viewId>`。
+const String _channelPrefix = 'filenest/code_editor/';
 
 /// 默认编辑器构建器：使用 sora-editor 的 Android 平台视图。
 Widget buildSoraCodeEditor(CodeEditorHostConfig config) =>

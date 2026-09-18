@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_lens_vault/app/pages/preview/text_search.dart';
+import 'package:filenest/app/pages/preview/text_search.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

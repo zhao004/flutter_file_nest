@@ -1,5 +1,5 @@
-import 'package:flutter_lens_vault/app/file_type/file_category.dart';
-import 'package:flutter_lens_vault/app/file_type/file_type_detector.dart';
+import 'package:filenest/app/file_type/file_category.dart';
+import 'package:filenest/app/file_type/file_type_detector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
