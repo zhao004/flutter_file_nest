@@ -27,15 +27,28 @@
 
 **媒体与归档**
 - 图片/视频列表缩略图：原生 `loadThumbnail`（API 29+），低版本回退 `MediaMetadataRetriever`；带缓存、并发上限与取消，目录切换时不阻塞列表。
-- 图片预览（`InteractiveViewer` 缩放拖动，不支持的格式可外部打开）、PDF 预览（`PdfRenderer` 分页）、视频预览（沉浸式播放器，播放/暂停、拖拽进度、静音、重播、外部打开）。
+- 图片预览（缩放、双击放大、缩放级别、信息与分享，SVG 由 `flutter_svg` 渲染）、PDF 预览（原生 `PdfRenderer` 分页与缩放）、视频预览（media_kit，播放/暂停、拖拽进度、倍速、静音、双击与滑动手势、续播、外部打开）、音频预览（media_kit，唱片式界面、快进快退、倍速、静音、续播）。
+- 文档预览：文本（编码识别、搜索高亮、换行与字号）、代码（语法高亮、行号、搜索）、Markdown（阅读/源码切换）、CSV 表格、字幕（SRT/VTT/ASS 时间轴）、字体（TTF/OTF 样文）、压缩包内容浏览（ZIP/TAR/GZ/BZ2/XZ 虚拟文件系统）、EPUB 阅读器（目录、分页、字号）。
+- 应用内无法预览的类型展示信息页并提供“用其他应用打开”；Office 文档、RAR/7Z、MOBI/AZW3、字体集合（TTC）等交由系统应用。
 - ZIP 压缩/解压（Android `java.util.zip` 流式处理，含条目数、深度、体积与压缩比安全上限）与系统分享。
 
 ## 技术栈
 
 - Flutter + Dart 3（`useMaterial3`），GetX 负责路由与状态。
-- Drift（SQLite）保存设置与本应用登记的文件创建时间。
+- Drift（SQLite）保存设置、本应用登记的文件创建时间与媒体续播位置。
 - Kotlin 平台通道封装 SAF、缩略图、ZIP 归档与分享。
-- `video_player` 播放视频。
+- `media_kit` 播放视频与音频；`flutter_svg`、`flutter_markdown_plus`、`flutter_highlight`、`archive`、`charset_converter`、`xml` 与 `flutter_widget_from_html_core` 支撑各类型预览。
+
+## 文件预览架构
+
+预览分为四层，新增格式只需扩展解析层与查看器：
+
+1. **识别层** `lib/app/file_type/`：`FileCategory` 综合 MIME 与扩展名判定分类。
+2. **解析层** `lib/app/preview/`：`PreviewResolver` 将条目解析为唯一 `PreviewKind`；`PreviewLauncher` 决定进入应用内预览还是系统打开；文本解码、CSV/字幕/EPUB/归档解析与大小上限均在此层。
+3. **UI 层** `lib/app/pages/preview/`：`FilePreviewPage` 按 `PreviewKind` 选择具体查看器。
+4. **外部层** `StorageGateway.openFile` 调用 Android `ACTION_VIEW`。
+
+各查看器共用 `PreviewSettingsController` 持久化字号、换行与 Markdown 模式。
 
 ## 目录结构
 
@@ -46,10 +59,11 @@ lib/
     routes/                     GetX 路由表
     pages/
       home/                     文件列表：控制器、视图、列表/对话框组件
-      preview/                  图片与 PDF 预览
+      preview/                  各类型预览页与预览偏好控制器
       video/                    视频播放
       settings/                 设置
-    database/                   Drift 数据库、表定义与迁移（schema v6）
+    preview/                    预览解析层：类型解析、启动器、文本/CSV/字幕/EPUB/归档解析
+    database/                   Drift 数据库、表定义与迁移（schema v8）
     models/                     存储条目、归档与批量操作模型
     services/                   SAF、缩略图、归档、数据库存储封装
 android/app/src/main/kotlin/...  MainActivity 与 storage/（SAF、归档、分享）
@@ -88,8 +102,9 @@ flutter test
 
 ## 数据与权限
 
-- **数据**：Drift schema v6，包含 `app_settings`（根目录授权与排序偏好）与 `entry_metadata`
-  （本应用创建文件的登记时间）。视频等文件内容存于 SAF 目录，不写入数据库。
+- **数据**：Drift schema v8，包含 `app_settings`（根目录授权、排序偏好与预览显示偏好）、
+  `entry_metadata`（本应用创建文件的登记时间）与 `playback_progress`（媒体续播位置）。
+  视频等文件内容存于 SAF 目录，不写入数据库。
 - **权限**：应用不声明 `CAMERA` / `RECORD_AUDIO`，相机权限由系统相机应用处理；文件访问依赖
   用户对 SAF 根目录的授权；分享缓存通过范围受限的 `FileProvider` 暴露。
 - **标识**：`content://` URI 与 `documentId` 均视为不透明标识，不解析为文件路径，也不通过字符串
@@ -99,4 +114,7 @@ flutter test
 
 - 仅支持 Android；不支持跨根目录移动、非 ZIP 归档、加密/分卷归档、回收站或删除撤销。
 - 仅按 ZIP 打包与整理文件，不承诺压缩率；损坏或含恶意路径的归档会被拒绝。
+- 应用内压缩包浏览仅支持 ZIP/TAR/GZ/BZ2/XZ 系列（受读取与展开上限约束），RAR/7Z/ZSTD 走系统打开；
+  解压仍仅支持 ZIP。
+- Office 文档、MOBI/AZW3、字体集合（TTC）与 Web 字体不做内嵌解析，交由系统应用。
 - 「创建时间」仅对本应用登记的文件可靠，外部来源文件显示为未知，不用修改时间冒充。

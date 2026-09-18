@@ -1,0 +1,133 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:charset_converter/charset_converter.dart';
+
+import '../models/storage_entry.dart';
+import '../services/saf_storage.dart';
+import 'preview_limits.dart';
+
+/// 已解码的文本内容及其来源编码。
+class TextContent {
+  const TextContent({
+    required this.text,
+    required this.encoding,
+    required this.truncated,
+  });
+
+  final String text;
+
+  /// 实际采用的编码名称，用于状态栏提示（例如 `UTF-8`、`GBK`）。
+  final String encoding;
+
+  /// 是否因超过读取上限被截断。
+  final bool truncated;
+}
+
+/// 读取条目文本并按编码解码；超出上限时截断并标记。
+Future<TextContent> loadTextContent(
+  StorageGateway storage,
+  StorageEntry entry, {
+  int maxBytes = textReadLimit,
+}) async {
+  final result = await storage.readDocumentLimited(entry, maxBytes: maxBytes);
+  final decoded = await decodeTextBytes(
+    result.bytes,
+    truncated: result.truncated,
+  );
+  return TextContent(
+    text: decoded.text,
+    encoding: decoded.encoding,
+    truncated: result.truncated,
+  );
+}
+
+/// 文本解码结果；不包含截断状态（由调用方持有）。
+class DecodedText {
+  const DecodedText(this.text, this.encoding);
+
+  final String text;
+  final String encoding;
+}
+
+/// 按 BOM → 严格 UTF-8 → GBK → Latin-1 的顺序解码。
+///
+/// GBK 依赖平台能力，在测试或无插件环境下会回退 Latin-1，保证不抛异常；
+/// [truncated] 为真时允许 UTF-8 尾部存在被截断的不完整序列，但仍要求
+/// 替换字符占比极低，避免把 GBK 内容误判成 UTF-8。
+Future<DecodedText> decodeTextBytes(
+  Uint8List bytes, {
+  bool truncated = false,
+}) async {
+  final withBom = _decodeWithBom(bytes);
+  if (withBom != null) return withBom;
+
+  final utf8Text = _decodeUtf8(bytes, truncated: truncated);
+  if (utf8Text != null) return DecodedText(utf8Text, 'UTF-8');
+
+  try {
+    final text = await CharsetConverter.decode('GBK', bytes);
+    return DecodedText(text, 'GBK');
+  } catch (_) {
+    // 平台不支持或字节不是 GBK：回退 Latin-1，逐字节映射不丢失内容。
+    return DecodedText(latin1.decode(bytes, allowInvalid: true), 'Latin-1');
+  }
+}
+
+/// 识别 UTF-8 / UTF-16 字节序标记并解码；无 BOM 返回 null。
+DecodedText? _decodeWithBom(Uint8List bytes) {
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xEF &&
+      bytes[1] == 0xBB &&
+      bytes[2] == 0xBF) {
+    return DecodedText(
+      utf8.decode(bytes.sublist(3), allowMalformed: true),
+      'UTF-8',
+    );
+  }
+  if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) {
+    return DecodedText(
+      _decodeUtf16(bytes.sublist(2), littleEndian: true),
+      'UTF-16LE',
+    );
+  }
+  if (bytes.length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) {
+    return DecodedText(
+      _decodeUtf16(bytes.sublist(2), littleEndian: false),
+      'UTF-16BE',
+    );
+  }
+  return null;
+}
+
+/// 严格 UTF-8 解码；[truncated] 时容忍尾部不完整的多字节序列。
+///
+/// 截断只可能发生在最后一个字符上（UTF-8 单字符最多 4 字节），因此
+/// 依次尝试去掉尾部 1-4 字节，只要能严格解码即视为被截断的 UTF-8；
+/// 中部存在非法字节时所有尝试都会失败，交由 GBK/Latin-1 处理。
+String? _decodeUtf8(Uint8List bytes, {required bool truncated}) {
+  try {
+    return utf8.decode(bytes);
+  } on FormatException {
+    if (!truncated) return null;
+  }
+  for (var drop = 1; drop <= 4 && drop < bytes.length; drop++) {
+    try {
+      return utf8.decode(bytes.sublist(0, bytes.length - drop));
+    } on FormatException {
+      continue;
+    }
+  }
+  return null;
+}
+
+/// 手动解码 UTF-16 代码单元；Dart 标准库未提供 UTF-16 解码器。
+String _decodeUtf16(Uint8List bytes, {required bool littleEndian}) {
+  final units = <int>[];
+  for (var index = 0; index + 1 < bytes.length; index += 2) {
+    final first = bytes[index];
+    final second = bytes[index + 1];
+    units.add(littleEndian ? (second << 8) | first : (first << 8) | second);
+  }
+  return String.fromCharCodes(units);
+}

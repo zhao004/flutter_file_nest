@@ -6,17 +6,19 @@ import 'package:path_provider/path_provider.dart';
 
 import 'tables/app_settings.dart';
 import 'tables/entry_metadata.dart';
+import 'tables/playback_progress.dart';
+import '../preview/preview_defaults.dart';
 import '../theme/theme_defaults.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [AppSettings, EntryMetadata])
+@DriftDatabase(tables: [AppSettings, EntryMetadata, PlaybackProgress])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -64,6 +66,22 @@ class AppDatabase extends _$AppDatabase {
           "DEFAULT '$kDefaultThemeModeName'",
         );
       }
+      if (from < 8) {
+        // v8 新增媒体续播表与文本预览偏好列，默认值由常量统一维护。
+        await migrator.createTable(playbackProgress);
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN text_font_size REAL NOT NULL '
+          'DEFAULT $kDefaultTextFontSize',
+        );
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN text_wrap INTEGER NOT NULL '
+          'DEFAULT ${kDefaultTextWrap ? 1 : 0}',
+        );
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN markdown_mode TEXT NOT NULL '
+          "DEFAULT '$kDefaultMarkdownMode'",
+        );
+      }
     },
   );
 
@@ -80,6 +98,29 @@ class AppDatabase extends _$AppDatabase {
       EntryMetadataCompanion.insert(uri: uri, createdAt: createdAt),
     );
   }
+
+  /// 读取媒体续播位置；无记录返回 null。
+  Future<Duration?> loadPlaybackPosition(String uri) async {
+    final row = await (select(
+      playbackProgress,
+    )..where((table) => table.uri.equals(uri))).getSingleOrNull();
+    if (row == null) return null;
+    return Duration(milliseconds: row.positionMs);
+  }
+
+  /// 写入或覆盖媒体续播位置；[duration] 未知时传 null。
+  Future<void> savePlaybackPosition(
+    String uri,
+    Duration position, {
+    Duration? duration,
+  }) => into(playbackProgress).insertOnConflictUpdate(
+    PlaybackProgressCompanion.insert(
+      uri: uri,
+      positionMs: Value(position.inMilliseconds),
+      durationMs: Value(duration?.inMilliseconds ?? 0),
+      updatedAt: DateTime.now().toUtc(),
+    ),
+  );
 }
 
 LazyDatabase _openConnection() {

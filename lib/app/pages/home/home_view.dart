@@ -5,6 +5,7 @@ import '../../file_type/file_category.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../models/archive_models.dart';
 import '../../models/storage_entry.dart';
+import '../../preview/preview_launcher.dart';
 import '../../routes/app_pages.dart';
 import 'home_controller.dart';
 import 'home_widgets.dart';
@@ -259,16 +260,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       await controller.enter(entry);
       return;
     }
-    if (entry.isVideo) {
-      await Get.toNamed<void>(Routes.video, arguments: entry);
-      await controller.refresh();
-    } else if (entry.isImage) {
-      await Get.toNamed<void>(Routes.imagePreview, arguments: entry);
-    } else if (entry.isPdf) {
-      await Get.toNamed<void>(Routes.pdfPreview, arguments: entry);
-    } else {
-      await controller.openFile(entry);
-    }
+    // 外部类型由启动器直接交给系统；应用内预览返回后刷新，反映预览页
+    // 可能产生的改动（例如归档解压产生的新文件）。
+    final inApp = await openEntryPreview(entry, storage: controller.storage);
+    if (inApp) await controller.refresh();
   }
 
   /// 长按文件/文件夹弹出的功能菜单；菜单关闭后按选择执行对应操作。
@@ -800,7 +795,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         if (entry.isDirectory) {
           await controller.enter(entry);
         } else {
-          await controller.openFile(entry);
+          final inApp = await openEntryPreview(
+            entry,
+            storage: controller.storage,
+          );
+          if (inApp) await controller.refresh();
         }
       },
     );

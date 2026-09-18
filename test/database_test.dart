@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_lens_vault/app/database/database.dart';
 import 'package:flutter_lens_vault/app/models/storage_entry.dart';
+import 'package:flutter_lens_vault/app/preview/preview_defaults.dart';
 import 'package:flutter_lens_vault/app/services/vault_store.dart';
 import 'package:flutter_lens_vault/app/theme/app_theme.dart';
+import 'package:flutter_lens_vault/app/theme/theme_defaults.dart';
 import 'package:flutter_lens_vault/app/theme/theme_store.dart';
 
 Future<Set<String>> _tables(AppDatabase db) async => {
@@ -208,5 +210,84 @@ void main() {
 
     final columns = await _columns(db, 'app_settings');
     expect(columns, containsAll(['theme_scheme', 'theme_mode']));
+  });
+
+  test('Drift 保存文本预览偏好与媒体续播位置', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final store = DriftVaultStore(db);
+
+    await store.savePreferences(
+      const VaultPreferences(
+        rootUri: 'content://root',
+        textFontSize: 18,
+        textWrap: false,
+        markdownMode: 'source',
+      ),
+    );
+    final loaded = await store.loadPreferences();
+    expect(loaded.textFontSize, 18);
+    expect(loaded.textWrap, false);
+    expect(loaded.markdownMode, 'source');
+
+    expect(await store.playbackPosition('content://a'), null);
+    await store.savePlaybackPosition(
+      'content://a',
+      const Duration(seconds: 42),
+      duration: const Duration(minutes: 3),
+    );
+    expect(
+      await store.playbackPosition('content://a'),
+      const Duration(seconds: 42),
+    );
+
+    // 保存续播位置不覆盖库偏好。
+    expect((await store.loadPreferences()).rootUri, 'content://root');
+  });
+
+  test('schema v7 迁移到 v8 新增续播表与预览偏好列', () async {
+    final executor = NativeDatabase.memory(
+      setup: (raw) {
+        raw.execute(
+          'CREATE TABLE app_settings ('
+          'id INTEGER NOT NULL DEFAULT 1, root_uri TEXT, '
+          "sort_field TEXT NOT NULL DEFAULT 'modified', "
+          'sort_descending INTEGER NOT NULL DEFAULT 1, '
+          "theme_scheme TEXT NOT NULL DEFAULT '$kDefaultThemeSchemeName', "
+          "theme_mode TEXT NOT NULL DEFAULT '$kDefaultThemeModeName', "
+          'updated_at INTEGER NOT NULL, PRIMARY KEY (id))',
+        );
+        raw.execute(
+          "INSERT INTO app_settings VALUES "
+          "(1, 'content://root', 'name', 0, "
+          "'$kDefaultThemeSchemeName', '$kDefaultThemeModeName', 0)",
+        );
+        raw.execute('PRAGMA user_version = 7');
+      },
+    );
+    final db = AppDatabase.forTesting(executor);
+    addTearDown(db.close);
+    final store = DriftVaultStore(db);
+
+    final preferences = await store.loadPreferences();
+    expect(preferences.rootUri, 'content://root');
+    expect(preferences.sort, EntrySort.name);
+    expect(preferences.descending, false);
+    // 新增列使用默认值。
+    expect(preferences.textFontSize, kDefaultTextFontSize);
+    expect(preferences.textWrap, kDefaultTextWrap);
+    expect(preferences.markdownMode, kDefaultMarkdownMode);
+
+    expect(await _tables(db), contains('playback_progress'));
+    expect(
+      await _columns(db, 'app_settings'),
+      containsAll(['text_font_size', 'text_wrap', 'markdown_mode']),
+    );
+
+    await store.savePlaybackPosition('content://a', const Duration(seconds: 7));
+    expect(
+      await store.playbackPosition('content://a'),
+      const Duration(seconds: 7),
+    );
   });
 }

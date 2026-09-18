@@ -1,13 +1,11 @@
 import 'package:get/get.dart';
 
+import '../models/storage_entry.dart';
 import '../pages/home/home_binding.dart';
 import '../pages/home/home_view.dart';
-import '../models/storage_entry.dart';
-import '../pages/preview/image_preview_view.dart';
-import '../pages/preview/pdf_preview_view.dart';
+import '../pages/preview/file_preview_page.dart';
 import '../pages/settings/settings_view.dart';
 import '../pages/settings/theme_picker_view.dart';
-import '../pages/video/video_view.dart';
 
 part 'app_routes.dart';
 
@@ -23,16 +21,8 @@ class AppPages {
       binding: HomeBinding(),
     ),
     GetPage(
-      name: Routes.video,
-      page: () => VideoView(entry: Get.arguments as StorageEntry),
-    ),
-    GetPage(
-      name: Routes.imagePreview,
-      page: () => ImagePreviewView(entry: Get.arguments as StorageEntry),
-    ),
-    GetPage(
-      name: Routes.pdfPreview,
-      page: () => PdfPreviewView(entry: Get.arguments as StorageEntry),
+      name: Routes.preview,
+      page: () => FilePreviewPage(entry: Get.arguments as StorageEntry),
     ),
     GetPage(name: Routes.settings, page: () => const SettingsView()),
     GetPage(name: Routes.themePicker, page: () => const ThemePickerView()),

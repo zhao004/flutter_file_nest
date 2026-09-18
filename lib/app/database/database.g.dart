@@ -81,6 +81,45 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(kDefaultThemeModeName),
   );
+  static const VerificationMeta _textFontSizeMeta = const VerificationMeta(
+    'textFontSize',
+  );
+  @override
+  late final GeneratedColumn<double> textFontSize = GeneratedColumn<double>(
+    'text_font_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultTextFontSize),
+  );
+  static const VerificationMeta _textWrapMeta = const VerificationMeta(
+    'textWrap',
+  );
+  @override
+  late final GeneratedColumn<bool> textWrap = GeneratedColumn<bool>(
+    'text_wrap',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("text_wrap" IN (0, 1))',
+    ),
+    defaultValue: const Constant(kDefaultTextWrap),
+  );
+  static const VerificationMeta _markdownModeMeta = const VerificationMeta(
+    'markdownMode',
+  );
+  @override
+  late final GeneratedColumn<String> markdownMode = GeneratedColumn<String>(
+    'markdown_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultMarkdownMode),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -100,6 +139,9 @@ class $AppSettingsTable extends AppSettings
     sortDescending,
     themeScheme,
     themeMode,
+    textFontSize,
+    textWrap,
+    markdownMode,
     updatedAt,
   ];
   @override
@@ -153,6 +195,30 @@ class $AppSettingsTable extends AppSettings
         themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
       );
     }
+    if (data.containsKey('text_font_size')) {
+      context.handle(
+        _textFontSizeMeta,
+        textFontSize.isAcceptableOrUnknown(
+          data['text_font_size']!,
+          _textFontSizeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('text_wrap')) {
+      context.handle(
+        _textWrapMeta,
+        textWrap.isAcceptableOrUnknown(data['text_wrap']!, _textWrapMeta),
+      );
+    }
+    if (data.containsKey('markdown_mode')) {
+      context.handle(
+        _markdownModeMeta,
+        markdownMode.isAcceptableOrUnknown(
+          data['markdown_mode']!,
+          _markdownModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -194,6 +260,18 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.string,
         data['${effectivePrefix}theme_mode'],
       )!,
+      textFontSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}text_font_size'],
+      )!,
+      textWrap: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}text_wrap'],
+      )!,
+      markdownMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}markdown_mode'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -218,6 +296,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   /// 当前外观模式名称；system / light / dark。
   final String themeMode;
+
+  /// 文本/代码预览字号（逻辑像素）。
+  final double textFontSize;
+
+  /// 文本预览是否自动换行；关闭时改为横向滚动。
+  final bool textWrap;
+
+  /// Markdown 展示模式；read（阅读）或 source（源码）。
+  final String markdownMode;
   final DateTime updatedAt;
   const AppSetting({
     required this.id,
@@ -226,6 +313,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.sortDescending,
     required this.themeScheme,
     required this.themeMode,
+    required this.textFontSize,
+    required this.textWrap,
+    required this.markdownMode,
     required this.updatedAt,
   });
   @override
@@ -239,6 +329,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['sort_descending'] = Variable<bool>(sortDescending);
     map['theme_scheme'] = Variable<String>(themeScheme);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['text_font_size'] = Variable<double>(textFontSize);
+    map['text_wrap'] = Variable<bool>(textWrap);
+    map['markdown_mode'] = Variable<String>(markdownMode);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -253,6 +346,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       sortDescending: Value(sortDescending),
       themeScheme: Value(themeScheme),
       themeMode: Value(themeMode),
+      textFontSize: Value(textFontSize),
+      textWrap: Value(textWrap),
+      markdownMode: Value(markdownMode),
       updatedAt: Value(updatedAt),
     );
   }
@@ -269,6 +365,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       sortDescending: serializer.fromJson<bool>(json['sortDescending']),
       themeScheme: serializer.fromJson<String>(json['themeScheme']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      textFontSize: serializer.fromJson<double>(json['textFontSize']),
+      textWrap: serializer.fromJson<bool>(json['textWrap']),
+      markdownMode: serializer.fromJson<String>(json['markdownMode']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -282,6 +381,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'sortDescending': serializer.toJson<bool>(sortDescending),
       'themeScheme': serializer.toJson<String>(themeScheme),
       'themeMode': serializer.toJson<String>(themeMode),
+      'textFontSize': serializer.toJson<double>(textFontSize),
+      'textWrap': serializer.toJson<bool>(textWrap),
+      'markdownMode': serializer.toJson<String>(markdownMode),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -293,6 +395,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? sortDescending,
     String? themeScheme,
     String? themeMode,
+    double? textFontSize,
+    bool? textWrap,
+    String? markdownMode,
     DateTime? updatedAt,
   }) => AppSetting(
     id: id ?? this.id,
@@ -301,6 +406,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     sortDescending: sortDescending ?? this.sortDescending,
     themeScheme: themeScheme ?? this.themeScheme,
     themeMode: themeMode ?? this.themeMode,
+    textFontSize: textFontSize ?? this.textFontSize,
+    textWrap: textWrap ?? this.textWrap,
+    markdownMode: markdownMode ?? this.markdownMode,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
@@ -315,6 +423,13 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ? data.themeScheme.value
           : this.themeScheme,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      textFontSize: data.textFontSize.present
+          ? data.textFontSize.value
+          : this.textFontSize,
+      textWrap: data.textWrap.present ? data.textWrap.value : this.textWrap,
+      markdownMode: data.markdownMode.present
+          ? data.markdownMode.value
+          : this.markdownMode,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -328,6 +443,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('sortDescending: $sortDescending, ')
           ..write('themeScheme: $themeScheme, ')
           ..write('themeMode: $themeMode, ')
+          ..write('textFontSize: $textFontSize, ')
+          ..write('textWrap: $textWrap, ')
+          ..write('markdownMode: $markdownMode, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -341,6 +459,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     sortDescending,
     themeScheme,
     themeMode,
+    textFontSize,
+    textWrap,
+    markdownMode,
     updatedAt,
   );
   @override
@@ -353,6 +474,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.sortDescending == this.sortDescending &&
           other.themeScheme == this.themeScheme &&
           other.themeMode == this.themeMode &&
+          other.textFontSize == this.textFontSize &&
+          other.textWrap == this.textWrap &&
+          other.markdownMode == this.markdownMode &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -363,6 +487,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> sortDescending;
   final Value<String> themeScheme;
   final Value<String> themeMode;
+  final Value<double> textFontSize;
+  final Value<bool> textWrap;
+  final Value<String> markdownMode;
   final Value<DateTime> updatedAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
@@ -371,6 +498,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.sortDescending = const Value.absent(),
     this.themeScheme = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.textFontSize = const Value.absent(),
+    this.textWrap = const Value.absent(),
+    this.markdownMode = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
@@ -380,6 +510,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.sortDescending = const Value.absent(),
     this.themeScheme = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.textFontSize = const Value.absent(),
+    this.textWrap = const Value.absent(),
+    this.markdownMode = const Value.absent(),
     required DateTime updatedAt,
   }) : updatedAt = Value(updatedAt);
   static Insertable<AppSetting> custom({
@@ -389,6 +522,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? sortDescending,
     Expression<String>? themeScheme,
     Expression<String>? themeMode,
+    Expression<double>? textFontSize,
+    Expression<bool>? textWrap,
+    Expression<String>? markdownMode,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -398,6 +534,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (sortDescending != null) 'sort_descending': sortDescending,
       if (themeScheme != null) 'theme_scheme': themeScheme,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (textFontSize != null) 'text_font_size': textFontSize,
+      if (textWrap != null) 'text_wrap': textWrap,
+      if (markdownMode != null) 'markdown_mode': markdownMode,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -409,6 +548,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? sortDescending,
     Value<String>? themeScheme,
     Value<String>? themeMode,
+    Value<double>? textFontSize,
+    Value<bool>? textWrap,
+    Value<String>? markdownMode,
     Value<DateTime>? updatedAt,
   }) {
     return AppSettingsCompanion(
@@ -418,6 +560,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       sortDescending: sortDescending ?? this.sortDescending,
       themeScheme: themeScheme ?? this.themeScheme,
       themeMode: themeMode ?? this.themeMode,
+      textFontSize: textFontSize ?? this.textFontSize,
+      textWrap: textWrap ?? this.textWrap,
+      markdownMode: markdownMode ?? this.markdownMode,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -443,6 +588,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (textFontSize.present) {
+      map['text_font_size'] = Variable<double>(textFontSize.value);
+    }
+    if (textWrap.present) {
+      map['text_wrap'] = Variable<bool>(textWrap.value);
+    }
+    if (markdownMode.present) {
+      map['markdown_mode'] = Variable<String>(markdownMode.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -458,6 +612,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('sortDescending: $sortDescending, ')
           ..write('themeScheme: $themeScheme, ')
           ..write('themeMode: $themeMode, ')
+          ..write('textFontSize: $textFontSize, ')
+          ..write('textWrap: $textWrap, ')
+          ..write('markdownMode: $markdownMode, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -678,11 +835,337 @@ class EntryMetadataCompanion extends UpdateCompanion<EntryMetadataData> {
   }
 }
 
+class $PlaybackProgressTable extends PlaybackProgress
+    with TableInfo<$PlaybackProgressTable, PlaybackProgressData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlaybackProgressTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _uriMeta = const VerificationMeta('uri');
+  @override
+  late final GeneratedColumn<String> uri = GeneratedColumn<String>(
+    'uri',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    uri,
+    positionMs,
+    durationMs,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'playback_progress';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlaybackProgressData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('uri')) {
+      context.handle(
+        _uriMeta,
+        uri.isAcceptableOrUnknown(data['uri']!, _uriMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uriMeta);
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uri};
+  @override
+  PlaybackProgressData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlaybackProgressData(
+      uri: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uri'],
+      )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PlaybackProgressTable createAlias(String alias) {
+    return $PlaybackProgressTable(attachedDatabase, alias);
+  }
+}
+
+class PlaybackProgressData extends DataClass
+    implements Insertable<PlaybackProgressData> {
+  final String uri;
+
+  /// 已播放位置（毫秒）。
+  final int positionMs;
+
+  /// 内容总时长（毫秒）；未知时为 0。
+  final int durationMs;
+  final DateTime updatedAt;
+  const PlaybackProgressData({
+    required this.uri,
+    required this.positionMs,
+    required this.durationMs,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['uri'] = Variable<String>(uri);
+    map['position_ms'] = Variable<int>(positionMs);
+    map['duration_ms'] = Variable<int>(durationMs);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PlaybackProgressCompanion toCompanion(bool nullToAbsent) {
+    return PlaybackProgressCompanion(
+      uri: Value(uri),
+      positionMs: Value(positionMs),
+      durationMs: Value(durationMs),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PlaybackProgressData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlaybackProgressData(
+      uri: serializer.fromJson<String>(json['uri']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      durationMs: serializer.fromJson<int>(json['durationMs']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uri': serializer.toJson<String>(uri),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'durationMs': serializer.toJson<int>(durationMs),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PlaybackProgressData copyWith({
+    String? uri,
+    int? positionMs,
+    int? durationMs,
+    DateTime? updatedAt,
+  }) => PlaybackProgressData(
+    uri: uri ?? this.uri,
+    positionMs: positionMs ?? this.positionMs,
+    durationMs: durationMs ?? this.durationMs,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PlaybackProgressData copyWithCompanion(PlaybackProgressCompanion data) {
+    return PlaybackProgressData(
+      uri: data.uri.present ? data.uri.value : this.uri,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackProgressData(')
+          ..write('uri: $uri, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(uri, positionMs, durationMs, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlaybackProgressData &&
+          other.uri == this.uri &&
+          other.positionMs == this.positionMs &&
+          other.durationMs == this.durationMs &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PlaybackProgressCompanion extends UpdateCompanion<PlaybackProgressData> {
+  final Value<String> uri;
+  final Value<int> positionMs;
+  final Value<int> durationMs;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PlaybackProgressCompanion({
+    this.uri = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlaybackProgressCompanion.insert({
+    required String uri,
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : uri = Value(uri),
+       updatedAt = Value(updatedAt);
+  static Insertable<PlaybackProgressData> custom({
+    Expression<String>? uri,
+    Expression<int>? positionMs,
+    Expression<int>? durationMs,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (uri != null) 'uri': uri,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlaybackProgressCompanion copyWith({
+    Value<String>? uri,
+    Value<int>? positionMs,
+    Value<int>? durationMs,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return PlaybackProgressCompanion(
+      uri: uri ?? this.uri,
+      positionMs: positionMs ?? this.positionMs,
+      durationMs: durationMs ?? this.durationMs,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uri.present) {
+      map['uri'] = Variable<String>(uri.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackProgressCompanion(')
+          ..write('uri: $uri, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $EntryMetadataTable entryMetadata = $EntryMetadataTable(this);
+  late final $PlaybackProgressTable playbackProgress = $PlaybackProgressTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -690,6 +1173,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     appSettings,
     entryMetadata,
+    playbackProgress,
   ];
 }
 
@@ -701,6 +1185,9 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> sortDescending,
       Value<String> themeScheme,
       Value<String> themeMode,
+      Value<double> textFontSize,
+      Value<bool> textWrap,
+      Value<String> markdownMode,
       required DateTime updatedAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
@@ -711,6 +1198,9 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> sortDescending,
       Value<String> themeScheme,
       Value<String> themeMode,
+      Value<double> textFontSize,
+      Value<bool> textWrap,
+      Value<String> markdownMode,
       Value<DateTime> updatedAt,
     });
 
@@ -749,6 +1239,24 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<String> get themeMode => $state.composableBuilder(
     column: $state.table.themeMode,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<double> get textFontSize => $state.composableBuilder(
+    column: $state.table.textFontSize,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<bool> get textWrap => $state.composableBuilder(
+    column: $state.table.textWrap,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<String> get markdownMode => $state.composableBuilder(
+    column: $state.table.markdownMode,
     builder: (column, joinBuilders) =>
         ColumnFilters(column, joinBuilders: joinBuilders),
   );
@@ -799,6 +1307,24 @@ class $$AppSettingsTableOrderingComposer
         ColumnOrderings(column, joinBuilders: joinBuilders),
   );
 
+  ColumnOrderings<double> get textFontSize => $state.composableBuilder(
+    column: $state.table.textFontSize,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<bool> get textWrap => $state.composableBuilder(
+    column: $state.table.textWrap,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<String> get markdownMode => $state.composableBuilder(
+    column: $state.table.markdownMode,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
     column: $state.table.updatedAt,
     builder: (column, joinBuilders) =>
@@ -842,6 +1368,9 @@ class $$AppSettingsTableTableManager
                 Value<bool> sortDescending = const Value.absent(),
                 Value<String> themeScheme = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<double> textFontSize = const Value.absent(),
+                Value<bool> textWrap = const Value.absent(),
+                Value<String> markdownMode = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
@@ -850,6 +1379,9 @@ class $$AppSettingsTableTableManager
                 sortDescending: sortDescending,
                 themeScheme: themeScheme,
                 themeMode: themeMode,
+                textFontSize: textFontSize,
+                textWrap: textWrap,
+                markdownMode: markdownMode,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -860,6 +1392,9 @@ class $$AppSettingsTableTableManager
                 Value<bool> sortDescending = const Value.absent(),
                 Value<String> themeScheme = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<double> textFontSize = const Value.absent(),
+                Value<bool> textWrap = const Value.absent(),
+                Value<String> markdownMode = const Value.absent(),
                 required DateTime updatedAt,
               }) => AppSettingsCompanion.insert(
                 id: id,
@@ -868,6 +1403,9 @@ class $$AppSettingsTableTableManager
                 sortDescending: sortDescending,
                 themeScheme: themeScheme,
                 themeMode: themeMode,
+                textFontSize: textFontSize,
+                textWrap: textWrap,
+                markdownMode: markdownMode,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -1015,6 +1553,169 @@ typedef $$EntryMetadataTableProcessedTableManager =
       EntryMetadataData,
       PrefetchHooks Function()
     >;
+typedef $$PlaybackProgressTableCreateCompanionBuilder =
+    PlaybackProgressCompanion Function({
+      required String uri,
+      Value<int> positionMs,
+      Value<int> durationMs,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PlaybackProgressTableUpdateCompanionBuilder =
+    PlaybackProgressCompanion Function({
+      Value<String> uri,
+      Value<int> positionMs,
+      Value<int> durationMs,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$PlaybackProgressTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $PlaybackProgressTable> {
+  $$PlaybackProgressTableFilterComposer(super.$state);
+  ColumnFilters<String> get uri => $state.composableBuilder(
+    column: $state.table.uri,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<int> get positionMs => $state.composableBuilder(
+    column: $state.table.positionMs,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<int> get durationMs => $state.composableBuilder(
+    column: $state.table.durationMs,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+    column: $state.table.updatedAt,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+}
+
+class $$PlaybackProgressTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $PlaybackProgressTable> {
+  $$PlaybackProgressTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get uri => $state.composableBuilder(
+    column: $state.table.uri,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<int> get positionMs => $state.composableBuilder(
+    column: $state.table.positionMs,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<int> get durationMs => $state.composableBuilder(
+    column: $state.table.durationMs,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+    column: $state.table.updatedAt,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+}
+
+class $$PlaybackProgressTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PlaybackProgressTable,
+          PlaybackProgressData,
+          $$PlaybackProgressTableFilterComposer,
+          $$PlaybackProgressTableOrderingComposer,
+          $$PlaybackProgressTableCreateCompanionBuilder,
+          $$PlaybackProgressTableUpdateCompanionBuilder,
+          (
+            PlaybackProgressData,
+            BaseReferences<
+              _$AppDatabase,
+              $PlaybackProgressTable,
+              PlaybackProgressData
+            >,
+          ),
+          PlaybackProgressData,
+          PrefetchHooks Function()
+        > {
+  $$PlaybackProgressTableTableManager(
+    _$AppDatabase db,
+    $PlaybackProgressTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer: $$PlaybackProgressTableFilterComposer(
+            ComposerState(db, table),
+          ),
+          orderingComposer: $$PlaybackProgressTableOrderingComposer(
+            ComposerState(db, table),
+          ),
+          updateCompanionCallback:
+              ({
+                Value<String> uri = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlaybackProgressCompanion(
+                uri: uri,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String uri,
+                Value<int> positionMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PlaybackProgressCompanion.insert(
+                uri: uri,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlaybackProgressTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PlaybackProgressTable,
+      PlaybackProgressData,
+      $$PlaybackProgressTableFilterComposer,
+      $$PlaybackProgressTableOrderingComposer,
+      $$PlaybackProgressTableCreateCompanionBuilder,
+      $$PlaybackProgressTableUpdateCompanionBuilder,
+      (
+        PlaybackProgressData,
+        BaseReferences<
+          _$AppDatabase,
+          $PlaybackProgressTable,
+          PlaybackProgressData
+        >,
+      ),
+      PlaybackProgressData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1023,4 +1724,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$EntryMetadataTableTableManager get entryMetadata =>
       $$EntryMetadataTableTableManager(_db, _db.entryMetadata);
+  $$PlaybackProgressTableTableManager get playbackProgress =>
+      $$PlaybackProgressTableTableManager(_db, _db.playbackProgress);
 }

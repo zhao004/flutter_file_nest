@@ -542,6 +542,7 @@ class MainActivity : FlutterFragmentActivity() {
             "getDeletionImpact",
             "videoMetadata",
             "readDocument",
+            "readDocumentLimited",
             "pdfInfo",
             "pdfPageBytes",
         )

@@ -72,6 +72,7 @@ class SafStorage(private val context: Context) {
             }
             "importDocument" -> import(sourceUri(args), rootUri, document)
             "readDocument" -> readBytes(uri(rootUri, id))
+            "readDocumentLimited" -> readBytesLimited(uri(rootUri, id), (args["maxBytes"] as? Number)?.toInt() ?: 0)
             "pdfInfo" -> pdfInfo(uri(rootUri, id))
             "pdfPageBytes" -> pdfPage(uri(rootUri, id), (args["page"] as? Number)?.toInt() ?: 0)
             "videoMetadata" -> metadata(uri(rootUri, id))
@@ -319,6 +320,32 @@ class SafStorage(private val context: Context) {
         return input.use { it.readBytes() }
     }
 
+    /**
+     * 受限字节读取：最多读取 maxBytes，超出部分不传输。
+     *
+     * 文本、归档与电子书预览使用；恰好读满上限时再探测一字节判断是否
+     * 还有剩余，避免“刚好等于上限”被误报为截断。
+     */
+    private fun readBytesLimited(target: Uri, maxBytes: Int): Map<String, Any?> {
+        if (maxBytes <= 0) throw StorageFailure("invalid_argument", "读取上限无效")
+        val input = resolver.openInputStream(target)
+            ?: throw StorageFailure("read_failed", "无法读取文件")
+        return input.use { stream ->
+            val output = ByteArrayOutputStream(minOf(maxBytes, READ_CHUNK_BYTES))
+            val chunk = ByteArray(READ_CHUNK_BYTES)
+            var total = 0
+            while (total < maxBytes) {
+                val want = minOf(chunk.size, maxBytes - total)
+                val read = stream.read(chunk, 0, want)
+                if (read < 0) break
+                output.write(chunk, 0, read)
+                total += read
+            }
+            val truncated = total == maxBytes && stream.read() >= 0
+            mapOf("bytes" to output.toByteArray(), "truncated" to truncated)
+        }
+    }
+
     /** PDF 元信息：页数；受密码保护的 PDF 返回 pdf_protected。 */
     private fun pdfInfo(target: Uri): Map<String, Any?> {
         openPdf(target).use { renderer -> return mapOf("pageCount" to renderer.pageCount) }
@@ -386,6 +413,9 @@ class SafStorage(private val context: Context) {
     private fun uri(tree: Uri, id: String) = documentTree.uri(tree, id)
 
     companion object {
+        /** 受限读取的缓冲区大小。 */
+        private const val READ_CHUNK_BYTES = 64 * 1024
+
         fun failure(error: Exception): StorageFailure = when (error) {
             is StorageFailure -> error
             is SecurityException -> StorageFailure("permission_denied", "目录访问权限已失效，请重新选择")

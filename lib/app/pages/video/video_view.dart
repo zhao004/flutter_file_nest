@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
+import '../../services/vault_store.dart';
 
 /// 沉浸式视频预览：全屏播放，控件以渐变浮层叠加，播放时自动隐藏。
 ///
 /// 底层使用 media_kit（libmpv），支持 SAF `content://` 内容；退出或进入后台时
-/// 暂停；错误态提供重试与“用其他应用打开”。控件显隐由点击切换，拖动进度条期间
-/// 保持可见。
+/// 暂停并记录续播位置。手势：双击播放/暂停、左右滑快进快退、右侧上下滑音量、
+/// 左侧上下滑亮度。错误态提供重试与“用其他应用打开”。
 class VideoView extends StatefulWidget {
   const VideoView({required this.entry, super.key});
 
@@ -26,6 +28,16 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
   /// 播放中控件自动隐藏前的等待时间。
   static const _autoHideDuration = Duration(seconds: 3);
 
+  /// 可选倍速档位。
+  static const _speeds = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
+
+  /// 横向滑动跨越整屏宽度对应的快进/快退时长。
+  static const _seekSpanSeconds = 120.0;
+
+  /// 应用内亮度的下限，避免完全黑屏难以恢复。
+  static const _minBrightness = 0.05;
+
+  late final VaultStore _store = Get.find<VaultStore>();
   Player? _player;
   VideoController? _videoController;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -35,9 +47,18 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
   bool _scrubbing = false;
   bool _muted = false;
   bool _wasPlaying = false;
+  bool _completed = false;
+  double _speed = 1.0;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   String? _error;
+
+  // 手势状态：同一时刻只处理一种拖动模式。
+  _DragMode _dragMode = _DragMode.none;
+  double _brightness = 1.0;
+  double _dragVolume = 1.0;
+  Duration _dragStartPosition = Duration.zero;
+  Duration? _dragSeekTarget;
 
   @override
   void initState() {
@@ -63,7 +84,10 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
           if (mounted && value != _duration) setState(() => _duration = value);
         }),
       ]);
+      final resume = await _store.playbackPosition(widget.entry.uri);
       await player.open(Media(widget.entry.uri), play: true);
+      if (resume != null && resume > Duration.zero) await player.seek(resume);
+      _brightness = await _currentBrightness();
       if (!mounted) return;
       setState(() => _ready = true);
       _scheduleHide();
@@ -71,6 +95,15 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => _error = '无法播放此视频，文件可能已移动或格式不受支持');
       }
+    }
+  }
+
+  /// 读取当前应用亮度；平台不支持时返回 1.0（不改变系统亮度）。
+  Future<double> _currentBrightness() async {
+    try {
+      return await ScreenBrightness.instance.application;
+    } catch (_) {
+      return 1.0;
     }
   }
 
@@ -89,6 +122,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       _scheduleHide();
     } else {
       _cancelHide();
+      unawaited(_persistPosition());
     }
     // 暂停或播放结束时保持控件可见，并刷新播放/暂停图标。
     setState(() {
@@ -98,8 +132,37 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
 
   void _onCompleted(bool completed) {
     if (!mounted || !completed) return;
+    _completed = true;
     _cancelHide();
-    setState(() => _controlsVisible = true);
+    setState(() {
+      _controlsVisible = true;
+      _position = _duration;
+    });
+    unawaited(
+      _store.savePlaybackPosition(
+        widget.entry.uri,
+        Duration.zero,
+        duration: _duration,
+      ),
+    );
+  }
+
+  /// 记录当前位置；播放结束或位置无效时跳过。
+  Future<void> _persistPosition() async {
+    if (_completed) return;
+    final player = _player;
+    if (player == null) return;
+    final position = player.state.position;
+    if (position <= Duration.zero) return;
+    try {
+      await _store.savePlaybackPosition(
+        widget.entry.uri,
+        position,
+        duration: player.state.duration,
+      );
+    } catch (_) {
+      /* 记录失败不影响播放。 */
+    }
   }
 
   void _scheduleHide() {
@@ -125,6 +188,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     try {
       // 播放结束后再次点击从头重播。
       if (player.state.completed) {
+        _completed = false;
         await player.seek(Duration.zero);
         await player.play();
       } else {
@@ -147,6 +211,12 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _setSpeed(double speed) async {
+    _speed = speed;
+    await _player?.setRate(speed);
+    if (mounted) setState(() {});
+  }
+
   /// 重新创建播放器再试一次；失败时保持错误态。
   Future<void> _retry() async {
     _cancelHide();
@@ -156,6 +226,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       _error = null;
       _ready = false;
       _wasPlaying = false;
+      _completed = false;
       _position = Duration.zero;
       _duration = Duration.zero;
     });
@@ -176,10 +247,84 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
 
   void _openExternally() => Get.find<StorageGateway>().openFile(widget.entry);
 
+  // ---- 手势 ----
+
+  void _onHorizontalDragStart(DragStartDetails details) {
+    if (!_ready || _error != null) return;
+    _dragMode = _DragMode.seek;
+    _dragStartPosition = _position;
+    _dragSeekTarget = _position;
+    _cancelHide();
+    if (!_controlsVisible) setState(() => _controlsVisible = true);
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (_dragMode != _DragMode.seek) return;
+    final width = context.size?.width ?? 1;
+    final seconds = details.delta.dx / width * _seekSpanSeconds;
+    final total = _duration.inMilliseconds;
+    final next =
+        _dragStartPosition + Duration(milliseconds: (seconds * 1000).round());
+    _dragStartPosition = Duration(
+      milliseconds: next.inMilliseconds.clamp(0, total > 0 ? total : 0),
+    );
+    setState(() => _dragSeekTarget = _dragStartPosition);
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_dragMode != _DragMode.seek) return;
+    final target = _dragSeekTarget;
+    _dragMode = _DragMode.none;
+    _dragSeekTarget = null;
+    if (target != null) _player?.seek(target);
+    setState(() => _position = target ?? _position);
+    _scheduleHide();
+  }
+
+  void _onVerticalDragStart(DragStartDetails details) {
+    if (!_ready || _error != null) return;
+    final width = context.size?.width ?? 1;
+    final onRight = details.localPosition.dx >= width / 2;
+    _dragMode = onRight ? _DragMode.volume : _DragMode.brightness;
+    _dragVolume = (_player?.state.volume ?? 100) / 100;
+    _cancelHide();
+  }
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    final height = context.size?.height ?? 1;
+    final delta = -details.delta.dy / height;
+    if (_dragMode == _DragMode.volume) {
+      _dragVolume = (_dragVolume + delta).clamp(0.0, 1.0);
+      _player?.setVolume(_dragVolume * 100);
+      _muted = _dragVolume == 0;
+    } else if (_dragMode == _DragMode.brightness) {
+      _brightness = (_brightness + delta).clamp(_minBrightness, 1.0);
+      unawaited(_applyBrightness(_brightness));
+    } else {
+      return;
+    }
+    setState(() {});
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    _dragMode = _DragMode.none;
+    setState(() {});
+    _scheduleHide();
+  }
+
+  Future<void> _applyBrightness(double value) async {
+    try {
+      await ScreenBrightness.instance.setApplicationScreenBrightness(value);
+    } catch (_) {
+      /* 平台不支持时忽略。 */
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) return;
     _player?.pause();
+    unawaited(_persistPosition());
     _cancelHide();
     if (mounted && !_controlsVisible) setState(() => _controlsVisible = true);
   }
@@ -188,12 +333,22 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _hideTimer?.cancel();
+    unawaited(_persistPosition());
     for (final subscription in _subscriptions) {
       subscription.cancel();
     }
     _subscriptions.clear();
     _player?.dispose().catchError((_) {});
+    unawaited(_resetBrightness());
     super.dispose();
+  }
+
+  Future<void> _resetBrightness() async {
+    try {
+      await ScreenBrightness.instance.resetApplicationScreenBrightness();
+    } catch (_) {
+      /* 平台不支持时忽略。 */
+    }
   }
 
   @override
@@ -202,9 +357,31 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     body: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _ready && _error == null ? _toggleControls : null,
+      onDoubleTap: _ready && _error == null ? _togglePlay : null,
+      onHorizontalDragStart: _ready && _error == null
+          ? _onHorizontalDragStart
+          : null,
+      onHorizontalDragUpdate: _ready && _error == null
+          ? _onHorizontalDragUpdate
+          : null,
+      onHorizontalDragEnd: _ready && _error == null
+          ? _onHorizontalDragEnd
+          : null,
+      onVerticalDragStart: _ready && _error == null
+          ? _onVerticalDragStart
+          : null,
+      onVerticalDragUpdate: _ready && _error == null
+          ? _onVerticalDragUpdate
+          : null,
+      onVerticalDragEnd: _ready && _error == null ? _onVerticalDragEnd : null,
       child: Stack(
         fit: StackFit.expand,
-        children: [_videoLayer(), if (_ready && _error == null) _controls()],
+        children: [
+          _videoLayer(),
+          if (_ready && _error == null) _controls(),
+          if (_ready && _error == null && _dragMode != _DragMode.none)
+            _gestureHud(),
+        ],
       ),
     ),
   );
@@ -287,7 +464,46 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     ),
   );
 
-  /// 顶部渐变栏：返回、文件名与外部打开。
+  /// 拖动反馈浮层：快进时间或音量/亮度百分比。
+  Widget _gestureHud() {
+    final text = switch (_dragMode) {
+      _DragMode.seek =>
+        '${formatPlaybackTime(_dragSeekTarget ?? _position)}'
+            ' / ${formatPlaybackTime(_duration)}',
+      _DragMode.volume => '音量 ${(_dragVolume * 100).round()}%',
+      _DragMode.brightness => '亮度 ${(_brightness * 100).round()}%',
+      _DragMode.none => '',
+    };
+    if (text.isEmpty) return const SizedBox.shrink();
+    final icon = switch (_dragMode) {
+      _DragMode.seek =>
+        _dragSeekTarget != null && _dragSeekTarget! > _position
+            ? Icons.fast_forward
+            : Icons.fast_rewind,
+      _DragMode.volume => _dragVolume == 0 ? Icons.volume_off : Icons.volume_up,
+      _DragMode.brightness => Icons.brightness_6,
+      _DragMode.none => Icons.circle,
+    };
+    return Center(
+      child: Material(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(text, style: const TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 顶部渐变栏：返回、文件名、播放速度与外部打开。
   Widget _topBar() => DecoratedBox(
     decoration: const BoxDecoration(
       gradient: LinearGradient(
@@ -313,6 +529,32 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Colors.white),
             ),
+          ),
+          PopupMenuButton<double>(
+            tooltip: '播放速度',
+            iconColor: Colors.white,
+            onSelected: _setSpeed,
+            itemBuilder: (context) => [
+              for (final speed in _speeds)
+                PopupMenuItem(
+                  value: speed,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        child: speed == _speed
+                            ? Icon(
+                                Icons.check,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : null,
+                      ),
+                      Text('${_formatSpeed(speed)}x'),
+                    ],
+                  ),
+                ),
+            ],
           ),
           IconButton(
             tooltip: '用其他应用打开',
@@ -434,3 +676,10 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     );
   }
 }
+
+/// 手势拖动模式；同一时刻只生效一种。
+enum _DragMode { none, seek, volume, brightness }
+
+/// 倍速文案：整数不带小数，其余保留原始写法。
+String _formatSpeed(double speed) =>
+    speed == speed.roundToDouble() ? speed.toStringAsFixed(0) : '$speed';

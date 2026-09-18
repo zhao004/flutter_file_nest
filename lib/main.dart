@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
+import 'app/pages/preview/preview_settings_controller.dart';
 import 'app/services/archive_service.dart';
 import 'app/services/incoming_share_service.dart';
 import 'app/services/saf_storage.dart';
@@ -23,6 +24,11 @@ Future<void> main() async {
   // 主题与库偏好共用同一数据库连接。
   final database = AppDatabase();
   Get.put<VaultStore>(DriftVaultStore(database), permanent: true);
+  // 预览显示偏好与库偏好共用同一存储，启动时注册为常驻实例。
+  Get.put<PreviewSettingsController>(
+    PreviewSettingsController(Get.find<VaultStore>()),
+    permanent: true,
+  );
   final themeController = Get.put<ThemeController>(
     ThemeController(DriftThemeStore(database)),
     permanent: true,

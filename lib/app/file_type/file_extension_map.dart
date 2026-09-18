@@ -162,6 +162,16 @@ const Map<String, FileCategory> _extensionCategories = {
 /// 需要整体匹配、含多个点段的扩展名键。
 const Set<String> _compoundExtensions = {'tar.gz', 'tar.bz2', 'tar.xz'};
 
+/// 文件名的小写单段扩展名（最后一个点之后）；无扩展名返回空串。
+///
+/// 与 [categoryFromExtension] 的复合键匹配不同，这里只返回最后一段，
+/// 例如 `archive.tar.gz` 返回 `gz`，供预览器按具体格式细分。
+String fileExtension(String name) {
+  final dot = name.lastIndexOf('.');
+  if (dot < 0 || dot == name.length - 1) return '';
+  return name.substring(dot + 1).toLowerCase();
+}
+
 /// 文件名扩展名判定的分类；无法识别时返回 [FileCategory.unknown]。
 ///
 /// 文件名大小写不敏感；只取最后一个点后的单段扩展名，因此

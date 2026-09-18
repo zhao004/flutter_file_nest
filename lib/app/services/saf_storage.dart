@@ -69,11 +69,28 @@ abstract interface class StorageGateway {
   /// 读取文档字节；仅用于应用内图片预览等有界场景。
   Future<Uint8List?> readDocument(StorageEntry entry);
 
+  /// 读取文档字节并限制最大长度；超出 [maxBytes] 的部分不传输。
+  ///
+  /// 用于文本、代码、归档与电子书预览，避免大文件占用内存；调用方通过
+  /// [DocumentBytes.truncated] 判断是否被截断并给出提示。
+  Future<DocumentBytes> readDocumentLimited(
+    StorageEntry entry, {
+    required int maxBytes,
+  });
+
   /// PDF 页数；受密码保护或损坏时抛出结构化错误。
   Future<Map<String, Object?>> pdfInfo(StorageEntry entry);
 
   /// 渲染 PDF 指定页为 JPEG 字节；[page] 从 0 开始。
   Future<Uint8List?> pdfPage(StorageEntry entry, {required int page});
+}
+
+/// 受限读取结果：字节内容与是否因超过上限被截断。
+class DocumentBytes {
+  const DocumentBytes(this.bytes, {required this.truncated});
+
+  final Uint8List bytes;
+  final bool truncated;
 }
 
 class DeletionImpact {
@@ -255,6 +272,25 @@ class SafStorage implements StorageGateway {
   @override
   Future<Uint8List?> readDocument(StorageEntry entry) =>
       channel.invokeMethod<Uint8List>('readDocument', _entry(entry));
+
+  @override
+  Future<DocumentBytes> readDocumentLimited(
+    StorageEntry entry, {
+    required int maxBytes,
+  }) async {
+    final value = await channel.invokeMapMethod<Object?, Object?>(
+      'readDocumentLimited',
+      {..._entry(entry), 'maxBytes': maxBytes},
+    );
+    if (value == null) {
+      throw PlatformException(code: 'invalid_response', message: '读取响应为空');
+    }
+    final raw = value['bytes'];
+    final bytes = raw is Uint8List
+        ? raw
+        : Uint8List.fromList((raw as List<Object?>? ?? const []).cast<int>());
+    return DocumentBytes(bytes, truncated: value['truncated'] == true);
+  }
 
   @override
   Future<Map<String, Object?>> pdfInfo(StorageEntry entry) async {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_lens_vault/app/models/batch_models.dart';
@@ -54,6 +55,7 @@ StorageEntry entry(
 class MemoryStore implements VaultStore {
   VaultPreferences value = const VaultPreferences();
   final created = <String, DateTime>{};
+  final playback = <String, Duration>{};
   @override
   Future<VaultPreferences> loadPreferences() async => value;
   @override
@@ -71,6 +73,18 @@ class MemoryStore implements VaultStore {
     for (final uri in uris.toSet())
       if (created[uri] != null) uri: created[uri]!,
   };
+
+  @override
+  Future<Duration?> playbackPosition(String uri) async => playback[uri];
+
+  @override
+  Future<void> savePlaybackPosition(
+    String uri,
+    Duration position, {
+    Duration? duration,
+  }) async {
+    playback[uri] = position;
+  }
 }
 
 /// 内存主题存储；可注入初值、统计保存次数并模拟保存失败。
@@ -125,6 +139,12 @@ class FakeStorage implements StorageGateway {
   bool permissionDenied = false;
   bool failSourceDelete = false;
   Uint8List? thumbnailResult = Uint8List.fromList([9, 9, 9]);
+
+  /// 受限读取默认返回一段 UTF-8 文本，便于文本类预览测试。
+  Uint8List readDocumentLimitedResult = Uint8List.fromList(
+    utf8.encode('hello\nworld'),
+  );
+  bool readDocumentTruncated = false;
   final failingFolders = <String>{};
   final failDeleteNames = <String>{};
   List<StorageEntry> pickImportResults = [];
@@ -311,6 +331,15 @@ class FakeStorage implements StorageGateway {
   @override
   Future<Uint8List?> readDocument(StorageEntry entry) async =>
       Uint8List.fromList(const [1, 2, 3]);
+
+  @override
+  Future<DocumentBytes> readDocumentLimited(
+    StorageEntry entry, {
+    required int maxBytes,
+  }) async => DocumentBytes(
+    readDocumentLimitedResult,
+    truncated: readDocumentTruncated,
+  );
 
   @override
   Future<Map<String, Object?>> pdfInfo(StorageEntry entry) async => const {
