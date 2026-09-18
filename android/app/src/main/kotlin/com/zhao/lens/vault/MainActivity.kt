@@ -4,10 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.provider.OpenableColumns
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import androidx.core.content.IntentCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -477,58 +477,41 @@ class MainActivity : FlutterFragmentActivity() {
         dispatchIncomingShares(intent)
     }
 
-    /** 解析并下发外部文件；Flutter 尚未监听时先缓冲。 */
+    /**
+     * 解析并下发外部文件；Flutter 尚未监听时先缓冲。
+     *
+     * 只提取 URI，不在主线程访问外部提供方（如微信 FileProvider 的
+     * ContentResolver.query 可能阻塞启动，导致白屏/ANR）；名称与大小在
+     * 保存阶段于后台线程解析。任何解析异常都不得影响 Flutter 启动。
+     */
     private fun dispatchIncomingShares(intent: Intent?) {
-        val shares = extractIncomingShares(intent) ?: return
+        val shares = try {
+            extractIncomingShares(intent)
+        } catch (_: Exception) {
+            null
+        } ?: return
         val sink = incomingSink
         if (sink != null) sink.success(shares) else pendingShares = shares
     }
 
     /** 从 VIEW / SEND / SEND_MULTIPLE 中提取可读文件；无有效来源返回 null。 */
-    @Suppress("DEPRECATION")
     private fun extractIncomingShares(intent: Intent?): List<Map<String, Any?>>? {
         if (intent == null) return null
         val uris = when (intent.action) {
             Intent.ACTION_VIEW -> listOfNotNull(intent.data)
-            Intent.ACTION_SEND -> listOfNotNull(intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
-            Intent.ACTION_SEND_MULTIPLE ->
-                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+            Intent.ACTION_SEND -> listOfNotNull(
+                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java),
+            )
+            Intent.ACTION_SEND_MULTIPLE -> IntentCompat.getParcelableArrayListExtra(
+                intent,
+                Intent.EXTRA_STREAM,
+                Uri::class.java,
+            ).orEmpty()
             else -> return null
         }
         val readable = uris.filter { it.scheme == "content" || it.scheme == "file" }
         if (readable.isEmpty()) return null
-        return readable.map { uri ->
-            val (name, size) = shareMeta(uri)
-            mapOf("uri" to uri.toString(), "name" to name, "size" to size)
-        }
-    }
-
-    /** 读取分享文件的显示名与大小；不可用时返回 null，保存阶段再解析。 */
-    private fun shareMeta(uri: Uri): Pair<String?, Long?> {
-        if (uri.scheme == "file") {
-            val file = File(uri.path ?: return null to null)
-            return file.name to file.length()
-        }
-        return try {
-            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (!cursor.moveToFirst()) return@use null to null
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                val name = if (nameIndex >= 0 && !cursor.isNull(nameIndex)) {
-                    cursor.getString(nameIndex)
-                } else {
-                    null
-                }
-                val size = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
-                    cursor.getLong(sizeIndex).takeIf { it >= 0 }
-                } else {
-                    null
-                }
-                name to size
-            } ?: (null to null)
-        } catch (_: Exception) {
-            null to null
-        }
+        return readable.map { mapOf("uri" to it.toString()) }
     }
 
     override fun onDestroy() {
