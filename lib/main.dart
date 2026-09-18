@@ -28,7 +28,7 @@ class LensVaultApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       GetMaterialApp(
-        title: 'Lens Vault',
+        title: 'LensVault',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
