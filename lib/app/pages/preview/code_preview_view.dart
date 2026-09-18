@@ -9,6 +9,7 @@ import '../../file_type/file_extension_map.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/code_language.dart';
 import '../../preview/text_content.dart';
+import '../../routes/app_pages.dart';
 import '../../services/saf_storage.dart';
 import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
@@ -72,6 +73,13 @@ class _CodePreviewViewState extends State<CodePreviewView> {
     }
   }
 
+  /// 进入编辑页；返回后重新加载以反映保存结果。
+  Future<void> _edit() async {
+    await Get.toNamed<void>(Routes.textEditor, arguments: widget.entry);
+    if (!mounted) return;
+    setState(() => _future = _load());
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -120,6 +128,12 @@ class _CodePreviewViewState extends State<CodePreviewView> {
             ),
           ],
         ),
+        if (widget.entry.canWrite)
+          IconButton(
+            tooltip: '编辑',
+            onPressed: _edit,
+            icon: const Icon(Icons.edit_outlined),
+          ),
         IconButton(
           tooltip: '用其他应用打开',
           onPressed: () => _storage.openFile(widget.entry),

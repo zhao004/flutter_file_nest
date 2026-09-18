@@ -43,6 +43,16 @@ void main() {
     expect(find.byType(SelectableText), findsWidgets);
   });
 
+  testWidgets('可写文本显示编辑入口，只读隐藏', (tester) async {
+    await pumpView(tester, TextPreviewView(entry: entry('notes.txt')));
+    expect(find.byTooltip('编辑'), findsOneWidget);
+    await pumpView(
+      tester,
+      TextPreviewView(entry: entry('notes.txt', canWrite: false)),
+    );
+    expect(find.byTooltip('编辑'), findsNothing);
+  });
+
   testWidgets('代码预览显示行号', (tester) async {
     await pumpView(tester, CodePreviewView(entry: entry('script.sh')));
     expect(find.text('1\n2'), findsOneWidget);

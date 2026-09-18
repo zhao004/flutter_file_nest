@@ -81,6 +81,9 @@ abstract interface class StorageGateway {
     required int maxBytes,
   });
 
+  /// 覆盖写入文档内容；返回更新后的条目（新大小与修改时间）。
+  Future<StorageEntry> writeDocument(StorageEntry entry, Uint8List bytes);
+
   /// PDF 页数；受密码保护或损坏时抛出结构化错误。
   Future<Map<String, Object?>> pdfInfo(StorageEntry entry);
 
@@ -297,6 +300,21 @@ class SafStorage implements StorageGateway {
         ? raw
         : Uint8List.fromList((raw as List<Object?>? ?? const []).cast<int>());
     return DocumentBytes(bytes, truncated: value['truncated'] == true);
+  }
+
+  @override
+  Future<StorageEntry> writeDocument(
+    StorageEntry entry,
+    Uint8List bytes,
+  ) async {
+    final value = await channel.invokeMapMethod<Object?, Object?>(
+      'writeDocument',
+      {..._entry(entry), 'bytes': bytes},
+    );
+    if (value == null) {
+      throw PlatformException(code: 'invalid_response', message: '写入响应为空');
+    }
+    return StorageEntry.fromMap(value);
   }
 
   @override

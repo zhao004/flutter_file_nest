@@ -17,6 +17,7 @@ class StorageEntry {
     this.canCreate = false,
     this.canRename = false,
     this.canDelete = false,
+    this.canWrite = false,
   });
 
   factory StorageEntry.fromMap(Map<Object?, Object?> map) => StorageEntry(
@@ -35,6 +36,7 @@ class StorageEntry {
     canCreate: map['canCreate'] == true,
     canRename: map['canRename'] == true,
     canDelete: map['canDelete'] == true,
+    canWrite: map['canWrite'] == true,
   );
 
   final String rootUri;
@@ -48,6 +50,9 @@ class StorageEntry {
   final bool canCreate;
   final bool canRename;
   final bool canDelete;
+
+  /// 文件是否可覆盖写入（SAF `FLAG_SUPPORTS_WRITE` 且目录具备写权限）。
+  final bool canWrite;
 
   /// 按 MIME 与扩展名判定的文件分类；目录与未知类型也有对应取值。
   FileCategory get fileCategory => detectFileCategory(

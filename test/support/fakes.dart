@@ -38,6 +38,7 @@ StorageEntry entry(
   int? size,
   DateTime? modified,
   String? mime,
+  bool? canWrite,
 }) => StorageEntry(
   rootUri: root.rootUri,
   documentId: name,
@@ -47,6 +48,7 @@ StorageEntry entry(
   canCreate: directory,
   canDelete: true,
   canRename: true,
+  canWrite: canWrite ?? !directory,
   size: size,
   modifiedAt: modified,
   mimeType: mime,
@@ -178,6 +180,8 @@ class FakeStorage implements StorageGateway {
   int deletes = 0;
   int creates = 0;
   int fileCreates = 0;
+  int writes = 0;
+  final writtenBytes = <String, Uint8List>{};
   final moves = <String>[];
   final renames = <String>[];
   int thumbnailLoads = 0;
@@ -260,6 +264,7 @@ class FakeStorage implements StorageGateway {
       canCreate: source.canCreate,
       canRename: source.canRename,
       canDelete: source.canDelete,
+      canWrite: source.canWrite,
     );
     contents.putIfAbsent(targetFolder.documentId, () => []).add(moved);
     return MoveResult(moved, sourceDeleted: !failSourceDelete);
@@ -363,6 +368,36 @@ class FakeStorage implements StorageGateway {
     readDocumentLimitedResult,
     truncated: readDocumentTruncated,
   );
+
+  @override
+  Future<StorageEntry> writeDocument(
+    StorageEntry entry,
+    Uint8List bytes,
+  ) async {
+    writes++;
+    writtenBytes[entry.uri] = bytes;
+    for (final items in contents.values) {
+      final index = items.indexWhere((value) => value.uri == entry.uri);
+      if (index < 0) continue;
+      final updated = StorageEntry(
+        rootUri: entry.rootUri,
+        documentId: entry.documentId,
+        uri: entry.uri,
+        name: entry.name,
+        isDirectory: false,
+        mimeType: entry.mimeType,
+        size: bytes.length,
+        modifiedAt: DateTime.now(),
+        canCreate: entry.canCreate,
+        canRename: entry.canRename,
+        canDelete: entry.canDelete,
+        canWrite: entry.canWrite,
+      );
+      items[index] = updated;
+      return updated;
+    }
+    return entry;
+  }
 
   @override
   Future<Map<String, Object?>> pdfInfo(StorageEntry entry) async => const {

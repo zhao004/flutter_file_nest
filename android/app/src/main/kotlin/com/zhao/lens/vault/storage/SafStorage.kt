@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.util.ArrayDeque
 import java.util.Locale
 
@@ -82,6 +83,12 @@ class SafStorage(private val context: Context) {
             "importDocument" -> import(sourceUri(args), rootUri, document)
             "readDocument" -> readBytes(uri(rootUri, id))
             "readDocumentLimited" -> readBytesLimited(uri(rootUri, id), (args["maxBytes"] as? Number)?.toInt() ?: 0)
+            "writeDocument" -> {
+                val bytes = args["bytes"] as? ByteArray
+                    ?: throw StorageFailure("invalid_argument", "缺少写入内容")
+                writeBytes(uri(rootUri, id), bytes)
+                read(rootUri, id)
+            }
             "pdfInfo" -> pdfInfo(uri(rootUri, id))
             "pdfPageBytes" -> pdfPage(uri(rootUri, id), (args["page"] as? Number)?.toInt() ?: 0)
             "videoMetadata" -> metadata(uri(rootUri, id))
@@ -352,6 +359,33 @@ class SafStorage(private val context: Context) {
             }
             val truncated = total == maxBytes && stream.read() >= 0
             mapOf("bytes" to output.toByteArray(), "truncated" to truncated)
+        }
+    }
+
+    /**
+     * 覆盖写入文档内容；先尝试 "wt"（写入并截断），部分提供方不支持时回退 "w"。
+     * 失败统一按 write_failed 上报，不泄漏底层异常。
+     */
+    private fun writeBytes(target: Uri, bytes: ByteArray) {
+        val output = openForWrite(target)
+            ?: throw StorageFailure("write_failed", "无法写入文件")
+        try {
+            output.use { stream ->
+                stream.write(bytes)
+                stream.flush()
+            }
+        } catch (_: Exception) {
+            throw StorageFailure("write_failed", "写入文件失败，请检查存储空间")
+        }
+    }
+
+    private fun openForWrite(target: Uri): OutputStream? = try {
+        resolver.openOutputStream(target, "wt")
+    } catch (_: Exception) {
+        try {
+            resolver.openOutputStream(target, "w")
+        } catch (_: Exception) {
+            null
         }
     }
 

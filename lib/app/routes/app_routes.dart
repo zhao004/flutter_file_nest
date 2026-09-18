@@ -4,6 +4,7 @@ abstract class Routes {
   Routes._();
   static const home = _Paths.home;
   static const preview = '/preview';
+  static const textEditor = '/preview/edit';
   static const settings = '/settings';
   static const themePicker = '/settings/theme';
 }

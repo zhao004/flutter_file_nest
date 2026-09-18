@@ -39,6 +39,7 @@ class DocumentTree(private val context: Context) {
                         "lastModified" to number(Document.COLUMN_LAST_MODIFIED)?.takeIf { it > 0 },
                         "canCreate" to supports(Document.FLAG_DIR_SUPPORTS_CREATE),
                         "canRename" to supports(Document.FLAG_SUPPORTS_RENAME), "canDelete" to supports(Document.FLAG_SUPPORTS_DELETE),
+                        "canWrite" to supports(Document.FLAG_SUPPORTS_WRITE),
                         "canMove" to supports(Document.FLAG_SUPPORTS_MOVE)))
                 }
             }

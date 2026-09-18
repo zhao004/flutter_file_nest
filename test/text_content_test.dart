@@ -56,4 +56,46 @@ void main() {
     final decoded = await decodeTextBytes(truncated);
     expect(decoded.encoding, isNot('UTF-8'));
   });
+
+  test('detectLineEnding 识别 CRLF', () {
+    expect(detectLineEnding('a\nb'), '\n');
+    expect(detectLineEnding('a\r\nb'), '\r\n');
+  });
+
+  test('按原换行风格回写 UTF-8', () async {
+    final bytes = await encodeTextBytes(
+      'a\r\nb\nc',
+      encoding: 'UTF-8',
+      lineEnding: '\r\n',
+    );
+    expect(utf8.decode(bytes), 'a\r\nb\r\nc');
+  });
+
+  test('UTF-8 BOM 往返', () async {
+    final bytes = await encodeTextBytes('你好', encoding: 'UTF-8', hasBom: true);
+    expect(bytes.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
+    final decoded = await decodeTextBytes(bytes);
+    expect(decoded.text, '你好');
+    expect(decoded.hasBom, isTrue);
+  });
+
+  test('UTF-16LE 往返', () async {
+    final bytes = await encodeTextBytes(
+      'Hi',
+      encoding: 'UTF-16LE',
+      hasBom: true,
+    );
+    expect(bytes.sublist(0, 2), [0xFF, 0xFE]);
+    final decoded = await decodeTextBytes(bytes);
+    expect(decoded.text, 'Hi');
+    expect(decoded.encoding, 'UTF-16LE');
+    expect(decoded.hasBom, isTrue);
+  });
+
+  test('平台不支持时 GBK 编码抛出结构化异常', () async {
+    await expectLater(
+      encodeTextBytes('中文', encoding: 'GBK'),
+      throwsA(isA<TextEncodeException>()),
+    );
+  });
 }

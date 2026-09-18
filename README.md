@@ -29,6 +29,7 @@
 - 图片/视频列表缩略图：原生 `loadThumbnail`（API 29+），低版本回退 `MediaMetadataRetriever`；带缓存、并发上限与取消，目录切换时不阻塞列表。
 - 图片预览（缩放、双击放大、缩放级别、信息与分享，SVG 由 `flutter_svg` 渲染）、PDF 预览（原生 `PdfRenderer` 分页与缩放）、视频预览（media_kit，播放/暂停、拖拽进度、倍速、静音、双击与滑动手势、续播、外部打开）、音频预览（media_kit，唱片式界面、快进快退、倍速、静音、续播）。
 - 文档预览：文本（编码识别、搜索高亮、换行与字号）、代码（语法高亮、行号、搜索）、Markdown（阅读/源码切换）、CSV 表格、字幕（SRT/VTT/ASS 时间轴）、字体（TTF/OTF 样文）、压缩包内容浏览（ZIP/TAR/GZ/BZ2/XZ 虚拟文件系统）、EPUB 阅读器（目录、分页、字号）。
+- 文本与代码编辑：txt/log/ini 与 html/php/java/js/css/json/xml/yaml 等，以及 Markdown 源码，可进入编辑页修改；保存按原编码/BOM/换行回写，未保存返回二次确认；超过读取上限或只读目录不开放编辑。
 - 应用内无法预览的类型展示信息页并提供“用其他应用打开”；Office 文档、RAR/7Z、MOBI/AZW3、字体集合（TTC）等交由系统应用。
 - ZIP 压缩/解压（Android `java.util.zip` 流式处理，含条目数、深度、体积与压缩比安全上限）与系统分享。
 
