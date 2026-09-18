@@ -13,6 +13,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import com.zhao.lens.vault.editor.CodeEditorViewFactory
 import com.zhao.lens.vault.storage.SafStorage
 import com.zhao.lens.vault.storage.StorageFailure
 import com.zhao.lens.vault.storage.archive.ArchiveManager
@@ -86,6 +87,11 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
+        // 代码编辑器平台视图：文本/代码文件的应用内编辑。
+        engine.platformViewsController.registry.registerViewFactory(
+            "lens_vault/code_editor",
+            CodeEditorViewFactory(engine.dartExecutor.binaryMessenger),
+        )
         val storage = SafStorage(applicationContext)
         storageHandler = storage
         channel = MethodChannel(engine.dartExecutor.binaryMessenger, "lens_vault/saf_storage")

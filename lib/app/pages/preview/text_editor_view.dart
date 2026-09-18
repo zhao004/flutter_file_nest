@@ -2,19 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../models/storage_entry.dart';
+import '../../preview/editor_surface.dart';
 import '../../preview/text_content.dart';
+import '../../routes/app_pages.dart';
 import '../../services/saf_storage.dart';
-import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
+import 'sora_code_editor.dart';
 
-/// 文本/代码编辑器：按原编码、BOM 与换行风格覆盖保存。
+/// 文本/代码编辑器：基于 sora-editor 平台视图，按原编码、BOM 与换行风格保存。
 ///
 /// 内容被截断（超过读取上限）时不提供编辑，避免用不完整内容覆盖原文件；
-/// 未保存返回时二次确认。保存成功后返回更新后的条目。
+/// 未保存返回时二次确认。保存成功后停留在编辑页并清除未保存状态。
 class TextEditorView extends StatefulWidget {
-  const TextEditorView({required this.entry, super.key});
+  const TextEditorView({
+    required this.entry,
+    this.editorBuilder = buildSoraCodeEditor,
+    super.key,
+  });
 
   final StorageEntry entry;
+
+  /// 编辑器构建器；测试注入假实现，生产默认使用 sora-editor 平台视图。
+  final CodeEditorBuilder editorBuilder;
 
   @override
   State<TextEditorView> createState() => _TextEditorViewState();
@@ -22,48 +31,40 @@ class TextEditorView extends StatefulWidget {
 
 class _TextEditorViewState extends State<TextEditorView> {
   late final StorageGateway _storage = Get.find<StorageGateway>();
-  late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
-  final _controller = TextEditingController();
 
+  CodeEditorController? _controller;
   TextContent? _content;
   String? _original;
   String? _error;
   bool _loading = true;
   bool _saving = false;
+  bool _dirty = false;
 
-  bool get _dirty => _content != null && _controller.text != _original;
+  /// 首次填充文本会触发原生内容变化事件，此时不应标记为“未保存”。
+  bool _suppressChange = false;
+
+  bool get _editable => widget.entry.canWrite;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onChanged);
     _load();
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_onChanged);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onChanged() {
-    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
+      _dirty = false;
+      _content = null;
+      _original = null;
+      _controller = null;
     });
     try {
       final content = await loadTextContent(_storage, widget.entry);
       if (!mounted) return;
-      _controller.text = content.text;
       setState(() {
         _content = content;
-        _original = content.text;
         _loading = false;
       });
     } catch (failure) {
@@ -75,33 +76,65 @@ class _TextEditorViewState extends State<TextEditorView> {
     }
   }
 
-  void _revert() {
+  /// 平台视图就绪：填入初始文本并记录原文。
+  void _onController(CodeEditorController controller) {
+    _controller = controller;
+    final content = _content;
+    if (content == null || content.truncated) return;
+    _suppressChange = true;
+    controller
+        .setText(content.text)
+        .whenComplete(() {
+          _original = content.text;
+          _suppressChange = false;
+          if (mounted) setState(() {});
+        })
+        .catchError((_) {
+          _suppressChange = false;
+        });
+  }
+
+  void _onChanged() {
+    if (_suppressChange || _dirty) return;
+    setState(() => _dirty = true);
+  }
+
+  Future<void> _revert() async {
+    final controller = _controller;
     final original = _original;
-    if (original == null) return;
-    _controller.text = original;
+    if (controller == null || original == null) return;
+    _suppressChange = true;
+    try {
+      await controller.setText(original);
+    } finally {
+      _suppressChange = false;
+    }
+    if (mounted) setState(() => _dirty = false);
   }
 
   Future<void> _save() async {
+    final controller = _controller;
     final content = _content;
-    if (content == null || _saving) return;
+    if (controller == null || content == null || _saving) return;
     setState(() => _saving = true);
     try {
+      final text = await controller.readText();
       final bytes = await encodeTextBytes(
-        _controller.text,
+        text,
         encoding: content.encoding,
         hasBom: content.hasBom,
         lineEnding: content.lineEnding,
       );
-      final updated = await _storage.writeDocument(widget.entry, bytes);
+      await _storage.writeDocument(widget.entry, bytes);
       if (!mounted) return;
       setState(() {
-        _original = _controller.text;
+        _original = text;
+        _dirty = false;
         _saving = false;
       });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已保存')));
-      Navigator.of(context).pop(updated);
     } on TextEncodeException catch (failure) {
       _showError(failure.message);
     } catch (failure) {
@@ -157,25 +190,49 @@ class _TextEditorViewState extends State<TextEditorView> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            tooltip: '保存',
-            onPressed: _dirty && !_saving ? _save : null,
-            icon: const Icon(Icons.save_outlined),
-          ),
+          if (_editable) ...[
+            IconButton(
+              tooltip: '撤销',
+              onPressed: _controller == null ? null : () => _controller!.undo(),
+              icon: const Icon(Icons.undo),
+            ),
+            IconButton(
+              tooltip: '重做',
+              onPressed: _controller == null ? null : () => _controller!.redo(),
+              icon: const Icon(Icons.redo),
+            ),
+            IconButton(
+              tooltip: '保存',
+              onPressed: _dirty && !_saving ? _save : null,
+              icon: const Icon(Icons.save_outlined),
+            ),
+          ],
           PopupMenuButton<_EditorMenu>(
             tooltip: '编辑选项',
             onSelected: (value) => switch (value) {
               _EditorMenu.revert => _revert(),
+              _EditorMenu.preview => Get.toNamed<void>(
+                Routes.preview,
+                arguments: widget.entry,
+              ),
               _EditorMenu.openExternal => _storage.openFile(widget.entry),
             },
             itemBuilder: (context) => [
               PopupMenuItem(
                 value: _EditorMenu.revert,
-                enabled: _dirty,
+                enabled: _editable && _dirty,
                 child: const ListTile(
                   dense: true,
                   leading: Icon(Icons.undo),
                   title: Text('还原修改'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: _EditorMenu.preview,
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(Icons.visibility_outlined),
+                  title: Text('预览'),
                 ),
               ),
               const PopupMenuItem(
@@ -233,23 +290,12 @@ class _TextEditorViewState extends State<TextEditorView> {
             content.lineEnding != '\n')
           _EncodingNotice(content: content),
         Expanded(
-          child: Obx(
-            () => TextField(
-              controller: _controller,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              keyboardType: TextInputType.multiline,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: _settings.fontSize.value,
-                height: 1.4,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(12),
-                hintText: '输入内容',
-              ),
+          child: widget.editorBuilder(
+            CodeEditorHostConfig(
+              editable: _editable,
+              dark: Theme.of(context).brightness == Brightness.dark,
+              onController: _onController,
+              onChanged: _onChanged,
             ),
           ),
         ),
@@ -258,7 +304,7 @@ class _TextEditorViewState extends State<TextEditorView> {
   }
 }
 
-enum _EditorMenu { revert, openExternal }
+enum _EditorMenu { revert, preview, openExternal }
 
 /// 编辑态编码信息条：提示保存时保持的原编码/BOM/换行。
 class _EncodingNotice extends StatelessWidget {

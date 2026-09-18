@@ -46,4 +46,6 @@ flutter {
 dependencies {
     testImplementation("junit:junit:4.13.2")
     implementation("androidx.core:core-ktx:1.13.1")
+    // sora-editor：应用内文本/代码编辑器（平台视图）。
+    implementation("io.github.rosemoe:editor:0.24.6")
 }
