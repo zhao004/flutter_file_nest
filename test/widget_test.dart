@@ -54,9 +54,21 @@ void main() {
     await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     Future<void> showDelete() async {
-      await tester.tap(find.byTooltip('文件操作'));
+      // 操作入口为长按文件行。
+      await tester.longPress(find.text('现场'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('删除'));
+      // 操作项较多时“删除”位于折叠区，先滚动到可见。
+      await tester.scrollUntilVisible(
+        find.text('删除'),
+        60,
+        scrollable: find
+            .descendant(
+              of: find.byType(SafeArea),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(find.text('删除'), warnIfMissed: false);
       await tester.pumpAndSettle();
     }
 
@@ -107,7 +119,8 @@ void main() {
     );
     await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('文件操作'));
+    // 操作入口为长按文件行。
+    await tester.longPress(find.text('素材.zip'));
     await tester.pumpAndSettle();
     expect(find.text('压缩为 ZIP'), findsOneWidget);
     expect(find.text('解压到新文件夹'), findsOneWidget);
