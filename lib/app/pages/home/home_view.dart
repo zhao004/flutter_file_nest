@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../file_type/file_category.dart';
+import '../../file_type/file_icon_mapper.dart';
 import '../../models/archive_models.dart';
 import '../../models/storage_entry.dart';
 import '../../routes/app_pages.dart';
@@ -487,7 +489,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 actions: [
                   FabAction(
                     label: '新建文件夹',
-                    icon: Icons.create_new_folder_outlined,
+                    icon: fileCategoryIcon(
+                      FileCategory.folder,
+                      folderState: FolderIconState.create,
+                    ),
                     onPressed: () => _nameDialog(),
                   ),
                   FabAction(
@@ -735,9 +740,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.folder_open,
+            fileCategoryIcon(
+              FileCategory.folder,
+              folderState: FolderIconState.open,
+            ),
             size: 64,
-            color: Theme.of(context).colorScheme.primary,
+            color: fileCategoryColor(context, FileCategory.folder),
           ),
           const SizedBox(height: 20),
           const Text('选择存储文件夹', style: TextStyle(fontSize: 22)),
@@ -784,12 +792,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Widget _searchRow(StorageEntry entry, bool busy) {
     final location = controller.searchLocationOf(entry);
     return ListTile(
-      leading: Icon(
-        entry.isDirectory ? Icons.folder : Icons.insert_drive_file_outlined,
-        color: entry.isDirectory
-            ? Theme.of(context).colorScheme.tertiary
-            : Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+      leading: _entryIcon(entry),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text('位置：${location ?? '未知'}'),
       enabled: !busy,
@@ -917,22 +920,20 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
-  Widget _entryIcon(StorageEntry entry) => Icon(
-    switch (entry) {
-      _ when entry.isDirectory => Icons.folder,
-      _ when entry.isVideo => Icons.movie_outlined,
-      _ when entry.isImage => Icons.image_outlined,
-      _ when entry.isPdf => Icons.picture_as_pdf_outlined,
-      _ => Icons.insert_drive_file_outlined,
-    },
-    color: entry.isDirectory
-        ? Theme.of(context).colorScheme.tertiary
-        : entry.isVideo
-        ? Theme.of(context).colorScheme.primary
-        : entry.isImage || entry.isPdf
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurfaceVariant,
-  );
+  /// 目录在缺少写入能力时显示受保护图标；其余分类使用统一映射。
+  FolderIconState _folderState(StorageEntry entry) =>
+      entry.isDirectory && !entry.canCreate && !entry.canDelete
+      ? FolderIconState.locked
+      : FolderIconState.closed;
+
+  Widget _entryIcon(StorageEntry entry) {
+    final category = entry.fileCategory;
+    final folderState = _folderState(entry);
+    return Icon(
+      fileCategoryIcon(category, folderState: folderState),
+      color: fileCategoryColor(context, category, folderState: folderState),
+    );
+  }
 
   /// 选择模式底部操作栏：退出、全选、删除、移动、重命名、压缩与分享。
   Widget _selectionBar(bool busy) => SafeArea(

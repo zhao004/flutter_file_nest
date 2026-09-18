@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../file_type/file_category.dart';
+import '../../file_type/file_icon_mapper.dart';
 import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
@@ -535,13 +537,18 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       itemBuilder: (context, index) {
         final folder = _children[index];
         final blocked = widget.blockedDocumentIds.contains(folder.documentId);
+        final folderState = blocked
+            ? FolderIconState.locked
+            : FolderIconState.closed;
         return ListTile(
           enabled: !blocked,
           leading: Icon(
-            Icons.folder,
-            color: blocked
-                ? Theme.of(context).colorScheme.outline
-                : Theme.of(context).colorScheme.tertiary,
+            fileCategoryIcon(FileCategory.folder, folderState: folderState),
+            color: fileCategoryColor(
+              context,
+              FileCategory.folder,
+              folderState: folderState,
+            ),
           ),
           title: Text(
             folder.name,
@@ -830,7 +837,7 @@ class EntryDetailsDialog extends StatelessWidget {
     final rows = <(String, String)>[
       ('名称', entry.name),
       ('位置', location),
-      ('类型', entry.isDirectory ? '文件夹' : entry.mimeType ?? '未知'),
+      ('类型', _entryTypeLabel(entry)),
       ('大小', entry.isDirectory ? '—' : formatBytes(entry.size)),
       (
         '修改时间',
@@ -931,6 +938,13 @@ String _formatTime(DateTime time) {
   String pad(int value) => value.toString().padLeft(2, '0');
   return '${time.year}/${pad(time.month)}/${pad(time.day)} '
       '${pad(time.hour)}:${pad(time.minute)}';
+}
+
+/// 详情页类型文案：分类中文名；提供方返回 MIME 时附在右侧便于排查。
+String _entryTypeLabel(StorageEntry entry) {
+  final label = fileTypeInfo(entry.fileCategory).label;
+  final mime = entry.mimeType;
+  return mime == null || mime.isEmpty ? label : '$label · $mime';
 }
 
 /// 悬浮菜单中的单个操作。

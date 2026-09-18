@@ -1,3 +1,6 @@
+import '../file_type/file_category.dart';
+import '../file_type/file_type_detector.dart';
+
 enum EntrySort { name, modified, created, size }
 
 /// 文档提供方返回的当前快照；documentId 与 URI 均为不透明标识。
@@ -46,25 +49,24 @@ class StorageEntry {
   final bool canRename;
   final bool canDelete;
 
-  bool get isVideo =>
-      !isDirectory &&
-      (mimeType?.startsWith('video/') == true ||
-          RegExp(
-            r'\.(mp4|m4v|mkv|webm|mov|3gp|avi)$',
-            caseSensitive: false,
-          ).hasMatch(name));
+  /// 按 MIME 与扩展名判定的文件分类；目录与未知类型也有对应取值。
+  FileCategory get fileCategory => detectFileCategory(
+    name: name,
+    mimeType: mimeType,
+    isDirectory: isDirectory,
+  );
 
+  bool get isVideo => fileCategory == FileCategory.video;
+
+  /// 是否可直接作为位图预览与缩略图来源。
+  ///
+  /// SVG 归入图片分类用于图标展示，但 Flutter 无法直接用字节解码，
+  /// 因此这里排除，避免点击后进入空白预览。
   bool get isImage =>
-      !isDirectory &&
-      (mimeType?.startsWith('image/') == true ||
-          RegExp(
-            r'\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$',
-            caseSensitive: false,
-          ).hasMatch(name));
+      fileCategory == FileCategory.image &&
+      !name.toLowerCase().endsWith('.svg');
 
-  bool get isPdf =>
-      !isDirectory &&
-      (mimeType == 'application/pdf' || name.toLowerCase().endsWith('.pdf'));
+  bool get isPdf => fileCategory == FileCategory.pdf;
 }
 
 List<StorageEntry> sortEntries(
