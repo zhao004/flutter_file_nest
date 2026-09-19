@@ -195,12 +195,14 @@ class SafStorage implements StorageGateway {
     StorageEntry entry,
     StorageEntry targetFolder,
   ) async {
-    final result = await channel
-        .invokeMapMethod<Object?, Object?>('moveEntry', {
-          ..._entry(entry),
-          'parentDocumentId': parent.documentId,
-          'targetParentDocumentId': targetFolder.documentId,
-        });
+    final result = await channel.invokeMapMethod<Object?, Object?>(
+      'moveEntry',
+      {
+        ..._entry(entry),
+        'parentDocumentId': parent.documentId,
+        'targetParentDocumentId': targetFolder.documentId,
+      },
+    );
     if (result == null) {
       throw PlatformException(code: 'invalid_response', message: '移动响应为空');
     }

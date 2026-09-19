@@ -163,9 +163,8 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
       bytes = contents.readEntry(row.path);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('无法读取该条目')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('无法读取该条目')));
       }
       return;
     }

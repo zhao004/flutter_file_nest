@@ -65,9 +65,8 @@ class _CodePreviewViewState extends State<CodePreviewView> {
       final content = await _future;
       await Clipboard.setData(ClipboardData(text: content.text));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已复制全部内容')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已复制全部内容')));
     } catch (_) {
       /* 复制失败不提示。 */
     }
@@ -229,9 +228,8 @@ class _CodePreviewViewState extends State<CodePreviewView> {
           query,
           base: base,
           matchStyle: TextStyle(
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.3),
+            backgroundColor: Theme.of(context).colorScheme.primary
+                .withValues(alpha: 0.3),
           ),
         ),
         style: base,

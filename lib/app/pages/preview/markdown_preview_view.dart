@@ -118,9 +118,8 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
         data: content.text,
         selectable: true,
         onTapLink: (text, href, title) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('链接：${href ?? text}')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('链接：${href ?? text}')));
         },
       ),
     );

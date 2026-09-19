@@ -170,9 +170,8 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
             customWidgetBuilder: (element) =>
                 element.localName == 'img' ? const SizedBox.shrink() : null,
             onTapUrl: (url) async {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('链接：$url')));
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text('链接：$url')));
               return true;
             },
           ),

@@ -410,9 +410,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// 前台归档任务进度条；总量未知时使用不定进度，始终提供取消入口。

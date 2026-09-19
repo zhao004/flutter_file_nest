@@ -650,9 +650,8 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
         activeTrackColor: Theme.of(context).colorScheme.primary,
         inactiveTrackColor: Colors.white24,
         thumbColor: Theme.of(context).colorScheme.primary,
-        overlayColor: Theme.of(
-          context,
-        ).colorScheme.primary.withValues(alpha: 0.2),
+        overlayColor: Theme.of(context).colorScheme.primary
+            .withValues(alpha: 0.2),
       ),
       child: Slider(
         min: 0,

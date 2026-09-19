@@ -135,9 +135,8 @@ class _TextEditorViewState extends State<TextEditorView> {
         _dirty = false;
         _saving = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已保存')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已保存')));
     } on TextEncodeException catch (failure) {
       _showError(failure.message);
     } catch (failure) {
@@ -148,9 +147,8 @@ class _TextEditorViewState extends State<TextEditorView> {
   void _showError(String message) {
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// 有未保存修改时确认是否放弃；返回 true 表示可以离开。

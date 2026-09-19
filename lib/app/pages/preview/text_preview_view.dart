@@ -59,9 +59,8 @@ class _TextPreviewViewState extends State<TextPreviewView> {
       final content = await _future;
       await Clipboard.setData(ClipboardData(text: content.text));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已复制全部内容')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已复制全部内容')));
     } catch (_) {
       /* 复制失败不提示。 */
     }

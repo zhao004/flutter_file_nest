@@ -165,14 +165,16 @@ class ArchiveService implements ArchiveGateway {
       canCancel: true,
     );
     try {
-      final result = await _channel
-          .invokeMapMethod<Object?, Object?>('extract', {
-            'operationId': operationId,
-            'rootUri': archive.rootUri,
-            'archiveDocumentId': archive.documentId,
-            'targetParentDocumentId': targetFolder.documentId,
-            'folderName': folderName ?? defaultExtractFolderName(archive.name),
-          });
+      final result = await _channel.invokeMapMethod<Object?, Object?>(
+        'extract',
+        {
+          'operationId': operationId,
+          'rootUri': archive.rootUri,
+          'archiveDocumentId': archive.documentId,
+          'targetParentDocumentId': targetFolder.documentId,
+          'folderName': folderName ?? defaultExtractFolderName(archive.name),
+        },
+      );
       if (result == null) {
         return const ArchiveOutcome.failure(
           ArchiveKind.extract,
