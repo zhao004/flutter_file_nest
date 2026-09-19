@@ -119,9 +119,34 @@ flutter analyze
 flutter test
 ```
 
+## 发布 Android 版本
+
+发布流程由 `.github/workflows/android-release.yml` 执行：推送 `vX.Y.Z` 格式的 tag，或在
+Actions 中手动运行 `Android release` 并填写既有 tag。流水线会依次执行格式检查、`flutter analyze`、
+`flutter test`，随后构建签名的 APK 与 AAB，生成 `SHA256SUMS.txt`，并创建（或覆盖更新）
+GitHub Release。
+
+- 运行环境 `flutter_android_build`，需配置以下 Secrets：
+
+  | Secret | 说明 |
+  | --- | --- |
+  | `ANDROID_KEYSTORE_BASE64` | 发布 keystore 的 Base64 内容 |
+  | `ANDROID_KEYSTORE_PASSWORD` | keystore 密码 |
+  | `ANDROID_KEY_ALIAS` | 密钥别名 |
+  | `ANDROID_KEY_PASSWORD` | 密钥密码 |
+
+- 生成 Base64（PowerShell）：
+
+  ```powershell
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes('release.jks')) | Set-Clipboard
+  ```
+
+- 本地构建发布包时，通过同名环境变量提供上述四项即可使用发布签名；未配置时 release
+  变体回退 debug 签名，仅用于本地验证。
+
 ## 数据与权限
 
-- **数据**：Drift schema v8，包含 `app_settings`（根目录授权、排序偏好与预览显示偏好）、
+- **数据**：Drift schema v10，包含 `app_settings`（根目录授权、排序与预览偏好、语言与外观）、
   `entry_metadata`（本应用创建文件的登记时间）与 `playback_progress`（媒体续播位置）。
   视频等文件内容存于 SAF 目录，不写入数据库。
 - **权限**：应用不声明 `CAMERA` / `RECORD_AUDIO`，相机权限由系统相机应用处理；文件访问依赖
