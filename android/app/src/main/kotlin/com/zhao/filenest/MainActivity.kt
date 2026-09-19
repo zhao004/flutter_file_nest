@@ -48,6 +48,8 @@ class MainActivity : FlutterFragmentActivity() {
     private var videoResult: MethodChannel.Result? = null
     private var videoTarget: Pair<String, String>? = null
     private var pendingVideoFile: File? = null
+    private var imagePickResult: MethodChannel.Result? = null
+    private var mediaPickResult: MethodChannel.Result? = null
     private var channel: MethodChannel? = null
     private var archiveChannel: MethodChannel? = null
     private var events: EventChannel.EventSink? = null
@@ -84,6 +86,15 @@ class MainActivity : FlutterFragmentActivity() {
     ) { response ->
         finishVideo(response.resultCode == RESULT_OK)
     }
+    private val imagePickLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> finishImagePick(uri) }
+    private val mediaPickSingleLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> finishMediaPick(if (uri == null) emptyList() else listOf(uri)) }
+    private val mediaPickMultipleLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris -> finishMediaPick(uris ?: emptyList()) }
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
@@ -115,6 +126,9 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
                 "pickImport" -> startImport(call, result)
+                "pickImage" -> startImagePick(result)
+                "pickVideoToCache" -> startMediaPick(result, arrayOf("video/*"), false)
+                "pickAudioToCache" -> startMediaPick(result, arrayOf("audio/*"), true)
                 "importDocuments" -> startImportDocuments(call, result)
                 "takePhoto" -> startPhotoCapture(call, result)
                 "takeVideo" -> startVideoCapture(call, result)
@@ -245,6 +259,77 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
         execute(result) { importSources(uris.map { it.toString() }, target) }
+    }
+
+    /**
+     * 选取单张图片并返回字节；不导入保险库，仅作为编辑素材（如贴纸）。
+     *
+     * 取消返回 null；读取失败走上报错误路径，不留临时文件。
+     */
+    private fun startImagePick(result: MethodChannel.Result) {
+        if (imagePickResult != null) {
+            result.error("busy", "选择器已打开", null)
+            return
+        }
+        imagePickResult = result
+        try {
+            imagePickLauncher.launch(arrayOf("image/*"))
+        } catch (_: Exception) {
+        imagePickResult = null
+        mediaPickResult = null
+            result.error("unavailable", "无法打开系统图片选择器", null)
+        }
+    }
+
+    private fun finishImagePick(uri: Uri?) {
+        val result = imagePickResult
+        imagePickResult = null
+        if (result == null) return
+        if (uri == null) {
+            result.success(null)
+            return
+        }
+        submit(readExecutor, result) {
+            contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        }
+    }
+
+    /**
+     * 选取视频（单个）或音频（多个）并复制到应用缓存，返回本地路径列表。
+     *
+     * 供视频编辑器的片段与背景音轨选择使用；不导入保险库，调用方负责清理。
+     */
+    private fun startMediaPick(
+        result: MethodChannel.Result,
+        mimeTypes: Array<String>,
+        multiple: Boolean,
+    ) {
+        if (mediaPickResult != null) {
+            result.error("busy", "选择器已打开", null)
+            return
+        }
+        mediaPickResult = result
+        try {
+            if (multiple) {
+                mediaPickMultipleLauncher.launch(mimeTypes)
+            } else {
+                mediaPickSingleLauncher.launch(mimeTypes)
+            }
+        } catch (_: Exception) {
+            mediaPickResult = null
+            result.error("unavailable", "无法打开系统选择器", null)
+        }
+    }
+
+    private fun finishMediaPick(uris: List<Uri>) {
+        val result = mediaPickResult
+        mediaPickResult = null
+        if (result == null) return
+        if (uris.isEmpty()) {
+            result.success(emptyList<Any>())
+            return
+        }
+        submit(readExecutor, result) { uris.map { storageHandler!!.cacheExternal(it) } }
     }
 
     /**
@@ -530,6 +615,7 @@ class MainActivity : FlutterFragmentActivity() {
         importResult = null
         photoResult = null
         videoResult = null
+        imagePickResult = null
         executor.shutdown()
         readExecutor.shutdown()
         thumbnailExecutor.shutdown()
@@ -549,6 +635,7 @@ class MainActivity : FlutterFragmentActivity() {
             "videoMetadata",
             "readDocument",
             "readDocumentLimited",
+            "exportToCache",
             "pdfInfo",
             "pdfPageBytes",
         )

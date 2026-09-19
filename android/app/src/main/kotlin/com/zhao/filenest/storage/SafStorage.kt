@@ -83,6 +83,7 @@ class SafStorage(private val context: Context) {
             "importDocument" -> import(sourceUri(args), rootUri, document)
             "readDocument" -> readBytes(uri(rootUri, id))
             "readDocumentLimited" -> readBytesLimited(uri(rootUri, id), (args["maxBytes"] as? Number)?.toInt() ?: 0)
+            "exportToCache" -> exportToCache(uri(rootUri, id), document["name"] as? String ?: "media")
             "writeDocument" -> {
                 val bytes = args["bytes"] as? ByteArray
                     ?: throw StorageFailure("invalid_argument", "缺少写入内容")
@@ -337,6 +338,49 @@ class SafStorage(private val context: Context) {
     }
 
     /**
+     * 把文档流式复制到应用缓存目录并返回本地绝对路径。
+     *
+     * 供需要真实文件路径的编辑器（视频编辑）使用；不修改文档内容，
+     * 调用方负责在用完后删除该缓存文件。
+     */
+    private fun exportToCache(source: Uri, name: String): String {
+        val directory = File(context.cacheDir, CACHE_MEDIA_DIR)
+        directory.mkdirs()
+        val safeName = try {
+            StorageRules.name(name)
+        } catch (_: Exception) {
+            "media_${System.currentTimeMillis()}"
+        }
+        val file = File(directory, "${System.currentTimeMillis()}_$safeName")
+        try {
+            resolver.openInputStream(source)?.use { input ->
+                file.outputStream().buffered().use { output -> input.copyTo(output) }
+            } ?: throw StorageFailure("read_failed", "无法读取文件")
+        } catch (error: Exception) {
+            file.delete()
+            throw error
+        }
+        return file.absolutePath
+    }
+
+    /**
+     * 把外部内容 URI（系统选择器结果）复制到缓存目录并返回路径。
+     *
+     * 供需要真实文件路径的编辑器素材选择使用；调用方负责清理。
+     */
+    fun cacheExternal(source: Uri): String = exportToCache(source, externalName(source))
+
+    private fun externalName(source: Uri): String = try {
+        val name = resolver.query(source, null, null, null, null)?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && index >= 0 && !cursor.isNull(index)) cursor.getString(index) else null
+        }
+        if (name.isNullOrBlank()) "media_${System.currentTimeMillis()}" else name
+    } catch (_: Exception) {
+        "media_${System.currentTimeMillis()}"
+    }
+
+    /**
      * 受限字节读取：最多读取 maxBytes，超出部分不传输。
      *
      * 文本、归档与电子书预览使用；恰好读满上限时再探测一字节判断是否
@@ -477,6 +521,9 @@ class SafStorage(private val context: Context) {
     companion object {
         /** 受限读取的缓冲区大小。 */
         private const val READ_CHUNK_BYTES = 64 * 1024
+
+        /** 媒体编辑临时文件所在的缓存子目录。 */
+        private const val CACHE_MEDIA_DIR = "media_edit"
 
         fun failure(error: Exception): StorageFailure = when (error) {
             is StorageFailure -> error

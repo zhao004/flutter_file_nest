@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 
+import 'app/localization.dart';
 import 'app/routes/app_pages.dart';
 import 'app/database/database.dart';
 import 'app/pages/preview/preview_settings_controller.dart';
@@ -53,6 +54,8 @@ class FileNestApp extends StatelessWidget {
       theme: theme.lightTheme,
       darkTheme: theme.darkTheme,
       themeMode: theme.mode.value,
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: appSupportedLocales,
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
     );

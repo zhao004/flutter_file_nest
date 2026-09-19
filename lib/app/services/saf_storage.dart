@@ -69,8 +69,29 @@ abstract interface class StorageGateway {
   /// 系统相机录制视频并复制到目标目录；取消或录制失败返回 null。
   Future<StorageEntry?> takeVideo(StorageEntry targetFolder);
 
+  /// 从系统选择器选取单张图片并读取字节；取消返回 null。
+  ///
+  /// 仅用于编辑素材（如贴纸），不导入保险库，不产生持久副本。
+  Future<Uint8List?> pickImage();
+
+  /// 从系统选择器选取单个视频并复制到应用缓存，返回本地路径；取消返回 null。
+  ///
+  /// 供视频编辑器的片段选择使用；不导入保险库，调用方负责清理。
+  Future<String?> pickVideoToCache();
+
+  /// 从系统选择器选取多个音频并复制到应用缓存，返回本地路径列表。
+  ///
+  /// 供视频编辑器的背景音轨选择使用；取消返回空列表，调用方负责清理。
+  Future<List<String>> pickAudioToCache();
+
   /// 读取文档字节；仅用于应用内图片预览等有界场景。
   Future<Uint8List?> readDocument(StorageEntry entry);
+
+  /// 将文档流式复制到应用缓存目录并返回本地绝对路径。
+  ///
+  /// 供需要真实文件路径的编辑器（视频编辑）使用；不修改文档，调用方负责
+  /// 在用完后删除该缓存文件。
+  Future<String> exportToCache(StorageEntry entry);
 
   /// 读取文档字节并限制最大长度；超出 [maxBytes] 的部分不传输。
   ///
@@ -280,8 +301,34 @@ class SafStorage implements StorageGateway {
   }
 
   @override
+  Future<Uint8List?> pickImage() =>
+      channel.invokeMethod<Uint8List>('pickImage');
+
+  @override
+  Future<String?> pickVideoToCache() async {
+    final values = await channel.invokeListMethod<String>('pickVideoToCache');
+    return (values == null || values.isEmpty) ? null : values.first;
+  }
+
+  @override
+  Future<List<String>> pickAudioToCache() async =>
+      await channel.invokeListMethod<String>('pickAudioToCache') ?? const [];
+
+  @override
   Future<Uint8List?> readDocument(StorageEntry entry) =>
       channel.invokeMethod<Uint8List>('readDocument', _entry(entry));
+
+  @override
+  Future<String> exportToCache(StorageEntry entry) async {
+    final path = await channel.invokeMethod<String>(
+      'exportToCache',
+      _entry(entry),
+    );
+    if (path == null || path.isEmpty) {
+      throw PlatformException(code: 'invalid_response', message: '缓存导出响应为空');
+    }
+    return path;
+  }
 
   @override
   Future<DocumentBytes> readDocumentLimited(

@@ -182,6 +182,9 @@ class FakeStorage implements StorageGateway {
   int fileCreates = 0;
   int writes = 0;
   final writtenBytes = <String, Uint8List>{};
+
+  /// 非空时模拟写入失败，用于覆盖保存清理半成品的路径。
+  PlatformException? writeFailure;
   final moves = <String>[];
   final renames = <String>[];
   int thumbnailLoads = 0;
@@ -356,9 +359,52 @@ class FakeStorage implements StorageGateway {
     return result;
   }
 
+  /// 图片编辑贴纸素材；取消时置 null。
+  Uint8List? pickImageResult = Uint8List.fromList(const [7, 7, 7]);
+  int imagePicks = 0;
+
+  @override
+  Future<Uint8List?> pickImage() async {
+    imagePicks++;
+    return pickImageResult;
+  }
+
+  /// 视频片段选择与音频音轨选择的结果与调用计数。
+  String? pickVideoResult = 'C:/cache/picked.mp4';
+  List<String> pickAudioResults = const ['C:/cache/picked.mp3'];
+  int videoPicks = 0;
+  int audioPicks = 0;
+
+  @override
+  Future<String?> pickVideoToCache() async {
+    videoPicks++;
+    return pickVideoResult;
+  }
+
+  @override
+  Future<List<String>> pickAudioToCache() async {
+    audioPicks++;
+    return List.of(pickAudioResults);
+  }
+
+  /// 单文档读取结果；置 null 模拟无法解码（如不支持的图片格式）。
+  Uint8List? readDocumentResult = Uint8List.fromList(const [1, 2, 3]);
+
   @override
   Future<Uint8List?> readDocument(StorageEntry entry) async =>
-      Uint8List.fromList(const [1, 2, 3]);
+      readDocumentResult == null
+      ? null
+      : Uint8List.fromList(readDocumentResult!);
+
+  /// exportToCache 返回的本地路径与调用计数。
+  String cacheExportPath = 'C:/cache/media_edit/sample';
+  int cacheExports = 0;
+
+  @override
+  Future<String> exportToCache(StorageEntry entry) async {
+    cacheExports++;
+    return cacheExportPath;
+  }
 
   @override
   Future<DocumentBytes> readDocumentLimited(
@@ -374,6 +420,8 @@ class FakeStorage implements StorageGateway {
     StorageEntry entry,
     Uint8List bytes,
   ) async {
+    final failure = writeFailure;
+    if (failure != null) throw failure;
     writes++;
     writtenBytes[entry.uri] = bytes;
     for (final items in contents.values) {

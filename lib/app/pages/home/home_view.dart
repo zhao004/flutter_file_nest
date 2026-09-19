@@ -5,6 +5,7 @@ import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../models/archive_models.dart';
+import '../../models/media_editor_args.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/preview_launcher.dart';
 import '../../routes/app_pages.dart';
@@ -262,6 +263,36 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
   }
 
+  /// 进入图片编辑页；保存采用另存为副本，返回后刷新以显示新文件。
+  Future<void> _editImage(StorageEntry entry) async {
+    final parent = controller.current;
+    if (parent == null) return;
+    await Get.toNamed<void>(
+      Routes.imageEditor,
+      arguments: MediaEditorArgs(
+        entry: entry,
+        parent: parent,
+        onSaved: (name) => _notify('已保存副本：$name'),
+      ),
+    );
+    await controller.refresh();
+  }
+
+  /// 进入视频编辑页；保存采用另存为副本，返回后刷新以显示新文件。
+  Future<void> _editVideo(StorageEntry entry) async {
+    final parent = controller.current;
+    if (parent == null) return;
+    await Get.toNamed<void>(
+      Routes.videoEditor,
+      arguments: MediaEditorArgs(
+        entry: entry,
+        parent: parent,
+        onSaved: (name) => _notify('已保存副本：$name'),
+      ),
+    );
+    await controller.refresh();
+  }
+
   Future<void> _open(StorageEntry entry) async {
     if (controller.selectionMode.value) {
       controller.toggleSelect(entry);
@@ -303,6 +334,22 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'rename'),
                 ),
+              if (entry.isImage && entry.canWrite && canWrite)
+                ListTile(
+                  leading: const Icon(Icons.tune_outlined),
+                  title: const Text('编辑图片'),
+                  subtitle: const Text('另存为新文件，原图保留'),
+                  enabled: !archiving,
+                  onTap: () => Navigator.pop(context, 'edit'),
+                ),
+              if (entry.isVideo && entry.canWrite && canWrite)
+                ListTile(
+                  leading: const Icon(Icons.movie_creation_outlined),
+                  title: const Text('编辑视频'),
+                  subtitle: const Text('另存为新文件，原视频保留'),
+                  enabled: !archiving,
+                  onTap: () => Navigator.pop(context, 'editVideo'),
+                ),
               ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('详情'),
@@ -333,6 +380,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     switch (action) {
       case 'rename':
         await _nameDialog(entry: entry);
+      case 'edit':
+        await _editImage(entry);
+      case 'editVideo':
+        await _editVideo(entry);
       case 'details':
         await _showDetails(entry);
       case 'delete':

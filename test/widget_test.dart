@@ -696,4 +696,58 @@ void main() {
     );
     expect(IconTheme.of(tester.element(actionIcon)).color, Colors.white);
   });
+
+  testWidgets('长按图片提供编辑入口，非图片文件不提供', (tester) async {
+    final storage = FakeStorage();
+    storage.contents['root']!
+      ..add(entry('照片.jpg', mime: 'image/jpeg'))
+      ..add(entry('备忘.txt', mime: 'text/plain'));
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
+        archive: FakeArchive(),
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('照片.jpg'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑图片'), findsOneWidget);
+
+    // 关闭菜单后长按非图片文件，不提供编辑入口。
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('备忘.txt'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑图片'), findsNothing);
+  });
+
+  testWidgets('长按视频提供编辑视频入口，图片不提供', (tester) async {
+    final storage = FakeStorage();
+    storage.contents['root']!
+      ..add(entry('短片.mp4', mime: 'video/mp4'))
+      ..add(entry('照片.png', mime: 'image/png'));
+    Get.put(
+      HomeController(
+        storage: storage,
+        store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
+        archive: FakeArchive(),
+      ),
+    );
+    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('短片.mp4'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑视频'), findsOneWidget);
+
+    // 关闭菜单后长按图片，不提供视频编辑入口。
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('照片.png'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑视频'), findsNothing);
+  });
 }
