@@ -1376,167 +1376,216 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
     });
 
 class $$AppSettingsTableFilterComposer
-    extends FilterComposer<_$AppDatabase, $AppSettingsTable> {
-  $$AppSettingsTableFilterComposer(super.$state);
-  ColumnFilters<int> get id => $state.composableBuilder(
-    column: $state.table.id,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get rootUri => $state.composableBuilder(
-    column: $state.table.rootUri,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<String> get rootUri => $composableBuilder(
+    column: $table.rootUri,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get sortField => $state.composableBuilder(
-    column: $state.table.sortField,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<String> get sortField => $composableBuilder(
+    column: $table.sortField,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get sortDescending => $state.composableBuilder(
-    column: $state.table.sortDescending,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<bool> get sortDescending => $composableBuilder(
+    column: $table.sortDescending,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get themeScheme => $state.composableBuilder(
-    column: $state.table.themeScheme,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<String> get themeScheme => $composableBuilder(
+    column: $table.themeScheme,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get themeMode => $state.composableBuilder(
-    column: $state.table.themeMode,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get textFontSize => $state.composableBuilder(
-    column: $state.table.textFontSize,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<double> get textFontSize => $composableBuilder(
+    column: $table.textFontSize,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get textWrap => $state.composableBuilder(
-    column: $state.table.textWrap,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<bool> get textWrap => $composableBuilder(
+    column: $table.textWrap,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get markdownMode => $state.composableBuilder(
-    column: $state.table.markdownMode,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<String> get markdownMode => $composableBuilder(
+    column: $table.markdownMode,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get showLineNumbers => $state.composableBuilder(
-    column: $state.table.showLineNumbers,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<bool> get showLineNumbers => $composableBuilder(
+    column: $table.showLineNumbers,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get editorTabWidth => $state.composableBuilder(
-    column: $state.table.editorTabWidth,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<int> get editorTabWidth => $composableBuilder(
+    column: $table.editorTabWidth,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get editorAutoIndent => $state.composableBuilder(
-    column: $state.table.editorAutoIndent,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<bool> get editorAutoIndent => $composableBuilder(
+    column: $table.editorAutoIndent,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
-    column: $state.table.updatedAt,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
   );
 }
 
 class $$AppSettingsTableOrderingComposer
-    extends OrderingComposer<_$AppDatabase, $AppSettingsTable> {
-  $$AppSettingsTableOrderingComposer(super.$state);
-  ColumnOrderings<int> get id => $state.composableBuilder(
-    column: $state.table.id,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get rootUri => $state.composableBuilder(
-    column: $state.table.rootUri,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<String> get rootUri => $composableBuilder(
+    column: $table.rootUri,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get sortField => $state.composableBuilder(
-    column: $state.table.sortField,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<String> get sortField => $composableBuilder(
+    column: $table.sortField,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get sortDescending => $state.composableBuilder(
-    column: $state.table.sortDescending,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<bool> get sortDescending => $composableBuilder(
+    column: $table.sortDescending,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get themeScheme => $state.composableBuilder(
-    column: $state.table.themeScheme,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<String> get themeScheme => $composableBuilder(
+    column: $table.themeScheme,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get themeMode => $state.composableBuilder(
-    column: $state.table.themeMode,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get textFontSize => $state.composableBuilder(
-    column: $state.table.textFontSize,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<double> get textFontSize => $composableBuilder(
+    column: $table.textFontSize,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get textWrap => $state.composableBuilder(
-    column: $state.table.textWrap,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<bool> get textWrap => $composableBuilder(
+    column: $table.textWrap,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get markdownMode => $state.composableBuilder(
-    column: $state.table.markdownMode,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<String> get markdownMode => $composableBuilder(
+    column: $table.markdownMode,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get showLineNumbers => $state.composableBuilder(
-    column: $state.table.showLineNumbers,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<bool> get showLineNumbers => $composableBuilder(
+    column: $table.showLineNumbers,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get editorTabWidth => $state.composableBuilder(
-    column: $state.table.editorTabWidth,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<int> get editorTabWidth => $composableBuilder(
+    column: $table.editorTabWidth,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get editorAutoIndent => $state.composableBuilder(
-    column: $state.table.editorAutoIndent,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<bool> get editorAutoIndent => $composableBuilder(
+    column: $table.editorAutoIndent,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
-    column: $state.table.updatedAt,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
   );
+}
+
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get rootUri =>
+      $composableBuilder(column: $table.rootUri, builder: (column) => column);
+
+  GeneratedColumn<String> get sortField =>
+      $composableBuilder(column: $table.sortField, builder: (column) => column);
+
+  GeneratedColumn<bool> get sortDescending => $composableBuilder(
+    column: $table.sortDescending,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get themeScheme => $composableBuilder(
+    column: $table.themeScheme,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get themeMode =>
+      $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<double> get textFontSize => $composableBuilder(
+    column: $table.textFontSize,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get textWrap =>
+      $composableBuilder(column: $table.textWrap, builder: (column) => column);
+
+  GeneratedColumn<String> get markdownMode => $composableBuilder(
+    column: $table.markdownMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showLineNumbers => $composableBuilder(
+    column: $table.showLineNumbers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get editorTabWidth => $composableBuilder(
+    column: $table.editorTabWidth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get editorAutoIndent => $composableBuilder(
+    column: $table.editorAutoIndent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager
@@ -1547,6 +1596,7 @@ class $$AppSettingsTableTableManager
           AppSetting,
           $$AppSettingsTableFilterComposer,
           $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
           $$AppSettingsTableCreateCompanionBuilder,
           $$AppSettingsTableUpdateCompanionBuilder,
           (
@@ -1561,12 +1611,12 @@ class $$AppSettingsTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          filteringComposer: $$AppSettingsTableFilterComposer(
-            ComposerState(db, table),
-          ),
-          orderingComposer: $$AppSettingsTableOrderingComposer(
-            ComposerState(db, table),
-          ),
+          createFilteringComposer: () =>
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
@@ -1628,7 +1678,16 @@ class $$AppSettingsTableTableManager
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$AppSettingsTable, AppSetting>(table),
+                  BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -1642,6 +1701,7 @@ typedef $$AppSettingsTableProcessedTableManager =
       AppSetting,
       $$AppSettingsTableFilterComposer,
       $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
       $$AppSettingsTableCreateCompanionBuilder,
       $$AppSettingsTableUpdateCompanionBuilder,
       (
@@ -1665,35 +1725,59 @@ typedef $$EntryMetadataTableUpdateCompanionBuilder =
     });
 
 class $$EntryMetadataTableFilterComposer
-    extends FilterComposer<_$AppDatabase, $EntryMetadataTable> {
-  $$EntryMetadataTableFilterComposer(super.$state);
-  ColumnFilters<String> get uri => $state.composableBuilder(
-    column: $state.table.uri,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $EntryMetadataTable> {
+  $$EntryMetadataTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get uri => $composableBuilder(
+    column: $table.uri,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
-    column: $state.table.createdAt,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
   );
 }
 
 class $$EntryMetadataTableOrderingComposer
-    extends OrderingComposer<_$AppDatabase, $EntryMetadataTable> {
-  $$EntryMetadataTableOrderingComposer(super.$state);
-  ColumnOrderings<String> get uri => $state.composableBuilder(
-    column: $state.table.uri,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $EntryMetadataTable> {
+  $$EntryMetadataTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get uri => $composableBuilder(
+    column: $table.uri,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
-    column: $state.table.createdAt,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
   );
+}
+
+class $$EntryMetadataTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntryMetadataTable> {
+  $$EntryMetadataTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get uri =>
+      $composableBuilder(column: $table.uri, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
 class $$EntryMetadataTableTableManager
@@ -1704,6 +1788,7 @@ class $$EntryMetadataTableTableManager
           EntryMetadataData,
           $$EntryMetadataTableFilterComposer,
           $$EntryMetadataTableOrderingComposer,
+          $$EntryMetadataTableAnnotationComposer,
           $$EntryMetadataTableCreateCompanionBuilder,
           $$EntryMetadataTableUpdateCompanionBuilder,
           (
@@ -1722,12 +1807,12 @@ class $$EntryMetadataTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          filteringComposer: $$EntryMetadataTableFilterComposer(
-            ComposerState(db, table),
-          ),
-          orderingComposer: $$EntryMetadataTableOrderingComposer(
-            ComposerState(db, table),
-          ),
+          createFilteringComposer: () =>
+              $$EntryMetadataTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntryMetadataTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntryMetadataTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> uri = const Value.absent(),
@@ -1749,7 +1834,16 @@ class $$EntryMetadataTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$EntryMetadataTable, EntryMetadataData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $EntryMetadataTable,
+                    EntryMetadataData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -1763,6 +1857,7 @@ typedef $$EntryMetadataTableProcessedTableManager =
       EntryMetadataData,
       $$EntryMetadataTableFilterComposer,
       $$EntryMetadataTableOrderingComposer,
+      $$EntryMetadataTableAnnotationComposer,
       $$EntryMetadataTableCreateCompanionBuilder,
       $$EntryMetadataTableUpdateCompanionBuilder,
       (
@@ -1790,59 +1885,89 @@ typedef $$PlaybackProgressTableUpdateCompanionBuilder =
     });
 
 class $$PlaybackProgressTableFilterComposer
-    extends FilterComposer<_$AppDatabase, $PlaybackProgressTable> {
-  $$PlaybackProgressTableFilterComposer(super.$state);
-  ColumnFilters<String> get uri => $state.composableBuilder(
-    column: $state.table.uri,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $PlaybackProgressTable> {
+  $$PlaybackProgressTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get uri => $composableBuilder(
+    column: $table.uri,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get positionMs => $state.composableBuilder(
-    column: $state.table.positionMs,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get durationMs => $state.composableBuilder(
-    column: $state.table.durationMs,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
-    column: $state.table.updatedAt,
-    builder: (column, joinBuilders) =>
-        ColumnFilters(column, joinBuilders: joinBuilders),
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
   );
 }
 
 class $$PlaybackProgressTableOrderingComposer
-    extends OrderingComposer<_$AppDatabase, $PlaybackProgressTable> {
-  $$PlaybackProgressTableOrderingComposer(super.$state);
-  ColumnOrderings<String> get uri => $state.composableBuilder(
-    column: $state.table.uri,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+    extends Composer<_$AppDatabase, $PlaybackProgressTable> {
+  $$PlaybackProgressTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get uri => $composableBuilder(
+    column: $table.uri,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get positionMs => $state.composableBuilder(
-    column: $state.table.positionMs,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get durationMs => $state.composableBuilder(
-    column: $state.table.durationMs,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
-    column: $state.table.updatedAt,
-    builder: (column, joinBuilders) =>
-        ColumnOrderings(column, joinBuilders: joinBuilders),
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
   );
+}
+
+class $$PlaybackProgressTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlaybackProgressTable> {
+  $$PlaybackProgressTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get uri =>
+      $composableBuilder(column: $table.uri, builder: (column) => column);
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$PlaybackProgressTableTableManager
@@ -1853,6 +1978,7 @@ class $$PlaybackProgressTableTableManager
           PlaybackProgressData,
           $$PlaybackProgressTableFilterComposer,
           $$PlaybackProgressTableOrderingComposer,
+          $$PlaybackProgressTableAnnotationComposer,
           $$PlaybackProgressTableCreateCompanionBuilder,
           $$PlaybackProgressTableUpdateCompanionBuilder,
           (
@@ -1873,12 +1999,12 @@ class $$PlaybackProgressTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          filteringComposer: $$PlaybackProgressTableFilterComposer(
-            ComposerState(db, table),
-          ),
-          orderingComposer: $$PlaybackProgressTableOrderingComposer(
-            ComposerState(db, table),
-          ),
+          createFilteringComposer: () =>
+              $$PlaybackProgressTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlaybackProgressTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlaybackProgressTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> uri = const Value.absent(),
@@ -1908,7 +2034,18 @@ class $$PlaybackProgressTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$PlaybackProgressTable, PlaybackProgressData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $PlaybackProgressTable,
+                    PlaybackProgressData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -1922,6 +2059,7 @@ typedef $$PlaybackProgressTableProcessedTableManager =
       PlaybackProgressData,
       $$PlaybackProgressTableFilterComposer,
       $$PlaybackProgressTableOrderingComposer,
+      $$PlaybackProgressTableAnnotationComposer,
       $$PlaybackProgressTableCreateCompanionBuilder,
       $$PlaybackProgressTableUpdateCompanionBuilder,
       (
