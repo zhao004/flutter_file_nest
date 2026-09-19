@@ -5,6 +5,7 @@ import '../../routes/app_pages.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 import '../home/home_controller.dart';
+import '../preview/preview_settings_controller.dart';
 
 /// 管理活动根目录与外观设置；文件导入与录制均交由系统应用完成。
 class SettingsView extends GetView<HomeController> {
@@ -13,6 +14,7 @@ class SettingsView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final theme = Get.find<ThemeController>();
+    final editor = Get.find<PreviewSettingsController>();
     return Obx(
       () => Scaffold(
         appBar: AppBar(title: const Text('设置')),
@@ -48,6 +50,14 @@ class SettingsView extends GetView<HomeController> {
               subtitle: Text(theme.scheme.value.data.name),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Get.toNamed<void>(Routes.themePicker),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('编辑器配置'),
+              subtitle: Text('字号 ${editor.fontSize.value.round()}'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Get.toNamed<void>(Routes.editorSettings),
             ),
           ],
         ),

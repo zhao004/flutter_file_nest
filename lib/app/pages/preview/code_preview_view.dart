@@ -193,18 +193,21 @@ class _CodePreviewViewState extends State<CodePreviewView> {
       fontSize: fontSize,
       height: 1.4,
     );
+    final code = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: _code(content, query, language, brightness, base),
+    );
+    // 代码预览保持横向滚动，行号才能与行内容对齐；自动换行仅作用于文本预览与编辑器。
     return SingleChildScrollView(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _lineNumbers(context, content.text, base),
+          if (_settings.lineNumbers.value)
+            _lineNumbers(context, content.text, base),
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                child: _code(content, query, language, brightness, base),
-              ),
+              child: code,
             ),
           ),
         ],

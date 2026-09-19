@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:filenest/app/pages/preview/preview_settings_controller.dart';
 import 'package:filenest/app/pages/preview/text_editor_view.dart';
 import 'package:filenest/app/preview/editor_surface.dart';
 import 'package:filenest/app/services/saf_storage.dart';
@@ -17,6 +18,11 @@ class FakeCodeEditor implements CodeEditorController {
   String text;
   bool editable = true;
   bool dark = false;
+  double fontSize = 14;
+  bool wrap = true;
+  bool lineNumbers = true;
+  int tabWidth = 4;
+  bool autoIndent = true;
   int undos = 0;
   int redos = 0;
 
@@ -28,6 +34,16 @@ class FakeCodeEditor implements CodeEditorController {
   Future<void> setEditable(bool value) async => editable = value;
   @override
   Future<void> setDark(bool value) async => dark = value;
+  @override
+  Future<void> setFontSize(double value) async => fontSize = value;
+  @override
+  Future<void> setWrap(bool value) async => wrap = value;
+  @override
+  Future<void> setLineNumbers(bool value) async => lineNumbers = value;
+  @override
+  Future<void> setTabWidth(int value) async => tabWidth = value;
+  @override
+  Future<void> setAutoIndent(bool value) async => autoIndent = value;
   @override
   Future<void> undo() async => undos++;
   @override
@@ -65,6 +81,12 @@ class _FakeEditorHostState extends State<_FakeEditorHost> {
   }
 
   @override
+  void didUpdateWidget(_FakeEditorHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.holder.config = widget.config;
+  }
+
+  @override
   Widget build(BuildContext context) => const SizedBox.expand();
 }
 
@@ -78,6 +100,9 @@ void main() {
     storage = FakeStorage()
       ..readDocumentLimitedResult = Uint8List.fromList(utf8.encode('hello'));
     Get.put<StorageGateway>(storage);
+    Get.put<PreviewSettingsController>(
+      PreviewSettingsController(MemoryStore()),
+    );
   });
 
   tearDown(Get.reset);
@@ -130,6 +155,23 @@ void main() {
       find.widgetWithIcon(IconButton, Icons.save_outlined),
     );
     expect(saveButton.onPressed, isNull);
+  });
+
+  testWidgets('编辑器按偏好应用字号、换行、行号与缩进', (tester) async {
+    final settings = Get.find<PreviewSettingsController>();
+    await settings.setFontSize(20);
+    await settings.setWrap(false);
+    await settings.setLineNumbers(false);
+    await settings.setTabWidth(2);
+    await settings.setAutoIndent(false);
+    await openEditor(tester);
+
+    final config = holder.config!;
+    expect(config.fontSize, 20);
+    expect(config.wrap, isFalse);
+    expect(config.lineNumbers, isFalse);
+    expect(config.tabWidth, 2);
+    expect(config.autoIndent, isFalse);
   });
 
   testWidgets('未保存返回时二次确认', (tester) async {

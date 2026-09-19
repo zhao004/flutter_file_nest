@@ -33,6 +33,18 @@ class AppSettings extends Table {
   TextColumn get markdownMode =>
       text().withDefault(const Constant(kDefaultMarkdownMode))();
 
+  /// 代码预览与编辑器是否显示行号。
+  BoolColumn get showLineNumbers =>
+      boolean().withDefault(const Constant(kDefaultShowLineNumbers))();
+
+  /// 编辑器 Tab 缩进宽度（空格数）。
+  IntColumn get editorTabWidth =>
+      integer().withDefault(const Constant(kDefaultEditorTabWidth))();
+
+  /// 编辑器是否启用自动缩进。
+  BoolColumn get editorAutoIndent =>
+      boolean().withDefault(const Constant(kDefaultEditorAutoIndent))();
+
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

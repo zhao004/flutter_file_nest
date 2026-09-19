@@ -12,6 +12,9 @@ class VaultPreferences {
     this.textFontSize = kDefaultTextFontSize,
     this.textWrap = kDefaultTextWrap,
     this.markdownMode = kDefaultMarkdownMode,
+    this.showLineNumbers = kDefaultShowLineNumbers,
+    this.editorTabWidth = kDefaultEditorTabWidth,
+    this.editorAutoIndent = kDefaultEditorAutoIndent,
   });
   final String? rootUri;
   final EntrySort sort;
@@ -26,6 +29,15 @@ class VaultPreferences {
   /// Markdown 展示模式：read（阅读）或 source（源码）。
   final String markdownMode;
 
+  /// 代码预览与编辑器是否显示行号。
+  final bool showLineNumbers;
+
+  /// 编辑器 Tab 缩进宽度（空格数）。
+  final int editorTabWidth;
+
+  /// 编辑器是否启用自动缩进。
+  final bool editorAutoIndent;
+
   VaultPreferences copyWith({
     String? rootUri,
     EntrySort? sort,
@@ -33,6 +45,9 @@ class VaultPreferences {
     double? textFontSize,
     bool? textWrap,
     String? markdownMode,
+    bool? showLineNumbers,
+    int? editorTabWidth,
+    bool? editorAutoIndent,
   }) => VaultPreferences(
     rootUri: rootUri ?? this.rootUri,
     sort: sort ?? this.sort,
@@ -40,6 +55,9 @@ class VaultPreferences {
     textFontSize: textFontSize ?? this.textFontSize,
     textWrap: textWrap ?? this.textWrap,
     markdownMode: markdownMode ?? this.markdownMode,
+    showLineNumbers: showLineNumbers ?? this.showLineNumbers,
+    editorTabWidth: editorTabWidth ?? this.editorTabWidth,
+    editorAutoIndent: editorAutoIndent ?? this.editorAutoIndent,
   );
 }
 
@@ -82,6 +100,9 @@ class DriftVaultStore implements VaultStore {
       textFontSize: row.textFontSize,
       textWrap: row.textWrap,
       markdownMode: row.markdownMode,
+      showLineNumbers: row.showLineNumbers,
+      editorTabWidth: row.editorTabWidth,
+      editorAutoIndent: row.editorAutoIndent,
     );
   }
 
@@ -95,6 +116,9 @@ class DriftVaultStore implements VaultStore {
       textFontSize: Value(value.textFontSize),
       textWrap: Value(value.textWrap),
       markdownMode: Value(value.markdownMode),
+      showLineNumbers: Value(value.showLineNumbers),
+      editorTabWidth: Value(value.editorTabWidth),
+      editorAutoIndent: Value(value.editorAutoIndent),
       updatedAt: Value(DateTime.now().toUtc()),
     ),
   );

@@ -58,6 +58,12 @@ void main() {
     expect(find.text('1\n2'), findsOneWidget);
   });
 
+  testWidgets('关闭行号偏好后代码预览不显示行号', (tester) async {
+    await Get.find<PreviewSettingsController>().setLineNumbers(false);
+    await pumpView(tester, CodePreviewView(entry: entry('script.sh')));
+    expect(find.text('1\n2'), findsNothing);
+  });
+
   testWidgets('Markdown 默认阅读模式并可切换到源码', (tester) async {
     await pumpView(tester, MarkdownPreviewView(entry: entry('README.md')));
     expect(find.byType(MarkdownBody), findsOneWidget);

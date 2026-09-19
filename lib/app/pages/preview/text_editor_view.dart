@@ -6,6 +6,7 @@ import '../../preview/editor_surface.dart';
 import '../../preview/text_content.dart';
 import '../../routes/app_pages.dart';
 import '../../services/saf_storage.dart';
+import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
 import 'sora_code_editor.dart';
 
@@ -31,6 +32,8 @@ class TextEditorView extends StatefulWidget {
 
 class _TextEditorViewState extends State<TextEditorView> {
   late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final PreviewSettingsController _settings =
+      Get.find<PreviewSettingsController>();
 
   CodeEditorController? _controller;
   TextContent? _content;
@@ -290,12 +293,19 @@ class _TextEditorViewState extends State<TextEditorView> {
             content.lineEnding != '\n')
           _EncodingNotice(content: content),
         Expanded(
-          child: widget.editorBuilder(
-            CodeEditorHostConfig(
-              editable: _editable,
-              dark: Theme.of(context).brightness == Brightness.dark,
-              onController: _onController,
-              onChanged: _onChanged,
+          child: Obx(
+            () => widget.editorBuilder(
+              CodeEditorHostConfig(
+                editable: _editable,
+                dark: Theme.of(context).brightness == Brightness.dark,
+                fontSize: _settings.fontSize.value,
+                wrap: _settings.wrap.value,
+                lineNumbers: _settings.lineNumbers.value,
+                tabWidth: _settings.tabWidth.value,
+                autoIndent: _settings.autoIndent.value,
+                onController: _onController,
+                onChanged: _onChanged,
+              ),
             ),
           ),
         ),

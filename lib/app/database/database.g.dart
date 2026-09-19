@@ -120,6 +120,48 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(kDefaultMarkdownMode),
   );
+  static const VerificationMeta _showLineNumbersMeta = const VerificationMeta(
+    'showLineNumbers',
+  );
+  @override
+  late final GeneratedColumn<bool> showLineNumbers = GeneratedColumn<bool>(
+    'show_line_numbers',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_line_numbers" IN (0, 1))',
+    ),
+    defaultValue: const Constant(kDefaultShowLineNumbers),
+  );
+  static const VerificationMeta _editorTabWidthMeta = const VerificationMeta(
+    'editorTabWidth',
+  );
+  @override
+  late final GeneratedColumn<int> editorTabWidth = GeneratedColumn<int>(
+    'editor_tab_width',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultEditorTabWidth),
+  );
+  static const VerificationMeta _editorAutoIndentMeta = const VerificationMeta(
+    'editorAutoIndent',
+  );
+  @override
+  late final GeneratedColumn<bool> editorAutoIndent = GeneratedColumn<bool>(
+    'editor_auto_indent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("editor_auto_indent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(kDefaultEditorAutoIndent),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -142,6 +184,9 @@ class $AppSettingsTable extends AppSettings
     textFontSize,
     textWrap,
     markdownMode,
+    showLineNumbers,
+    editorTabWidth,
+    editorAutoIndent,
     updatedAt,
   ];
   @override
@@ -219,6 +264,33 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('show_line_numbers')) {
+      context.handle(
+        _showLineNumbersMeta,
+        showLineNumbers.isAcceptableOrUnknown(
+          data['show_line_numbers']!,
+          _showLineNumbersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('editor_tab_width')) {
+      context.handle(
+        _editorTabWidthMeta,
+        editorTabWidth.isAcceptableOrUnknown(
+          data['editor_tab_width']!,
+          _editorTabWidthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('editor_auto_indent')) {
+      context.handle(
+        _editorAutoIndentMeta,
+        editorAutoIndent.isAcceptableOrUnknown(
+          data['editor_auto_indent']!,
+          _editorAutoIndentMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -272,6 +344,18 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.string,
         data['${effectivePrefix}markdown_mode'],
       )!,
+      showLineNumbers: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_line_numbers'],
+      )!,
+      editorTabWidth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}editor_tab_width'],
+      )!,
+      editorAutoIndent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}editor_auto_indent'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -305,6 +389,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   /// Markdown 展示模式；read（阅读）或 source（源码）。
   final String markdownMode;
+
+  /// 代码预览与编辑器是否显示行号。
+  final bool showLineNumbers;
+
+  /// 编辑器 Tab 缩进宽度（空格数）。
+  final int editorTabWidth;
+
+  /// 编辑器是否启用自动缩进。
+  final bool editorAutoIndent;
   final DateTime updatedAt;
   const AppSetting({
     required this.id,
@@ -316,6 +409,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.textFontSize,
     required this.textWrap,
     required this.markdownMode,
+    required this.showLineNumbers,
+    required this.editorTabWidth,
+    required this.editorAutoIndent,
     required this.updatedAt,
   });
   @override
@@ -332,6 +428,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['text_font_size'] = Variable<double>(textFontSize);
     map['text_wrap'] = Variable<bool>(textWrap);
     map['markdown_mode'] = Variable<String>(markdownMode);
+    map['show_line_numbers'] = Variable<bool>(showLineNumbers);
+    map['editor_tab_width'] = Variable<int>(editorTabWidth);
+    map['editor_auto_indent'] = Variable<bool>(editorAutoIndent);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -349,6 +448,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       textFontSize: Value(textFontSize),
       textWrap: Value(textWrap),
       markdownMode: Value(markdownMode),
+      showLineNumbers: Value(showLineNumbers),
+      editorTabWidth: Value(editorTabWidth),
+      editorAutoIndent: Value(editorAutoIndent),
       updatedAt: Value(updatedAt),
     );
   }
@@ -368,6 +470,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       textFontSize: serializer.fromJson<double>(json['textFontSize']),
       textWrap: serializer.fromJson<bool>(json['textWrap']),
       markdownMode: serializer.fromJson<String>(json['markdownMode']),
+      showLineNumbers: serializer.fromJson<bool>(json['showLineNumbers']),
+      editorTabWidth: serializer.fromJson<int>(json['editorTabWidth']),
+      editorAutoIndent: serializer.fromJson<bool>(json['editorAutoIndent']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -384,6 +489,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'textFontSize': serializer.toJson<double>(textFontSize),
       'textWrap': serializer.toJson<bool>(textWrap),
       'markdownMode': serializer.toJson<String>(markdownMode),
+      'showLineNumbers': serializer.toJson<bool>(showLineNumbers),
+      'editorTabWidth': serializer.toJson<int>(editorTabWidth),
+      'editorAutoIndent': serializer.toJson<bool>(editorAutoIndent),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -398,6 +506,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     double? textFontSize,
     bool? textWrap,
     String? markdownMode,
+    bool? showLineNumbers,
+    int? editorTabWidth,
+    bool? editorAutoIndent,
     DateTime? updatedAt,
   }) => AppSetting(
     id: id ?? this.id,
@@ -409,6 +520,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     textFontSize: textFontSize ?? this.textFontSize,
     textWrap: textWrap ?? this.textWrap,
     markdownMode: markdownMode ?? this.markdownMode,
+    showLineNumbers: showLineNumbers ?? this.showLineNumbers,
+    editorTabWidth: editorTabWidth ?? this.editorTabWidth,
+    editorAutoIndent: editorAutoIndent ?? this.editorAutoIndent,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
@@ -430,6 +544,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       markdownMode: data.markdownMode.present
           ? data.markdownMode.value
           : this.markdownMode,
+      showLineNumbers: data.showLineNumbers.present
+          ? data.showLineNumbers.value
+          : this.showLineNumbers,
+      editorTabWidth: data.editorTabWidth.present
+          ? data.editorTabWidth.value
+          : this.editorTabWidth,
+      editorAutoIndent: data.editorAutoIndent.present
+          ? data.editorAutoIndent.value
+          : this.editorAutoIndent,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -446,6 +569,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('textFontSize: $textFontSize, ')
           ..write('textWrap: $textWrap, ')
           ..write('markdownMode: $markdownMode, ')
+          ..write('showLineNumbers: $showLineNumbers, ')
+          ..write('editorTabWidth: $editorTabWidth, ')
+          ..write('editorAutoIndent: $editorAutoIndent, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -462,6 +588,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     textFontSize,
     textWrap,
     markdownMode,
+    showLineNumbers,
+    editorTabWidth,
+    editorAutoIndent,
     updatedAt,
   );
   @override
@@ -477,6 +606,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.textFontSize == this.textFontSize &&
           other.textWrap == this.textWrap &&
           other.markdownMode == this.markdownMode &&
+          other.showLineNumbers == this.showLineNumbers &&
+          other.editorTabWidth == this.editorTabWidth &&
+          other.editorAutoIndent == this.editorAutoIndent &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -490,6 +622,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<double> textFontSize;
   final Value<bool> textWrap;
   final Value<String> markdownMode;
+  final Value<bool> showLineNumbers;
+  final Value<int> editorTabWidth;
+  final Value<bool> editorAutoIndent;
   final Value<DateTime> updatedAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
@@ -501,6 +636,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.textFontSize = const Value.absent(),
     this.textWrap = const Value.absent(),
     this.markdownMode = const Value.absent(),
+    this.showLineNumbers = const Value.absent(),
+    this.editorTabWidth = const Value.absent(),
+    this.editorAutoIndent = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
@@ -513,6 +651,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.textFontSize = const Value.absent(),
     this.textWrap = const Value.absent(),
     this.markdownMode = const Value.absent(),
+    this.showLineNumbers = const Value.absent(),
+    this.editorTabWidth = const Value.absent(),
+    this.editorAutoIndent = const Value.absent(),
     required DateTime updatedAt,
   }) : updatedAt = Value(updatedAt);
   static Insertable<AppSetting> custom({
@@ -525,6 +666,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<double>? textFontSize,
     Expression<bool>? textWrap,
     Expression<String>? markdownMode,
+    Expression<bool>? showLineNumbers,
+    Expression<int>? editorTabWidth,
+    Expression<bool>? editorAutoIndent,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -537,6 +681,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (textFontSize != null) 'text_font_size': textFontSize,
       if (textWrap != null) 'text_wrap': textWrap,
       if (markdownMode != null) 'markdown_mode': markdownMode,
+      if (showLineNumbers != null) 'show_line_numbers': showLineNumbers,
+      if (editorTabWidth != null) 'editor_tab_width': editorTabWidth,
+      if (editorAutoIndent != null) 'editor_auto_indent': editorAutoIndent,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -551,6 +698,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<double>? textFontSize,
     Value<bool>? textWrap,
     Value<String>? markdownMode,
+    Value<bool>? showLineNumbers,
+    Value<int>? editorTabWidth,
+    Value<bool>? editorAutoIndent,
     Value<DateTime>? updatedAt,
   }) {
     return AppSettingsCompanion(
@@ -563,6 +713,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       textFontSize: textFontSize ?? this.textFontSize,
       textWrap: textWrap ?? this.textWrap,
       markdownMode: markdownMode ?? this.markdownMode,
+      showLineNumbers: showLineNumbers ?? this.showLineNumbers,
+      editorTabWidth: editorTabWidth ?? this.editorTabWidth,
+      editorAutoIndent: editorAutoIndent ?? this.editorAutoIndent,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -597,6 +750,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (markdownMode.present) {
       map['markdown_mode'] = Variable<String>(markdownMode.value);
     }
+    if (showLineNumbers.present) {
+      map['show_line_numbers'] = Variable<bool>(showLineNumbers.value);
+    }
+    if (editorTabWidth.present) {
+      map['editor_tab_width'] = Variable<int>(editorTabWidth.value);
+    }
+    if (editorAutoIndent.present) {
+      map['editor_auto_indent'] = Variable<bool>(editorAutoIndent.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -615,6 +777,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('textFontSize: $textFontSize, ')
           ..write('textWrap: $textWrap, ')
           ..write('markdownMode: $markdownMode, ')
+          ..write('showLineNumbers: $showLineNumbers, ')
+          ..write('editorTabWidth: $editorTabWidth, ')
+          ..write('editorAutoIndent: $editorAutoIndent, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1188,6 +1353,9 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<double> textFontSize,
       Value<bool> textWrap,
       Value<String> markdownMode,
+      Value<bool> showLineNumbers,
+      Value<int> editorTabWidth,
+      Value<bool> editorAutoIndent,
       required DateTime updatedAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
@@ -1201,6 +1369,9 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<double> textFontSize,
       Value<bool> textWrap,
       Value<String> markdownMode,
+      Value<bool> showLineNumbers,
+      Value<int> editorTabWidth,
+      Value<bool> editorAutoIndent,
       Value<DateTime> updatedAt,
     });
 
@@ -1257,6 +1428,24 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<String> get markdownMode => $state.composableBuilder(
     column: $state.table.markdownMode,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<bool> get showLineNumbers => $state.composableBuilder(
+    column: $state.table.showLineNumbers,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<int> get editorTabWidth => $state.composableBuilder(
+    column: $state.table.editorTabWidth,
+    builder: (column, joinBuilders) =>
+        ColumnFilters(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnFilters<bool> get editorAutoIndent => $state.composableBuilder(
+    column: $state.table.editorAutoIndent,
     builder: (column, joinBuilders) =>
         ColumnFilters(column, joinBuilders: joinBuilders),
   );
@@ -1325,6 +1514,24 @@ class $$AppSettingsTableOrderingComposer
         ColumnOrderings(column, joinBuilders: joinBuilders),
   );
 
+  ColumnOrderings<bool> get showLineNumbers => $state.composableBuilder(
+    column: $state.table.showLineNumbers,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<int> get editorTabWidth => $state.composableBuilder(
+    column: $state.table.editorTabWidth,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
+  ColumnOrderings<bool> get editorAutoIndent => $state.composableBuilder(
+    column: $state.table.editorAutoIndent,
+    builder: (column, joinBuilders) =>
+        ColumnOrderings(column, joinBuilders: joinBuilders),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
     column: $state.table.updatedAt,
     builder: (column, joinBuilders) =>
@@ -1371,6 +1578,9 @@ class $$AppSettingsTableTableManager
                 Value<double> textFontSize = const Value.absent(),
                 Value<bool> textWrap = const Value.absent(),
                 Value<String> markdownMode = const Value.absent(),
+                Value<bool> showLineNumbers = const Value.absent(),
+                Value<int> editorTabWidth = const Value.absent(),
+                Value<bool> editorAutoIndent = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
@@ -1382,6 +1592,9 @@ class $$AppSettingsTableTableManager
                 textFontSize: textFontSize,
                 textWrap: textWrap,
                 markdownMode: markdownMode,
+                showLineNumbers: showLineNumbers,
+                editorTabWidth: editorTabWidth,
+                editorAutoIndent: editorAutoIndent,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -1395,6 +1608,9 @@ class $$AppSettingsTableTableManager
                 Value<double> textFontSize = const Value.absent(),
                 Value<bool> textWrap = const Value.absent(),
                 Value<String> markdownMode = const Value.absent(),
+                Value<bool> showLineNumbers = const Value.absent(),
+                Value<int> editorTabWidth = const Value.absent(),
+                Value<bool> editorAutoIndent = const Value.absent(),
                 required DateTime updatedAt,
               }) => AppSettingsCompanion.insert(
                 id: id,
@@ -1406,6 +1622,9 @@ class $$AppSettingsTableTableManager
                 textFontSize: textFontSize,
                 textWrap: textWrap,
                 markdownMode: markdownMode,
+                showLineNumbers: showLineNumbers,
+                editorTabWidth: editorTabWidth,
+                editorAutoIndent: editorAutoIndent,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

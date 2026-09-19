@@ -212,7 +212,7 @@ void main() {
     expect(columns, containsAll(['theme_scheme', 'theme_mode']));
   });
 
-  test('Drift 保存文本预览偏好与媒体续播位置', () async {
+  test('Drift 保存文本预览偏好、编辑器偏好与媒体续播位置', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final store = DriftVaultStore(db);
@@ -223,12 +223,18 @@ void main() {
         textFontSize: 18,
         textWrap: false,
         markdownMode: 'source',
+        showLineNumbers: false,
+        editorTabWidth: 2,
+        editorAutoIndent: false,
       ),
     );
     final loaded = await store.loadPreferences();
     expect(loaded.textFontSize, 18);
     expect(loaded.textWrap, false);
     expect(loaded.markdownMode, 'source');
+    expect(loaded.showLineNumbers, false);
+    expect(loaded.editorTabWidth, 2);
+    expect(loaded.editorAutoIndent, false);
 
     expect(await store.playbackPosition('content://a'), null);
     await store.savePlaybackPosition(
@@ -288,6 +294,51 @@ void main() {
     expect(
       await store.playbackPosition('content://a'),
       const Duration(seconds: 7),
+    );
+  });
+
+  test('schema v8 迁移到 v9 新增编辑器偏好列', () async {
+    final executor = NativeDatabase.memory(
+      setup: (raw) {
+        raw.execute(
+          'CREATE TABLE app_settings ('
+          'id INTEGER NOT NULL DEFAULT 1, root_uri TEXT, '
+          "sort_field TEXT NOT NULL DEFAULT 'modified', "
+          'sort_descending INTEGER NOT NULL DEFAULT 1, '
+          "theme_scheme TEXT NOT NULL DEFAULT '$kDefaultThemeSchemeName', "
+          "theme_mode TEXT NOT NULL DEFAULT '$kDefaultThemeModeName', "
+          'text_font_size REAL NOT NULL DEFAULT $kDefaultTextFontSize, '
+          'text_wrap INTEGER NOT NULL DEFAULT ${kDefaultTextWrap ? 1 : 0}, '
+          "markdown_mode TEXT NOT NULL DEFAULT '$kDefaultMarkdownMode', "
+          'updated_at INTEGER NOT NULL, PRIMARY KEY (id))',
+        );
+        raw.execute(
+          "INSERT INTO app_settings VALUES "
+          "(1, 'content://root', 'name', 0, "
+          "'$kDefaultThemeSchemeName', '$kDefaultThemeModeName', "
+          "$kDefaultTextFontSize, 1, '$kDefaultMarkdownMode', 0)",
+        );
+        raw.execute('PRAGMA user_version = 8');
+      },
+    );
+    final db = AppDatabase.forTesting(executor);
+    addTearDown(db.close);
+    final store = DriftVaultStore(db);
+
+    final preferences = await store.loadPreferences();
+    expect(preferences.rootUri, 'content://root');
+    // 新增列使用默认值，未破坏既有行。
+    expect(preferences.showLineNumbers, kDefaultShowLineNumbers);
+    expect(preferences.editorTabWidth, kDefaultEditorTabWidth);
+    expect(preferences.editorAutoIndent, kDefaultEditorAutoIndent);
+
+    expect(
+      await _columns(db, 'app_settings'),
+      containsAll([
+        'show_line_numbers',
+        'editor_tab_width',
+        'editor_auto_indent',
+      ]),
     );
   });
 }

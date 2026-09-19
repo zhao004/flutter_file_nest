@@ -7,6 +7,7 @@ abstract class Routes {
   static const textEditor = '/preview/edit';
   static const settings = '/settings';
   static const themePicker = '/settings/theme';
+  static const editorSettings = '/settings/editor';
 }
 
 abstract class _Paths {

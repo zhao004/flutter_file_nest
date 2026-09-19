@@ -3,23 +3,33 @@ import 'package:get/get.dart';
 import '../../preview/preview_defaults.dart';
 import '../../services/vault_store.dart';
 
-/// 预览显示偏好：文本字号、自动换行与 Markdown 模式。
+/// 预览与编辑器偏好：字号、自动换行、Markdown 模式与编辑器行为。
 ///
 /// 偏好持久化到 [VaultStore]；保存失败只影响下次启动的默认值，不阻断
-/// 当前展示。控制器在应用启动时注册为常驻实例，预览页只读取其响应式值。
+/// 当前展示。控制器在应用启动时注册为常驻实例，预览页与编辑器只读取其
+/// 响应式值。
 class PreviewSettingsController extends GetxController {
   PreviewSettingsController(this._store);
 
   final VaultStore _store;
 
-  /// 文本/代码预览字号（逻辑像素）。
+  /// 文本/代码预览与编辑器字号（逻辑像素）。
   final fontSize = kDefaultTextFontSize.obs;
 
-  /// 文本预览是否自动换行。
+  /// 文本/代码预览与编辑器是否自动换行。
   final wrap = kDefaultTextWrap.obs;
 
   /// Markdown 展示模式：read（阅读）或 source（源码）。
   final markdownMode = kDefaultMarkdownMode.obs;
+
+  /// 代码预览与编辑器是否显示行号。
+  final lineNumbers = kDefaultShowLineNumbers.obs;
+
+  /// 编辑器 Tab 缩进宽度（空格数）。
+  final tabWidth = kDefaultEditorTabWidth.obs;
+
+  /// 编辑器是否启用自动缩进。
+  final autoIndent = kDefaultEditorAutoIndent.obs;
 
   @override
   void onInit() {
@@ -34,6 +44,9 @@ class PreviewSettingsController extends GetxController {
       fontSize.value = preferences.textFontSize;
       wrap.value = preferences.textWrap;
       markdownMode.value = preferences.markdownMode;
+      lineNumbers.value = preferences.showLineNumbers;
+      tabWidth.value = preferences.editorTabWidth;
+      autoIndent.value = preferences.editorAutoIndent;
     } catch (_) {
       /* 读取失败保留默认值。 */
     }
@@ -59,6 +72,24 @@ class PreviewSettingsController extends GetxController {
     if (value == markdownMode.value) return;
     markdownMode.value = value;
     await _save((preferences) => preferences.copyWith(markdownMode: value));
+  }
+
+  Future<void> setLineNumbers(bool value) async {
+    if (value == lineNumbers.value) return;
+    lineNumbers.value = value;
+    await _save((preferences) => preferences.copyWith(showLineNumbers: value));
+  }
+
+  Future<void> setTabWidth(int value) async {
+    if (value == tabWidth.value) return;
+    tabWidth.value = value;
+    await _save((preferences) => preferences.copyWith(editorTabWidth: value));
+  }
+
+  Future<void> setAutoIndent(bool value) async {
+    if (value == autoIndent.value) return;
+    autoIndent.value = value;
+    await _save((preferences) => preferences.copyWith(editorAutoIndent: value));
   }
 
   /// 在最新偏好的基础上应用单项修改，避免覆盖排序、根目录等其他设置。

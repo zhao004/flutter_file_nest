@@ -5,6 +5,7 @@ import '../pages/home/home_binding.dart';
 import '../pages/home/home_view.dart';
 import '../pages/preview/file_preview_page.dart';
 import '../pages/preview/text_editor_view.dart';
+import '../pages/settings/editor_settings_view.dart';
 import '../pages/settings/settings_view.dart';
 import '../pages/settings/theme_picker_view.dart';
 
@@ -31,5 +32,9 @@ class AppPages {
     ),
     GetPage(name: Routes.settings, page: () => const SettingsView()),
     GetPage(name: Routes.themePicker, page: () => const ThemePickerView()),
+    GetPage(
+      name: Routes.editorSettings,
+      page: () => const EditorSettingsView(),
+    ),
   ];
 }

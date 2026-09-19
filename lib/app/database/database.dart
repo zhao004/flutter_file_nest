@@ -18,7 +18,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -80,6 +80,21 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE app_settings ADD COLUMN markdown_mode TEXT NOT NULL '
           "DEFAULT '$kDefaultMarkdownMode'",
+        );
+      }
+      if (from < 9) {
+        // v9 新增编辑器偏好列，默认值由常量统一维护。
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN show_line_numbers INTEGER '
+          'NOT NULL DEFAULT ${kDefaultShowLineNumbers ? 1 : 0}',
+        );
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN editor_tab_width INTEGER '
+          'NOT NULL DEFAULT $kDefaultEditorTabWidth',
+        );
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN editor_auto_indent INTEGER '
+          'NOT NULL DEFAULT ${kDefaultEditorAutoIndent ? 1 : 0}',
         );
       }
     },

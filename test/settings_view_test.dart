@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
+import 'package:filenest/app/pages/preview/preview_settings_controller.dart';
+import 'package:filenest/app/pages/settings/editor_settings_view.dart';
 import 'package:filenest/app/pages/settings/settings_view.dart';
 import 'package:filenest/app/pages/settings/theme_picker_view.dart';
 import 'package:filenest/app/theme/theme_controller.dart';
@@ -32,6 +34,9 @@ void main() {
         archive: FakeArchive(),
       ),
     );
+    Get.put<PreviewSettingsController>(
+      PreviewSettingsController(MemoryStore()),
+    );
     await tester.pumpWidget(
       GetMaterialApp(
         theme: theme.lightTheme,
@@ -44,6 +49,7 @@ void main() {
 
     expect(find.text('外观模式'), findsOneWidget);
     expect(find.text('跟随系统'), findsOneWidget);
+    expect(find.text('编辑器配置'), findsOneWidget);
 
     await tester.tap(find.text('外观模式'));
     await tester.pumpAndSettle();
@@ -53,6 +59,35 @@ void main() {
     expect(store.value.mode, ThemeMode.dark);
     // 选择后设置页副标题同步为深色。
     expect(find.text('深色'), findsOneWidget);
+  });
+
+  testWidgets('编辑器配置页切换行号并持久化', (tester) async {
+    final store = MemoryStore();
+    Get.put<PreviewSettingsController>(PreviewSettingsController(store));
+    await tester.pumpWidget(GetMaterialApp(home: const EditorSettingsView()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('显示行号'), findsOneWidget);
+    expect(store.value.showLineNumbers, true);
+
+    await tester.tap(find.text('显示行号'));
+    await tester.pumpAndSettle();
+
+    expect(store.value.showLineNumbers, false);
+  });
+
+  testWidgets('编辑器配置页可切换 Markdown 展示模式', (tester) async {
+    final store = MemoryStore();
+    Get.put<PreviewSettingsController>(PreviewSettingsController(store));
+    await tester.pumpWidget(GetMaterialApp(home: const EditorSettingsView()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('展示模式'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('源码'));
+    await tester.pumpAndSettle();
+
+    expect(store.value.markdownMode, 'source');
   });
 
   testWidgets('主题选择页选中方案后持久化', (tester) async {

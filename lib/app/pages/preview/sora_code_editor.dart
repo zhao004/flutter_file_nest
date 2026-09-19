@@ -40,6 +40,21 @@ class _SoraCodeEditorState extends State<SoraCodeEditor> {
     if (oldWidget.config.editable != widget.config.editable) {
       channel.invokeMethod<void>('setEditable', widget.config.editable);
     }
+    if (oldWidget.config.fontSize != widget.config.fontSize) {
+      channel.invokeMethod<void>('setFontSize', widget.config.fontSize);
+    }
+    if (oldWidget.config.wrap != widget.config.wrap) {
+      channel.invokeMethod<void>('setWrap', widget.config.wrap);
+    }
+    if (oldWidget.config.lineNumbers != widget.config.lineNumbers) {
+      channel.invokeMethod<void>('setLineNumbers', widget.config.lineNumbers);
+    }
+    if (oldWidget.config.tabWidth != widget.config.tabWidth) {
+      channel.invokeMethod<void>('setTabWidth', widget.config.tabWidth);
+    }
+    if (oldWidget.config.autoIndent != widget.config.autoIndent) {
+      channel.invokeMethod<void>('setAutoIndent', widget.config.autoIndent);
+    }
   }
 
   @override
@@ -67,6 +82,11 @@ class _SoraCodeEditorState extends State<SoraCodeEditor> {
     creationParams: {
       'editable': widget.config.editable,
       'dark': widget.config.dark,
+      'fontSize': widget.config.fontSize,
+      'wrap': widget.config.wrap,
+      'lineNumbers': widget.config.lineNumbers,
+      'tabWidth': widget.config.tabWidth,
+      'autoIndent': widget.config.autoIndent,
     },
     creationParamsCodec: const StandardMessageCodec(),
     onPlatformViewCreated: _onPlatformViewCreated,
@@ -94,6 +114,26 @@ class _PlatformCodeEditorController implements CodeEditorController {
   @override
   Future<void> setDark(bool dark) =>
       _channel.invokeMethod<void>('setDark', dark);
+
+  @override
+  Future<void> setFontSize(double logicalPixels) =>
+      _channel.invokeMethod<void>('setFontSize', logicalPixels);
+
+  @override
+  Future<void> setWrap(bool wrap) =>
+      _channel.invokeMethod<void>('setWrap', wrap);
+
+  @override
+  Future<void> setLineNumbers(bool enabled) =>
+      _channel.invokeMethod<void>('setLineNumbers', enabled);
+
+  @override
+  Future<void> setTabWidth(int spaces) =>
+      _channel.invokeMethod<void>('setTabWidth', spaces);
+
+  @override
+  Future<void> setAutoIndent(bool enabled) =>
+      _channel.invokeMethod<void>('setAutoIndent', enabled);
 
   @override
   Future<void> undo() => _channel.invokeMethod<void>('undo');

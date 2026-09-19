@@ -18,3 +18,15 @@ const String kDefaultMarkdownMode = 'read';
 
 /// Markdown 源码模式取值。
 const String kMarkdownModeSource = 'source';
+
+/// 默认显示行号；代码预览与编辑器共用同一偏好。
+const bool kDefaultShowLineNumbers = true;
+
+/// 编辑器默认启用自动缩进；回车时复制当前行前导空白。
+const bool kDefaultEditorAutoIndent = true;
+
+/// 编辑器默认 Tab 缩进宽度（空格数）。
+const int kDefaultEditorTabWidth = 4;
+
+/// 编辑器可选的 Tab 缩进宽度（空格数）；供设置页选择，避免自由输入非法值。
+const List<int> kEditorTabWidthOptions = [2, 4, 6, 8];
