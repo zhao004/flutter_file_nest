@@ -84,6 +84,8 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
     isAudioSupported: true,
     minTrimDuration: _minTrimDuration,
     playTimeSmoothingDuration: Duration(milliseconds: 600),
+    // 帧预览条与播放控制放在视频区底部，紧贴底部工具栏上方。
+    controlsPosition: VideoEditorControlPosition.bottom,
   );
 
   /// 编辑器配置：在片段解析完成后构建，合并片段后重建。
