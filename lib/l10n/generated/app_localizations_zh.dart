@@ -246,13 +246,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeEditImage => '编辑图片';
 
   @override
-  String get homeEditImageSubtitle => '另存为新文件，原图保留';
-
-  @override
   String get homeEditVideo => '编辑视频';
-
-  @override
-  String get homeEditVideoSubtitle => '另存为新文件，原视频保留';
 
   @override
   String get homeDetails => '详情';

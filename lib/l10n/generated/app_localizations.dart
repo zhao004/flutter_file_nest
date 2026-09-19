@@ -542,23 +542,11 @@ abstract class AppLocalizations {
   /// **'编辑图片'**
   String get homeEditImage;
 
-  /// No description provided for @homeEditImageSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'另存为新文件，原图保留'**
-  String get homeEditImageSubtitle;
-
   /// No description provided for @homeEditVideo.
   ///
   /// In zh, this message translates to:
   /// **'编辑视频'**
   String get homeEditVideo;
-
-  /// No description provided for @homeEditVideoSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'另存为新文件，原视频保留'**
-  String get homeEditVideoSubtitle;
 
   /// No description provided for @homeDetails.
   ///

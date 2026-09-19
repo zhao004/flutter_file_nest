@@ -362,7 +362,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 ListTile(
                   leading: const Icon(Icons.tune_outlined),
                   title: Text(context.l10n.homeEditImage),
-                  subtitle: Text(context.l10n.homeEditImageSubtitle),
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'edit'),
                 ),
@@ -370,7 +369,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 ListTile(
                   leading: const Icon(Icons.movie_creation_outlined),
                   title: Text(context.l10n.homeEditVideo),
-                  subtitle: Text(context.l10n.homeEditVideoSubtitle),
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'editVideo'),
                 ),

@@ -250,15 +250,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeEditImage => 'Edit image';
 
   @override
-  String get homeEditImageSubtitle =>
-      'Save as a new file; the original is kept';
-
-  @override
   String get homeEditVideo => 'Edit video';
-
-  @override
-  String get homeEditVideoSubtitle =>
-      'Save as a new file; the original is kept';
 
   @override
   String get homeDetails => 'Details';
