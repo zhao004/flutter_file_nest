@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
 import 'package:filenest/app/preview/image_editor_host.dart';
@@ -71,6 +73,9 @@ void main() {
   testWidgets('保存 JPEG 原图时另存为 jpg 副本并返回文件名', (tester) async {
     await openEditor(tester, 'photo.jpg');
 
+    expect(storage.cacheExports, 1);
+    expect(captured!.filePath, storage.cacheExportPath);
+
     await tester.tap(find.text('完成'));
     await tester.pumpAndSettle();
 
@@ -128,5 +133,21 @@ void main() {
     expect(storage.fileCreates, 0);
     expect(saved, isNull);
     expect(find.byType(ImageEditorView), findsNothing);
+  });
+
+  testWidgets('关闭编辑器删除缓存副本', (tester) async {
+    final directory = Directory.systemTemp.createTempSync('filenest_editor_');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final cacheFile = File('${directory.path}/photo.jpg')
+      ..writeAsBytesSync(const [1, 2, 3]);
+    storage.cacheExportPath = cacheFile.path;
+
+    await openEditor(tester, 'photo.jpg');
+    expect(cacheFile.existsSync(), isTrue);
+
+    await tester.tap(find.text('关闭'));
+    await tester.pumpAndSettle();
+
+    expect(cacheFile.existsSync(), isFalse);
   });
 }

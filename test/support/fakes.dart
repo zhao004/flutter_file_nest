@@ -392,8 +392,13 @@ class FakeStorage implements StorageGateway {
   String cacheExportPath = 'C:/cache/media_edit/sample';
   int cacheExports = 0;
 
+  /// 置非空时导出缓存抛出该异常；用于覆盖加载失败路径。
+  Object? cacheExportFailure;
+
   @override
   Future<String> exportToCache(StorageEntry entry) async {
+    final failure = cacheExportFailure;
+    if (failure != null) throw failure;
     cacheExports++;
     return cacheExportPath;
   }

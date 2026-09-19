@@ -12,6 +12,7 @@ import '../../file_type/file_type_detector.dart';
 import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/archive_reader.dart';
+import '../../preview/image_decode.dart';
 import '../../preview/preview_limits.dart';
 import '../../preview/text_content.dart';
 import '../../services/saf_storage.dart';
@@ -185,8 +186,11 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
         errorBuilder: (_, _, _) => Text(context.l10n.archiveImagePreviewFailed),
       );
     } else if (_imageExtensions.contains(extension)) {
-      content = Image.memory(
-        bytes,
+      content = Image(
+        image: boundedImageProvider(
+          MemoryImage(bytes),
+          bounds: dialogDecodeBounds,
+        ),
         fit: BoxFit.contain,
         errorBuilder: (_, _, _) => Text(context.l10n.archiveImagePreviewFailed),
       );

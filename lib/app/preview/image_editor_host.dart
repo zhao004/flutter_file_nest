@@ -11,15 +11,16 @@ import 'media_editor_format.dart';
 /// 便于测试注入假实现而不依赖第三方重型组件。
 class ImageEditorHostConfig {
   const ImageEditorHostConfig({
-    required this.bytes,
+    required this.filePath,
     required this.sourceName,
     required this.pickSticker,
     required this.onComplete,
     required this.onClose,
   });
 
-  /// 原图字节；由页面经 SAF 读取后传入。
-  final Uint8List bytes;
+  /// 原图缓存路径；由页面经 SAF 导出后传入，编辑器按文件读取以避免
+  /// 大字节经平台通道拷贝。
+  final String filePath;
 
   /// 原文件名；用于推断输出编码格式。
   final String sourceName;
@@ -47,8 +48,8 @@ class _ProImageEditorHost extends StatelessWidget {
   final ImageEditorHostConfig config;
 
   @override
-  Widget build(BuildContext context) => ProImageEditor.memory(
-    config.bytes,
+  Widget build(BuildContext context) => ProImageEditor.file(
+    config.filePath,
     configs: ProImageEditorConfigs(
       i18n: editorI18nFor(editorLocale()),
       emojiEditor: EmojiEditorConfigs(emojiSet: editorEmojiSet),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
@@ -38,7 +39,7 @@ class ImageEditorView extends StatefulWidget {
 class _ImageEditorViewState extends State<ImageEditorView> {
   late final StorageGateway _storage = getIt<StorageGateway>();
 
-  Uint8List? _bytes;
+  String? _filePath;
   String? _error;
   bool _saving = false;
 
@@ -54,20 +55,47 @@ class _ImageEditorViewState extends State<ImageEditorView> {
   Future<void> _load() async {
     setState(() {
       _error = null;
-      _bytes = null;
+      _filePath = null;
     });
     try {
-      final bytes = await _storage.readDocument(widget.entry);
-      if (!mounted) return;
-      if (bytes == null || bytes.isEmpty) {
+      final path = await _storage.exportToCache(widget.entry);
+      if (!mounted) {
+        _deleteCache(path);
+        return;
+      }
+      if (path.trim().isEmpty) {
         setState(() => _error = AppL10n.current.imageEditUnsupported);
         return;
       }
-      setState(() => _bytes = bytes);
+      setState(() => _filePath = path);
     } catch (failure) {
       if (!mounted) return;
       setState(() => _error = previewErrorMessage(failure));
     }
+  }
+
+  /// 删除编辑器使用的缓存副本；清理失败不影响主流程，系统可后续回收。
+  void _deleteCache(String? path) {
+    if (path == null) return;
+    try {
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+    } catch (_) {
+      // 忽略清理失败。
+    }
+  }
+
+  /// 清理并放弃缓存路径，避免重复删除。
+  void _cleanup() {
+    final path = _filePath;
+    _filePath = null;
+    _deleteCache(path);
+  }
+
+  @override
+  void dispose() {
+    _cleanup();
+    super.dispose();
   }
 
   Future<void> _onComplete(Uint8List bytes) async {
@@ -75,6 +103,7 @@ class _ImageEditorViewState extends State<ImageEditorView> {
     setState(() => _saving = true);
     try {
       final name = await _save(bytes);
+      _cleanup();
       if (!mounted) return;
       _closed = true;
       Navigator.of(context).pop(name);
@@ -97,6 +126,7 @@ class _ImageEditorViewState extends State<ImageEditorView> {
   void _onClose() {
     if (_closed) return;
     _closed = true;
+    _cleanup();
     Navigator.of(context).pop();
   }
 
@@ -138,8 +168,8 @@ class _ImageEditorViewState extends State<ImageEditorView> {
         ),
       );
     }
-    final bytes = _bytes;
-    if (bytes == null) {
+    final filePath = _filePath;
+    if (filePath == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
@@ -147,7 +177,7 @@ class _ImageEditorViewState extends State<ImageEditorView> {
         children: [
           widget.editorBuilder(
             ImageEditorHostConfig(
-              bytes: bytes,
+              filePath: filePath,
               sourceName: widget.entry.name,
               pickSticker: _storage.pickImage,
               onComplete: _onComplete,

@@ -8,6 +8,7 @@ import '../../di/injector.dart';
 import '../../file_type/file_type_info.dart';
 import '../../localization.dart';
 import '../../models/storage_entry.dart';
+import '../../preview/image_decode.dart';
 import '../../services/archive_service.dart';
 import '../../services/saf_storage.dart';
 import 'preview_app_bar.dart';
@@ -28,10 +29,28 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
   late final Future<Uint8List?> _future = _storage.readDocument(widget.entry);
   final _controller = TransformationController();
 
+  /// 是否已切换为原图解码；放大超过 [previewDecodeFactor] 时置位。
+  bool _fullResolution = false;
+
   bool get _isSvg => widget.entry.name.toLowerCase().endsWith('.svg');
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleTransformChanged);
+  }
+
+  /// 放大超过降采样倍率后改用原图解码，避免细节模糊；只升不降。
+  void _handleTransformChanged() {
+    if (_fullResolution) return;
+    if (_controller.value.getMaxScaleOnAxis() > previewDecodeFactor) {
+      setState(() => _fullResolution = true);
+    }
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_handleTransformChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -118,6 +137,13 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
     await getIt<ArchiveGateway>().share([widget.entry]);
   }
 
+  /// 位图解码器：默认按视口上限降采样，放大后改用原图。
+  ImageProvider _bitmapProvider(Uint8List bytes) {
+    final provider = MemoryImage(bytes);
+    if (_fullResolution) return provider;
+    return boundedImageProvider(provider, bounds: decodeBoundsOf(context));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
@@ -177,9 +203,10 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
                         errorBuilder: (context, error, stack) =>
                             _errorBody(context),
                       )
-                    : Image.memory(
-                        bytes,
+                    : Image(
+                        image: _bitmapProvider(bytes),
                         fit: BoxFit.contain,
+                        gaplessPlayback: true,
                         errorBuilder: (context, error, stack) =>
                             _errorBody(context),
                       ),
