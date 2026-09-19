@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:filenest/app/di/injector.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 
 void main() {
   late FakeStorage storage;
@@ -33,7 +34,7 @@ void main() {
   tearDown(() => getIt.reset());
 
   Future<void> pumpView(WidgetTester tester, Widget view) async {
-    await tester.pumpWidget(MaterialApp(home: view));
+    await tester.pumpWidget(localizedApp(view));
     await tester.pumpAndSettle();
   }
 

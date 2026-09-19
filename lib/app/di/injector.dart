@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:get_it/get_it.dart';
 
 import '../database/database.dart';
+import '../i18n/locale_controller.dart';
 import '../pages/home/home_controller.dart';
 import '../pages/preview/preview_settings_controller.dart';
 import '../services/archive_service.dart';
@@ -37,6 +38,11 @@ Future<void> configureDependencies() async {
   final themeController = ThemeController(DriftThemeStore(database));
   getIt.registerSingleton<ThemeController>(themeController);
   await themeController.initialize();
+
+  // 语言偏好读取必须在首帧前完成，避免界面先中文后英文的闪烁。
+  final localeController = LocaleController(getIt<VaultStore>());
+  getIt.registerSingleton<LocaleController>(localeController);
+  await localeController.initialize();
 
   getIt.registerSingleton<ArchiveGateway>(ArchiveService());
   getIt.registerSingleton<IncomingShareGateway>(const IncomingShareService());

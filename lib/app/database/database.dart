@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'tables/app_settings.dart';
 import 'tables/entry_metadata.dart';
 import 'tables/playback_progress.dart';
+import '../i18n/locale_defaults.dart';
 import '../preview/preview_defaults.dart';
 import '../theme/theme_defaults.dart';
 
@@ -18,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -95,6 +96,13 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE app_settings ADD COLUMN editor_auto_indent INTEGER '
           'NOT NULL DEFAULT ${kDefaultEditorAutoIndent ? 1 : 0}',
+        );
+      }
+      if (from < 10) {
+        // v10 新增语言偏好列，默认跟随系统。
+        await customStatement(
+          'ALTER TABLE app_settings ADD COLUMN locale TEXT NOT NULL '
+          "DEFAULT '$kDefaultLocaleName'",
         );
       }
     },

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 
 void main() {
   late FakeStorage storage;
@@ -39,8 +40,8 @@ void main() {
 
   Future<void> openEditor(WidgetTester tester, String name) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
+      localizedApp(
+        Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(

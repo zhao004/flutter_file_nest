@@ -99,6 +99,9 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # 由 lib/l10n 下的 ARB 生成 AppLocalizations（见 l10n.yaml）。
+  generate: true
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

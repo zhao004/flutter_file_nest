@@ -16,6 +16,7 @@ import 'package:filenest/app/services/vault_store.dart';
 import 'package:filenest/app/theme/app_theme.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 import 'support/archive_fakes.dart';
 
 void main() {
@@ -30,7 +31,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.text('选择文件夹'));
     await tester.pumpAndSettle();
@@ -60,7 +61,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     // 操作入口为可展开悬浮按钮；点击展开后的小按钮。
     await tester.tap(find.byTooltip('更多操作'));
@@ -89,7 +90,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     Future<void> showDelete() async {
       // 操作入口为长按文件行。
@@ -137,7 +138,7 @@ void main() {
           archive: FakeArchive(),
         ),
       );
-      await tester.pumpWidget(const MaterialApp(home: HomeView()));
+      await tester.pumpWidget(localizedApp(const HomeView()));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('更多操作'), findsOneWidget);
@@ -155,7 +156,7 @@ void main() {
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     // 操作入口为长按文件行。
     await tester.longPress(find.text('素材.zip'));
@@ -179,7 +180,7 @@ void main() {
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -206,7 +207,7 @@ void main() {
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     archive.emit(
       const ArchiveTaskState(
@@ -239,7 +240,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('更多操作'));
     await tester.pumpAndSettle();
@@ -265,7 +266,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     // 展开状态由主按钮旋转角标识：展开 0.125 圈，收起为 0。
     double fabTurns() => tester
@@ -306,7 +307,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('更多操作'));
     await tester.pumpAndSettle();
@@ -327,7 +328,7 @@ void main() {
     getIt.registerSingleton(
       HomeController(storage: storage, store: store, archive: FakeArchive()),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     // 搜索为独立图标按钮；设置仅存在于“更多”菜单。
     expect(find.byIcon(Icons.search), findsOneWidget);
@@ -397,7 +398,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     expect(find.byTooltip('多选'), findsOneWidget);
     await tester.tap(find.byTooltip('多选'));
@@ -437,7 +438,7 @@ void main() {
       thumbnails: thumbs,
     );
     getIt.registerSingleton(controller);
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     expect(thumbs.loads, hasLength(1));
 
@@ -470,7 +471,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -523,7 +524,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -563,7 +564,7 @@ void main() {
         incoming: incoming,
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     // 先进入子目录，分享应保存到该目录而非根目录。
     await tester.tap(find.text('子目录'));
@@ -592,7 +593,7 @@ void main() {
         incoming: incoming,
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
     incoming.emit([const IncomingShare(uri: 'content://wx/7', name: '分享.pdf')]);
     await tester.pumpAndSettle();
@@ -613,9 +614,7 @@ void main() {
   testWidgets('视频预览页初始化失败时展示错误态与外部打开入口', (tester) async {
     // 测试环境没有 media_kit 原生库（libmpv），初始化失败应回落到错误态。
     await tester.pumpWidget(
-      MaterialApp(
-        home: VideoView(entry: entry('视频.mp4', mime: 'video/mp4')),
-      ),
+      localizedApp(VideoView(entry: entry('视频.mp4', mime: 'video/mp4'))),
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('无法播放此视频'), findsOneWidget);
@@ -626,8 +625,8 @@ void main() {
   testWidgets('PDF 预览页按页渲染并显示页码', (tester) async {
     getIt.registerSingleton<StorageGateway>(FakeStorage());
     await tester.pumpWidget(
-      MaterialApp(
-        home: PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
+      localizedApp(
+        PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
       ),
     );
     await tester.pumpAndSettle();
@@ -642,9 +641,8 @@ void main() {
     getIt.registerSingleton<StorageGateway>(FakeStorage());
     // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
     await tester.pumpWidget(
-      MaterialApp(
-        theme: buildLightTheme(FlexScheme.blue),
-        home: Builder(
+      localizedApp(
+        Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
@@ -661,6 +659,7 @@ void main() {
             ),
           ),
         ),
+        theme: buildLightTheme(FlexScheme.blue),
       ),
     );
     await tester.tap(find.text('打开图片'));
@@ -681,9 +680,9 @@ void main() {
     getIt.registerSingleton<StorageGateway>(FakeStorage());
     // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
+        PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
         theme: buildLightTheme(FlexScheme.blue),
-        home: PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
       ),
     );
     await tester.pumpAndSettle();
@@ -707,7 +706,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
 
     await tester.longPress(find.text('照片.jpg'));
@@ -734,7 +733,7 @@ void main() {
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: HomeView()));
+    await tester.pumpWidget(localizedApp(const HomeView()));
     await tester.pumpAndSettle();
 
     await tester.longPress(find.text('短片.mp4'));

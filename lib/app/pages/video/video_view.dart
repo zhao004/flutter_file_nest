@@ -8,6 +8,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
 import '../../services/vault_store.dart';
@@ -96,7 +98,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       _scheduleHide();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = '无法播放此视频，文件可能已移动或格式不受支持');
+        setState(() => _error = AppL10n.current.videoCannotPlay);
       }
     }
   }
@@ -113,7 +115,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
   /// 播放器错误：忽略空消息，仅首次进入错误态。
   void _onError(String message) {
     if (!mounted || _error != null || message.trim().isEmpty) return;
-    setState(() => _error = '视频播放失败');
+    setState(() => _error = AppL10n.current.videoPlayFailed);
     _cancelHide();
   }
 
@@ -199,7 +201,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       }
       _scheduleHide();
     } catch (_) {
-      if (mounted) setState(() => _error = '视频播放失败');
+      if (mounted) setState(() => _error = AppL10n.current.videoPlayFailed);
     }
   }
 
@@ -436,13 +438,13 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
               OutlinedButton.icon(
                 onPressed: _retry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('重试'),
+                label: Text(context.l10n.commonRetry),
               ),
               const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: _openExternally,
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('用其他应用打开'),
+                label: Text(context.l10n.commonOpenExternal),
               ),
             ],
           ),
@@ -473,8 +475,10 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       _DragMode.seek =>
         '${formatPlaybackTime(_dragSeekTarget ?? _position)}'
             ' / ${formatPlaybackTime(_duration)}',
-      _DragMode.volume => '音量 ${(_dragVolume * 100).round()}%',
-      _DragMode.brightness => '亮度 ${(_brightness * 100).round()}%',
+      _DragMode.volume => context.l10n.videoVolume((_dragVolume * 100).round()),
+      _DragMode.brightness => context.l10n.videoBrightness(
+        (_brightness * 100).round(),
+      ),
       _DragMode.none => '',
     };
     if (text.isEmpty) return const SizedBox.shrink();
@@ -520,7 +524,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
       child: Row(
         children: [
           IconButton(
-            tooltip: '返回',
+            tooltip: context.l10n.commonBack,
             color: immersivePreviewIconTheme.color,
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.arrow_back),
@@ -534,7 +538,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
             ),
           ),
           PopupMenuButton<double>(
-            tooltip: '播放速度',
+            tooltip: context.l10n.videoSpeed,
             iconColor: immersivePreviewIconTheme.color,
             onSelected: _setSpeed,
             itemBuilder: (context) => [
@@ -560,7 +564,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
             ],
           ),
           IconButton(
-            tooltip: '用其他应用打开',
+            tooltip: context.l10n.commonOpenExternal,
             color: immersivePreviewIconTheme.color,
             onPressed: _openExternally,
             icon: const Icon(Icons.open_in_new),
@@ -626,7 +630,9 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
                 ),
                 const Spacer(),
                 IconButton(
-                  tooltip: _muted ? '取消静音' : '静音',
+                  tooltip: _muted
+                      ? context.l10n.audioUnmute
+                      : context.l10n.audioMute,
                   color: Colors.white,
                   onPressed: _toggleMute,
                   icon: Icon(_muted ? Icons.volume_off : Icons.volume_up),

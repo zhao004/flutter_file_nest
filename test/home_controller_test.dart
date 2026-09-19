@@ -8,6 +8,7 @@ import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/services/vault_store.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 import 'support/archive_fakes.dart';
 
 void main() {
@@ -113,7 +114,7 @@ void main() {
     final outcome = await controller.zipEntry(controller.entries.value.single);
     expect(archive.zipCalls, ['视频.mp4']);
     expect(outcome.ok, true);
-    expect(outcome.summary, contains('压缩结果.zip'));
+    expect(outcome.summary(zhL10n), contains('压缩结果.zip'));
     expect(controller.error.value, isNull);
   });
 
@@ -159,7 +160,7 @@ void main() {
       controller.entries.value.single,
     );
     expect(archive.extractCalls, ['素材.zip']);
-    expect(outcome.summary, contains('跳过 1 项'));
+    expect(outcome.summary(zhL10n), contains('跳过 1 项'));
   });
 
   test('分享与取消转发到归档网关', () async {
@@ -177,7 +178,7 @@ void main() {
     controller.toggleSelect(controller.entries.value.single);
     final outcome = await controller.shareSelected();
     expect(archive.shareCalls, ['视频.mp4']);
-    expect(outcome.summary, contains('未找到'));
+    expect(outcome.summary(zhL10n), contains('未找到'));
     await controller.cancelArchive();
     expect(archive.cancels, 1);
   });

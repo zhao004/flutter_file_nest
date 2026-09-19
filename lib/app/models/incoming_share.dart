@@ -1,3 +1,5 @@
+import '../i18n/app_l10n.dart';
+
 /// 来自其他应用（微信/QQ 等）的待保存文件；uri 为不透明的内容标识。
 class IncomingShare {
   const IncomingShare({required this.uri, this.name, this.size});
@@ -15,6 +17,8 @@ class IncomingShare {
   /// 展示用名称；提供方未给出名称时回退为通用文案。
   String get displayName {
     final value = name;
-    return (value == null || value.isEmpty) ? '待保存文件' : value;
+    return (value == null || value.isEmpty)
+        ? AppL10n.current.incomingShareFallbackName
+        : value;
   }
 }

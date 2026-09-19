@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
+import '../../localization.dart';
 import '../../preview/preview_defaults.dart';
 import '../preview/preview_settings_controller.dart';
 
@@ -17,50 +18,52 @@ class EditorSettingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('编辑器配置')),
+    appBar: AppBar(title: Text(context.l10n.settingsEditor)),
     body: SignalBuilder(
       builder: (context) => ListView(
         children: [
-          const _SectionHeader('文本与代码'),
+          _SectionHeader(context.l10n.editorSectionTextCode),
           _fontSizeTile(context),
           SwitchListTile(
             secondary: const Icon(Icons.wrap_text),
-            title: const Text('自动换行'),
-            subtitle: const Text('关闭后长行改为横向滚动'),
+            title: Text(context.l10n.editorWrap),
+            subtitle: Text(context.l10n.editorWrapSubtitle),
             value: controller.wrap.value,
             onChanged: controller.setWrap,
           ),
           SwitchListTile(
             secondary: const Icon(Icons.format_list_numbered),
-            title: const Text('显示行号'),
+            title: Text(context.l10n.editorLineNumbers),
             value: controller.lineNumbers.value,
             onChanged: controller.setLineNumbers,
           ),
           const Divider(height: 1),
-          const _SectionHeader('编辑器'),
+          _SectionHeader(context.l10n.editorSectionEditor),
           ListTile(
             leading: const Icon(Icons.keyboard_tab),
-            title: const Text('Tab 缩进'),
-            subtitle: Text('${controller.tabWidth.value} 个空格'),
+            title: Text(context.l10n.editorTabWidth),
+            subtitle: Text(
+              context.l10n.editorTabWidthValue(controller.tabWidth.value),
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _pickTabWidth(context),
           ),
           SwitchListTile(
             secondary: const Icon(Icons.format_indent_increase),
-            title: const Text('自动缩进'),
-            subtitle: const Text('换行时保持当前行的缩进'),
+            title: Text(context.l10n.editorAutoIndent),
+            subtitle: Text(context.l10n.editorAutoIndentSubtitle),
             value: controller.autoIndent.value,
             onChanged: controller.setAutoIndent,
           ),
           const Divider(height: 1),
-          const _SectionHeader('Markdown'),
+          _SectionHeader(context.l10n.editorSectionMarkdown),
           ListTile(
             leading: const Icon(Icons.article_outlined),
-            title: const Text('展示模式'),
+            title: Text(context.l10n.editorMarkdownMode),
             subtitle: Text(
               controller.markdownMode.value == kMarkdownModeSource
-                  ? '源码'
-                  : '阅读',
+                  ? context.l10n.editorMarkdownSource
+                  : context.l10n.editorMarkdownRead,
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _pickMarkdownMode(context),
@@ -73,7 +76,7 @@ class EditorSettingsView extends StatelessWidget {
   /// 字号滑杆；取值限制在允许范围内并实时持久化。
   Widget _fontSizeTile(BuildContext context) => ListTile(
     leading: const Icon(Icons.format_size),
-    title: const Text('字号'),
+    title: Text(context.l10n.editorFontSize),
     subtitle: Slider(
       min: minTextFontSize,
       max: maxTextFontSize,
@@ -90,11 +93,11 @@ class EditorSettingsView extends StatelessWidget {
     final selected = await showDialog<int>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('Tab 缩进'),
+        title: Text(context.l10n.editorTabWidth),
         children: [
           for (final width in kEditorTabWidthOptions)
             ListTile(
-              title: Text('$width 个空格'),
+              title: Text(context.l10n.editorTabWidthValue(width)),
               trailing: width == controller.tabWidth.value
                   ? Icon(
                       Icons.check,
@@ -114,11 +117,11 @@ class EditorSettingsView extends StatelessWidget {
     final selected = await showDialog<String>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('展示模式'),
+        title: Text(context.l10n.editorMarkdownMode),
         children: [
-          for (final option in const [
-            (kDefaultMarkdownMode, '阅读'),
-            (kMarkdownModeSource, '源码'),
+          for (final option in [
+            (kDefaultMarkdownMode, context.l10n.editorMarkdownRead),
+            (kMarkdownModeSource, context.l10n.editorMarkdownSource),
           ])
             ListTile(
               title: Text(option.$2),

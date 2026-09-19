@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:filenest/app/models/archive_models.dart';
 import 'package:filenest/app/models/storage_entry.dart';
 
+import 'support/localization.dart';
+
 StorageEntry _entry(String name, {bool directory = false, String? mime}) =>
     StorageEntry(
       rootUri: 'content://test/tree/root',
@@ -24,7 +26,7 @@ void main() {
     expect(task.stage, ArchiveStage.processing);
     expect(task.fraction, 0.4);
     expect(task.terminal, false);
-    expect(task.label, contains('已处理 4 项'));
+    expect(task.label(zhL10n), contains('已处理 4 项'));
     final done = ArchiveTaskState.fromEvent('op-1', ArchiveKind.extract, {
       'stage': 'completed',
     });
@@ -49,8 +51,8 @@ void main() {
       items: 3,
     );
     expect(outcome.ok, true);
-    expect(outcome.summary, contains('现场.zip'));
-    expect(outcome.summary, contains('3 项'));
+    expect(outcome.summary(zhL10n), contains('现场.zip'));
+    expect(outcome.summary(zhL10n), contains('3 项'));
   });
 
   test('解压存在跳过项时必须显式说明部分结果', () {
@@ -60,27 +62,27 @@ void main() {
       extracted: 5,
       skipped: 2,
     );
-    expect(outcome.summary, contains('已解压 5 项'));
-    expect(outcome.summary, contains('跳过 2 项'));
+    expect(outcome.summary(zhL10n), contains('已解压 5 项'));
+    expect(outcome.summary(zhL10n), contains('跳过 2 项'));
   });
 
   test('取消与失败结果区分展示', () {
     const cancelled = ArchiveOutcome.cancelled(ArchiveKind.extract, 'op-1');
     expect(cancelled.cancelled, true);
-    expect(cancelled.summary, '解压已取消');
+    expect(cancelled.summary(zhL10n), '解压已取消');
     const failure = ArchiveOutcome.failure(
       ArchiveKind.extract,
       'unsafe_archive',
       '归档包含不安全的条目名称',
     );
     expect(failure.ok, false);
-    expect(failure.summary, '归档包含不安全的条目名称');
+    expect(failure.summary(zhL10n), '归档包含不安全的条目名称');
   });
 
   test('分享结果区分无接收方与打开分享面板', () {
-    expect(const ShareOutcome.shared().summary, contains('系统分享'));
-    expect(const ShareOutcome.noApp().summary, contains('未找到'));
-    expect(const ShareOutcome.cancelled().summary, '分享已取消');
+    expect(const ShareOutcome.shared().summary(zhL10n), contains('系统分享'));
+    expect(const ShareOutcome.noApp().summary(zhL10n), contains('未找到'));
+    expect(const ShareOutcome.cancelled().summary(zhL10n), '分享已取消');
   });
 
   test('压缩与解压默认名称遵循原生规则', () {

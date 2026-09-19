@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/editor_surface.dart';
 import '../../preview/text_content.dart';
@@ -138,11 +139,13 @@ class _TextEditorViewState extends State<TextEditorView> {
         _saving = false;
       });
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已保存')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.editorSaved)));
     } on TextEncodeException catch (failure) {
       _showError(failure.message);
     } catch (failure) {
-      _showError(previewErrorMessage(failure, fallback: '保存失败，请重试'));
+      _showError(
+        previewErrorMessage(failure, fallback: context.l10n.editorSaveFailed),
+      );
     }
   }
 
@@ -159,16 +162,16 @@ class _TextEditorViewState extends State<TextEditorView> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('放弃未保存的修改？'),
-        content: const Text('离开将丢失本次编辑内容。'),
+        title: Text(context.l10n.commonUnsavedChangesTitle),
+        content: Text(context.l10n.editorDiscardBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('继续编辑'),
+            child: Text(context.l10n.editorKeepEditing),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('放弃修改'),
+            child: Text(context.l10n.editorDiscard),
           ),
         ],
       ),
@@ -195,23 +198,23 @@ class _TextEditorViewState extends State<TextEditorView> {
         actions: [
           if (_editable) ...[
             IconButton(
-              tooltip: '撤销',
+              tooltip: context.l10n.editorUndo,
               onPressed: _controller == null ? null : () => _controller!.undo(),
               icon: const Icon(Icons.undo),
             ),
             IconButton(
-              tooltip: '重做',
+              tooltip: context.l10n.editorRedo,
               onPressed: _controller == null ? null : () => _controller!.redo(),
               icon: const Icon(Icons.redo),
             ),
             IconButton(
-              tooltip: '保存',
+              tooltip: context.l10n.editorSave,
               onPressed: _dirty && !_saving ? _save : null,
               icon: const Icon(Icons.save_outlined),
             ),
           ],
           PopupMenuButton<_EditorMenu>(
-            tooltip: '编辑选项',
+            tooltip: context.l10n.editorOptions,
             onSelected: (value) => switch (value) {
               _EditorMenu.revert => _revert(),
               _EditorMenu.preview => context.push<void>(
@@ -224,26 +227,26 @@ class _TextEditorViewState extends State<TextEditorView> {
               PopupMenuItem(
                 value: _EditorMenu.revert,
                 enabled: _editable && _dirty,
-                child: const ListTile(
+                child: ListTile(
                   dense: true,
-                  leading: Icon(Icons.undo),
-                  title: Text('还原修改'),
+                  leading: const Icon(Icons.undo),
+                  title: Text(context.l10n.editorRevert),
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: _EditorMenu.preview,
                 child: ListTile(
                   dense: true,
-                  leading: Icon(Icons.visibility_outlined),
-                  title: Text('预览'),
+                  leading: const Icon(Icons.visibility_outlined),
+                  title: Text(context.l10n.commonPreview),
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: _EditorMenu.openExternal,
                 child: ListTile(
                   dense: true,
-                  leading: Icon(Icons.open_in_new),
-                  title: Text('用其他应用打开'),
+                  leading: const Icon(Icons.open_in_new),
+                  title: Text(context.l10n.commonOpenExternal),
                 ),
               ),
             ],
@@ -274,12 +277,12 @@ class _TextEditorViewState extends State<TextEditorView> {
             children: [
               const Icon(Icons.warning_amber, size: 56),
               const SizedBox(height: 16),
-              const Text('文件过大，无法在应用内编辑', textAlign: TextAlign.center),
+              Text(context.l10n.editorTooLarge, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () => _storage.openFile(widget.entry),
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('用其他应用打开'),
+                label: Text(context.l10n.commonOpenExternal),
               ),
             ],
           ),
@@ -334,7 +337,7 @@ class _EncodingNotice extends StatelessWidget {
       child: ListTile(
         dense: true,
         leading: const Icon(Icons.info_outline, size: 20),
-        title: Text('保存时保持：$details'),
+        title: Text(context.l10n.editorPreserveEncoding(details)),
       ),
     );
   }

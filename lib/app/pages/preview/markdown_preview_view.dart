@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/preview_defaults.dart';
 import '../../preview/text_content.dart';
@@ -55,7 +56,9 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
           builder: (context) {
             final reading = _settings.markdownMode.value != kMarkdownModeSource;
             return IconButton(
-              tooltip: reading ? '查看源码' : '阅读模式',
+              tooltip: reading
+                  ? context.l10n.markdownViewSource
+                  : context.l10n.markdownReadingMode,
               onPressed: () => _settings.setMarkdownMode(
                 reading ? kMarkdownModeSource : kDefaultMarkdownMode,
               ),
@@ -65,12 +68,12 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
         ),
         if (widget.entry.canWrite)
           IconButton(
-            tooltip: '编辑源码',
+            tooltip: context.l10n.markdownEditSource,
             onPressed: _edit,
             icon: const Icon(Icons.edit_outlined),
           ),
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -123,8 +126,9 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
           data: content.text,
           selectable: true,
           onTapLink: (text, href, title) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('链接：${href ?? text}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.l10n.commonLink(href ?? text))),
+            );
           },
         ),
       );

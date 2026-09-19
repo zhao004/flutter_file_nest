@@ -10,6 +10,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:video_player/video_player.dart';
 
+import '../i18n/app_l10n.dart';
 import '../models/video_export_request.dart';
 
 /// 视频编辑器宿主配置：只暴露页面逻辑所需的输入与回调，
@@ -226,7 +227,7 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       if (!mounted) return;
       _failed = true;
       setState(() {});
-      widget.config.onError('无法在此视频上启动编辑，可能是格式不受支持');
+      widget.config.onError(AppL10n.current.videoEditorHostUnsupported);
     }
   }
 

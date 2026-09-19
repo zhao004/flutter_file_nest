@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:filenest/app/di/injector.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 
 /// 假编辑器控制器：记录文本与操作，方法均为同步语义。
 class FakeCodeEditor implements CodeEditorController {
@@ -111,8 +112,8 @@ void main() {
 
   Future<void> openEditor(WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
+      localizedApp(
+        Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(

@@ -1,6 +1,8 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+
 /// 默认配色方案；内置的 Blue delight（`FlexScheme.blue`）。
 const FlexScheme kDefaultFlexScheme = FlexScheme.blue;
 
@@ -41,9 +43,9 @@ ThemeMode themeModeFromName(String? name) => switch (name) {
   _ => kDefaultThemeMode,
 };
 
-/// 外观模式的中文名称，用于设置页展示。
-String themeModeLabel(ThemeMode mode) => switch (mode) {
-  ThemeMode.light => '浅色',
-  ThemeMode.dark => '深色',
-  ThemeMode.system => '跟随系统',
+/// 外观模式的本地化名称，用于设置页展示。
+String themeModeLabel(ThemeMode mode, AppLocalizations l10n) => switch (mode) {
+  ThemeMode.light => l10n.themeModeLight,
+  ThemeMode.dark => l10n.themeModeDark,
+  ThemeMode.system => l10n.themeModeSystem,
 };

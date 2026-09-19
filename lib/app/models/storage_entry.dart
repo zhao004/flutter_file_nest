@@ -1,3 +1,4 @@
+import '../../l10n/generated/app_localizations.dart';
 import '../file_type/file_category.dart';
 import '../file_type/file_type_detector.dart';
 
@@ -111,18 +112,18 @@ List<StorageEntry> sortEntries(
   return sorted;
 }
 
-String? validateEntryName(String value) {
+String? validateEntryName(String value, AppLocalizations l10n) {
   final name = value.trim();
-  if (name.isEmpty || name == '.' || name == '..') return '请输入有效名称';
-  if (name.length > 120) return '名称不能超过 120 个字符';
+  if (name.isEmpty || name == '.' || name == '..') return l10n.entryNameEmpty;
+  if (name.length > 120) return l10n.entryNameTooLong;
   if (RegExp(r'[\\/:*?"<>|\x00-\x1f\x7f]').hasMatch(name)) {
-    return '名称不能含路径或控制字符';
+    return l10n.entryNameInvalidChars;
   }
   return null;
 }
 
-String formatBytes(int? bytes) {
-  if (bytes == null) return '大小未知';
+String formatBytes(int? bytes, AppLocalizations l10n) {
+  if (bytes == null) return l10n.sizeUnknown;
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
   if (bytes < 1024 * 1024 * 1024) {

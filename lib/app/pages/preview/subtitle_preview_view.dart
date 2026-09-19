@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../di/injector.dart';
 
 import '../../file_type/file_extension_map.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/subtitle_parser.dart';
 import '../../preview/text_content.dart';
@@ -39,7 +40,7 @@ class _SubtitlePreviewViewState extends State<SubtitlePreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -65,7 +66,7 @@ class _SubtitlePreviewViewState extends State<SubtitlePreviewView> {
           extension: fileExtension(widget.entry.name),
         );
         if (cues.isEmpty) {
-          return const Center(child: Text('没有可显示的字幕内容'));
+          return Center(child: Text(context.l10n.subtitleEmpty));
         }
         return Column(
           children: [
@@ -85,7 +86,11 @@ class _SubtitlePreviewViewState extends State<SubtitlePreviewView> {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    title: Text(cue.text.isEmpty ? '（空对白）' : cue.text),
+                    title: Text(
+                      cue.text.isEmpty
+                          ? context.l10n.subtitleEmptyCue
+                          : cue.text,
+                    ),
                   );
                 },
               ),

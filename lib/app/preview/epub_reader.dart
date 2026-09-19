@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import '../i18n/app_l10n.dart';
+
 /// EPUB 章节：标题与原始 XHTML。
 class EpubChapter {
   const EpubChapter({required this.title, required this.html});
@@ -39,21 +41,23 @@ EpubBook readEpub(Uint8List bytes) {
   try {
     archive = ZipDecoder().decodeBytes(bytes);
   } catch (_) {
-    throw const EpubReadException('无法解析 EPUB 文件');
+    throw EpubReadException(AppL10n.current.epubInvalid);
   }
   final containerFile = archive.find('META-INF/container.xml');
   if (containerFile == null) {
-    throw const EpubReadException('EPUB 缺少 container.xml');
+    throw EpubReadException(AppL10n.current.epubMissingContainer);
   }
   final container = _parseXml(containerFile.content);
   final opfPath = _elementsByLocalName(
     container,
     'rootfile',
   ).firstOrNull?.getAttribute('full-path');
-  if (opfPath == null) throw const EpubReadException('EPUB 缺少 OPF 清单');
+  if (opfPath == null) throw EpubReadException(AppL10n.current.epubMissingOpf);
 
   final opfFile = archive.find(opfPath);
-  if (opfFile == null) throw const EpubReadException('无法读取 EPUB 清单');
+  if (opfFile == null) {
+    throw EpubReadException(AppL10n.current.epubUnreadableManifest);
+  }
   final opf = _parseXml(opfFile.content);
 
   final hrefs = <String, String>{};
@@ -80,7 +84,7 @@ EpubBook readEpub(Uint8List bytes) {
       spinePaths.add(_resolvePath(baseDirectory, href));
     }
   }
-  if (spinePaths.isEmpty) throw const EpubReadException('EPUB 没有可显示的章节');
+  if (spinePaths.isEmpty) throw EpubReadException(AppL10n.current.epubNoSpine);
 
   final chapters = <EpubChapter>[];
   for (var index = 0; index < spinePaths.length; index++) {
@@ -91,14 +95,18 @@ EpubBook readEpub(Uint8List bytes) {
       EpubChapter(title: _chapterTitle(html, index + 1), html: html),
     );
   }
-  if (chapters.isEmpty) throw const EpubReadException('EPUB 章节内容为空');
+  if (chapters.isEmpty) {
+    throw EpubReadException(AppL10n.current.epubEmptyChapters);
+  }
 
   final title = _elementsByLocalName(
     opf,
     'title',
   ).firstOrNull?.innerText.trim();
   return EpubBook(
-    title: title == null || title.isEmpty ? '未命名' : title,
+    title: title == null || title.isEmpty
+        ? AppL10n.current.epubUntitled
+        : title,
     chapters: chapters,
   );
 }
@@ -113,7 +121,7 @@ XmlDocument _parseXml(List<int> bytes) {
   try {
     return XmlDocument.parse(utf8.decode(bytes, allowMalformed: true));
   } catch (_) {
-    throw const EpubReadException('EPUB 清单格式无效');
+    throw EpubReadException(AppL10n.current.epubInvalidManifest);
   }
 }
 
@@ -156,5 +164,5 @@ String _chapterTitle(String html, int index) {
     final text = heading.replaceAll(RegExp(r'<[^>]+>'), '').trim();
     if (text.isNotEmpty) return text;
   }
-  return '第 $index 章';
+  return AppL10n.current.epubChapterTitle(index);
 }

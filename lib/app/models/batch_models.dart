@@ -4,6 +4,7 @@
 /// 供重试，且重试仅处理未完成部分。
 library;
 
+import '../../l10n/generated/app_localizations.dart';
 import 'storage_entry.dart';
 
 /// 批量任务类型。
@@ -57,11 +58,13 @@ class BatchJob {
       .length;
 
   /// 汇总文案；仅在所有条目到达终态后展示完整结果。
-  String summary() {
-    if (doneCount < total) return '$doneCount/$total';
-    final parts = <String>['成功 $successCount'];
-    if (failedCount > 0) parts.add('失败 $failedCount');
-    if (keptSourceCount > 0) parts.add('源未删除 $keptSourceCount');
+  String summary(AppLocalizations l10n) {
+    if (doneCount < total) return l10n.batchProgress(doneCount, total);
+    final parts = <String>[l10n.batchSummarySuccess(successCount)];
+    if (failedCount > 0) parts.add(l10n.batchSummaryFailed(failedCount));
+    if (keptSourceCount > 0) {
+      parts.add(l10n.batchSummaryKeptSource(keptSourceCount));
+    }
     return parts.join(' · ');
   }
 }
@@ -131,6 +134,7 @@ class RenamePreview {
 List<RenamePreview> previewRename(
   List<StorageEntry> entries,
   BatchRenamePlan plan,
+  AppLocalizations l10n,
 ) {
   final previews = <RenamePreview>[];
   final planned = <String, String>{};
@@ -139,15 +143,15 @@ List<RenamePreview> previewRename(
     final name = plan.numbering
         ? _numberedName(plan, index, item)
         : plan.baseName(item.name, isDirectory: item.isDirectory);
-    String? error = validateEntryName(name);
+    String? error = validateEntryName(name, l10n);
     final key = name.toLowerCase();
     if (error == null && planned.containsKey(key)) {
-      error = '与 ${planned[key]} 重名';
+      error = l10n.renameDuplicate(planned[key]!);
     }
     if (error == null &&
         key != item.name.toLowerCase() &&
         existing.contains(key)) {
-      error = '当前目录已存在同名项目';
+      error = l10n.renameExists;
     }
     planned[key] = item.name;
     previews.add(RenamePreview(item, name, error));

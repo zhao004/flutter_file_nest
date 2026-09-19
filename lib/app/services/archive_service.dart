@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
+import '../i18n/app_l10n.dart';
 import '../models/archive_models.dart';
 import '../models/storage_entry.dart';
 
@@ -85,10 +86,10 @@ class ArchiveService implements ArchiveGateway {
     String? fileName,
   }) async {
     if (entries.isEmpty) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.zip,
         'invalid_argument',
-        '没有可压缩的条目',
+        AppL10n.current.archiveNoEntries,
       );
     }
     final name = fileName ?? defaultZipFileName(entries.first.name);
@@ -101,10 +102,10 @@ class ArchiveService implements ArchiveGateway {
     required StorageEntry targetFolder,
   }) async {
     if (_active.value != null) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.zip,
         'busy',
-        '已有归档任务在进行，请等待完成或取消',
+        AppL10n.current.archiveBusyZip,
       );
     }
     final operationId = _nextId();
@@ -123,10 +124,10 @@ class ArchiveService implements ArchiveGateway {
         'entries': [for (final entry in entries) _entryArgument(entry)],
       });
       if (result == null) {
-        return const ArchiveOutcome.failure(
+        return ArchiveOutcome.failure(
           ArchiveKind.zip,
           'invalid_response',
-          '归档响应为空',
+          AppL10n.current.archiveEmptyResponse,
         );
       }
       if (result['cancelled'] == true) {
@@ -143,7 +144,7 @@ class ArchiveService implements ArchiveGateway {
       return ArchiveOutcome.failure(
         ArchiveKind.zip,
         error.code,
-        error.message ?? '压缩失败，请重试',
+        error.message ?? AppL10n.current.archiveZipFailed,
       );
     } finally {
       if (_active.value?.operationId == operationId) _active.value = null;
@@ -157,10 +158,10 @@ class ArchiveService implements ArchiveGateway {
     String? folderName,
   }) async {
     if (_active.value != null) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.extract,
         'busy',
-        '已有归档任务在进行，请等待完成或取消',
+        AppL10n.current.archiveBusyZip,
       );
     }
     final operationId = _nextId();
@@ -182,10 +183,10 @@ class ArchiveService implements ArchiveGateway {
         },
       );
       if (result == null) {
-        return const ArchiveOutcome.failure(
+        return ArchiveOutcome.failure(
           ArchiveKind.extract,
           'invalid_response',
-          '解压响应为空',
+          AppL10n.current.archiveExtractEmptyResponse,
         );
       }
       if (result['cancelled'] == true) {
@@ -203,7 +204,7 @@ class ArchiveService implements ArchiveGateway {
       return ArchiveOutcome.failure(
         ArchiveKind.extract,
         error.code,
-        error.message ?? '解压失败，请检查压缩包是否完整',
+        error.message ?? AppL10n.current.archiveExtractFailed,
       );
     } finally {
       if (_active.value?.operationId == operationId) _active.value = null;
@@ -213,10 +214,13 @@ class ArchiveService implements ArchiveGateway {
   @override
   Future<ShareOutcome> share(List<StorageEntry> entries) async {
     if (entries.isEmpty) {
-      return const ShareOutcome.failure('invalid_argument', '没有可分享的内容');
+      return ShareOutcome.failure(
+        'invalid_argument',
+        AppL10n.current.shareNoContent,
+      );
     }
     if (_active.value != null) {
-      return const ShareOutcome.failure('busy', '已有归档任务在进行，请稍后再分享');
+      return ShareOutcome.failure('busy', AppL10n.current.archiveBusyShare);
     }
     final documentUris = <String>[
       for (final entry in entries)
@@ -236,7 +240,10 @@ class ArchiveService implements ArchiveGateway {
       }
       final path = prepared.path;
       if (path == null) {
-        return const ShareOutcome.failure('invalid_response', '分享缓存准备失败');
+        return ShareOutcome.failure(
+          'invalid_response',
+          AppL10n.current.shareCacheFailed,
+        );
       }
       cachePaths.add(path);
       mimeTypes.add('application/zip');
@@ -246,15 +253,21 @@ class ArchiveService implements ArchiveGateway {
         'documentUris': documentUris,
         'cachePaths': cachePaths,
         'mimeTypes': mimeTypes,
-        'title': '分享 ${entries.first.name}',
+        'title': AppL10n.current.shareTitle(entries.first.name),
       });
       if (result == null) {
-        return const ShareOutcome.failure('invalid_response', '分享响应为空');
+        return ShareOutcome.failure(
+          'invalid_response',
+          AppL10n.current.shareEmptyResponse,
+        );
       }
       if (result['result'] == 'no_app') return const ShareOutcome.noApp();
       return const ShareOutcome.shared();
     } on PlatformException catch (error) {
-      return ShareOutcome.failure(error.code, error.message ?? '分享失败，请重试');
+      return ShareOutcome.failure(
+        error.code,
+        error.message ?? AppL10n.current.shareFailed,
+      );
     }
   }
 
@@ -278,12 +291,18 @@ class ArchiveService implements ArchiveGateway {
         },
       );
       if (result == null) {
-        return const _PreparedZip.failure('invalid_response', '分享缓存准备失败');
+        return _PreparedZip.failure(
+          'invalid_response',
+          AppL10n.current.shareCacheFailed,
+        );
       }
       if (result['cancelled'] == true) return const _PreparedZip.cancelled();
       return _PreparedZip.done(result['path'] as String?);
     } on PlatformException catch (error) {
-      return _PreparedZip.failure(error.code, error.message ?? '分享缓存准备失败');
+      return _PreparedZip.failure(
+        error.code,
+        error.message ?? AppL10n.current.shareCacheFailed,
+      );
     } finally {
       if (_active.value?.operationId == operationId) _active.value = null;
     }

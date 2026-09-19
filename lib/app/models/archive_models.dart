@@ -1,6 +1,8 @@
 /// 归档任务的状态与结果模型；字段与 Kotlin 侧事件协议对应。
 library;
 
+import '../../l10n/generated/app_localizations.dart';
+import '../i18n/app_l10n.dart';
 import 'storage_entry.dart';
 
 /// 归档任务阶段。
@@ -88,20 +90,20 @@ class ArchiveTaskState {
   }
 
   /// 阶段文案；包含已处理项数时给出可观察的进度。
-  String get label => switch (stage) {
+  String label(AppLocalizations l10n) => switch (stage) {
     ArchiveStage.scanning => switch (kind) {
-      ArchiveKind.zip => '正在准备压缩…',
-      ArchiveKind.extract => '正在检查压缩包…',
-      ArchiveKind.share => '正在准备分享…',
+      ArchiveKind.zip => l10n.archiveTaskScanningZip,
+      ArchiveKind.extract => l10n.archiveTaskScanningExtract,
+      ArchiveKind.share => l10n.archiveTaskScanningShare,
     },
     ArchiveStage.processing => switch (kind) {
-      ArchiveKind.zip => '正在压缩：已处理 $processedItems 项',
-      ArchiveKind.extract => '正在解压：已完成 $processedItems 项',
-      ArchiveKind.share => '正在准备分享：已处理 $processedItems 项',
+      ArchiveKind.zip => l10n.archiveTaskProcessingZip(processedItems),
+      ArchiveKind.extract => l10n.archiveTaskProcessingExtract(processedItems),
+      ArchiveKind.share => l10n.archiveTaskProcessingShare(processedItems),
     },
-    ArchiveStage.completed => '已完成',
-    ArchiveStage.cancelled => '已取消',
-    ArchiveStage.failed => message ?? '任务失败',
+    ArchiveStage.completed => l10n.archiveTaskCompleted,
+    ArchiveStage.cancelled => l10n.archiveTaskCancelled,
+    ArchiveStage.failed => message ?? l10n.archiveTaskFailed,
   };
 }
 
@@ -153,18 +155,26 @@ class ArchiveOutcome {
   bool get ok => !cancelled && code == null;
 
   /// 界面提示文案；部分成功（存在跳过项）必须显式说明。
-  String get summary {
+  String summary(AppLocalizations l10n) {
     if (cancelled) {
-      return kind == ArchiveKind.extract ? '解压已取消' : '压缩已取消';
+      return kind == ArchiveKind.extract
+          ? l10n.archiveExtractCancelled
+          : l10n.archiveZipCancelled;
     }
-    if (code != null) return message ?? '归档任务失败';
+    if (code != null) return message ?? l10n.archiveOutcomeFailed;
     return switch (kind) {
-      ArchiveKind.zip => '已生成压缩包：${target?.name ?? '压缩包'}（$items 项）',
+      ArchiveKind.zip => l10n.archiveZipDone(
+        target?.name ?? l10n.archiveZipDefaultName,
+        items,
+      ),
       ArchiveKind.extract =>
         skipped > 0
-            ? '已解压 $extracted 项，跳过 $skipped 项'
-            : '已解压 $extracted 项到 ${target?.name ?? '新文件夹'}',
-      ArchiveKind.share => '分享内容已准备',
+            ? l10n.archiveExtractSkipped(extracted, skipped)
+            : l10n.archiveExtractDone(
+                extracted,
+                target?.name ?? l10n.archiveExtractDefaultFolder,
+              ),
+      ArchiveKind.share => l10n.archiveShareReady,
     };
   }
 }
@@ -193,12 +203,12 @@ class ShareOutcome {
 
   bool get ok => !cancelled && code == null;
 
-  String get summary {
-    if (cancelled) return '分享已取消';
+  String summary(AppLocalizations l10n) {
+    if (cancelled) return l10n.shareCancelled;
     return switch (code) {
-      'no_app' => '未找到可接收分享的应用',
-      null => '已打开系统分享',
-      _ => message ?? '分享失败，请重试',
+      'no_app' => l10n.shareNoApp,
+      null => l10n.shareOpened,
+      _ => message ?? l10n.shareFailed,
     };
   }
 }
@@ -216,7 +226,9 @@ String defaultExtractFolderName(String archiveName) {
       ? archiveName.substring(0, archiveName.length - 4)
       : archiveName;
   final trimmed = base.trim();
-  return trimmed.isEmpty ? '解压结果' : trimmed;
+  return trimmed.isEmpty
+      ? AppL10n.current.archiveExtractResultFallbackName
+      : trimmed;
 }
 
 /// 是否为可尝试解压的 ZIP 文件。

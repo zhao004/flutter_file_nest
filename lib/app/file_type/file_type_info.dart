@@ -1,3 +1,4 @@
+import '../../l10n/generated/app_localizations.dart';
 import 'file_category.dart';
 
 /// 文件分类图标的数据类型；由 hugeicons 的 `HugeIcons.strokeRoundedX` 提供。
@@ -6,7 +7,7 @@ import 'file_category.dart';
 /// 必须通过 `FileCategoryIcon` 组件渲染。
 typedef FileIcon = List<List<dynamic>>;
 
-/// 文件分类的展示信息：中文标签与图标。
+/// 文件分类的展示信息：本地化标签与图标。
 ///
 /// 供详情页等同时需要标签和图标的场景使用；列表图标可直接调用
 /// `fileCategoryIcon`，无需构造本对象。
@@ -22,23 +23,24 @@ class FileTypeInfo {
   final FileIcon icon;
 }
 
-/// 分类的中文名称；未知类型不暴露原始扩展名。
-String fileCategoryLabel(FileCategory category) => switch (category) {
-  FileCategory.folder => '文件夹',
-  FileCategory.image => '图片',
-  FileCategory.video => '视频',
-  FileCategory.audio => '音频',
-  FileCategory.pdf => 'PDF',
-  FileCategory.document => '文档',
-  FileCategory.spreadsheet => '表格',
-  FileCategory.presentation => '演示文稿',
-  FileCategory.archive => '压缩包',
-  FileCategory.apk => '安装包',
-  FileCategory.text => '文本',
-  FileCategory.code => '代码',
-  FileCategory.database => '数据库',
-  FileCategory.font => '字体',
-  FileCategory.ebook => '电子书',
-  FileCategory.subtitle => '字幕',
-  FileCategory.unknown => '未知文件',
-};
+/// 分类的本地化名称；未知类型不暴露原始扩展名。
+String fileCategoryLabel(FileCategory category, AppLocalizations l10n) =>
+    switch (category) {
+      FileCategory.folder => l10n.categoryFolder,
+      FileCategory.image => l10n.categoryImage,
+      FileCategory.video => l10n.categoryVideo,
+      FileCategory.audio => l10n.categoryAudio,
+      FileCategory.pdf => l10n.categoryPdf,
+      FileCategory.document => l10n.categoryDocument,
+      FileCategory.spreadsheet => l10n.categorySpreadsheet,
+      FileCategory.presentation => l10n.categoryPresentation,
+      FileCategory.archive => l10n.categoryArchive,
+      FileCategory.apk => l10n.categoryApk,
+      FileCategory.text => l10n.categoryText,
+      FileCategory.code => l10n.categoryCode,
+      FileCategory.database => l10n.categoryDatabase,
+      FileCategory.font => l10n.categoryFont,
+      FileCategory.ebook => l10n.categoryEbook,
+      FileCategory.subtitle => l10n.categorySubtitle,
+      FileCategory.unknown => l10n.categoryUnknown,
+    };

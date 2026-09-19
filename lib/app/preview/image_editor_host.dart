@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
+import '../localization.dart';
 import 'media_editor_format.dart';
 
 /// 图片编辑器宿主配置：只暴露页面逻辑所需的输入与回调，
@@ -116,12 +117,15 @@ class _DeviceStickerPicker extends StatelessWidget {
         InkWell(
           onTap: () => _pick(context),
           borderRadius: BorderRadius.circular(8),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_photo_alternate_outlined, size: 28),
-              SizedBox(height: 6),
-              Text('从设备选择', style: TextStyle(fontSize: 12)),
+              const Icon(Icons.add_photo_alternate_outlined, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                context.l10n.imageEditorPickFromDevice,
+                style: const TextStyle(fontSize: 12),
+              ),
             ],
           ),
         ),

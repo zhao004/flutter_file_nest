@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../localization.dart';
 import '../../models/batch_models.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
@@ -49,27 +51,28 @@ class _ZipNameDialogState extends State<ZipNameDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('压缩为 ZIP'),
+    title: Text(context.l10n.zipDialogTitle),
     content: Form(
       key: _form,
       child: TextFormField(
         controller: _text,
         autofocus: true,
         maxLength: 116,
-        decoration: const InputDecoration(
-          labelText: '压缩包名称',
+        decoration: InputDecoration(
+          labelText: context.l10n.zipNameLabel,
           suffixText: '.zip',
         ),
-        validator: (value) => validateEntryName(_baseName(value ?? '')),
+        validator: (value) =>
+            validateEntryName(_baseName(value ?? ''), context.l10n),
         onFieldSubmitted: (_) => _submit(),
       ),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
+        child: Text(context.l10n.commonCancel),
       ),
-      FilledButton(onPressed: _submit, child: const Text('开始压缩')),
+      FilledButton(onPressed: _submit, child: Text(context.l10n.zipStart)),
     ],
   );
 }
@@ -78,7 +81,7 @@ class _ZipNameDialogState extends State<ZipNameDialog> {
 class EntryNameDialog extends StatefulWidget {
   const EntryNameDialog({
     required this.title,
-    this.fieldLabel = '文件夹名称',
+    required this.fieldLabel,
     this.initialName,
     super.key,
   });
@@ -119,16 +122,16 @@ class _EntryNameDialogState extends State<EntryNameDialog> {
         autofocus: true,
         maxLength: 120,
         decoration: InputDecoration(labelText: widget.fieldLabel),
-        validator: (value) => validateEntryName(value ?? ''),
+        validator: (value) => validateEntryName(value ?? '', context.l10n),
         onFieldSubmitted: (_) => _submit(),
       ),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
+        child: Text(context.l10n.commonCancel),
       ),
-      FilledButton(onPressed: _submit, child: const Text('确定')),
+      FilledButton(onPressed: _submit, child: Text(context.l10n.commonConfirm)),
     ],
   );
 }
@@ -359,7 +362,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
     } catch (failure) {
       if (!mounted) return;
       setState(() {
-        _error = userError(failure);
+        _error = userError(failure, context.l10n);
         _loading = false;
       });
     }
@@ -392,7 +395,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       // 不显示“移动到…”标题，仅在有选中项时提示数量。
       title: widget.selectedCount > 0
-          ? Text('已选 ${widget.selectedCount} 项')
+          ? Text(context.l10n.homeSelectedCount(widget.selectedCount))
           : null,
       contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       content: SizedBox(
@@ -412,13 +415,13 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton(
           onPressed: (_loading || issue != null)
               ? null
               : () => Navigator.pop(context, _confirm()),
-          child: const Text('移动到此文件夹'),
+          child: Text(context.l10n.folderPickerMoveHere),
         ),
       ],
     );
@@ -431,7 +434,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       children: [
         if (_trail.length > 1)
           IconButton(
-            tooltip: '上一级',
+            tooltip: context.l10n.commonPrevious,
             onPressed: _loading ? null : () => _goTo(_trail.length - 2),
             icon: const Icon(Icons.arrow_back),
           ),
@@ -483,7 +486,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              issue ?? '将移动到：$_path',
+              issue ?? context.l10n.folderPickerWillMoveTo(_path),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -507,7 +510,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _loading ? null : _loadChildren,
-              child: const Text('重试'),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),
@@ -527,7 +530,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
               color: Theme.of(context).colorScheme.outline,
             ),
             const SizedBox(height: 8),
-            const Text('没有子文件夹'),
+            Text(context.l10n.folderPickerNoSubfolders),
           ],
         ),
       );
@@ -557,7 +560,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle: blocked ? const Text('所选项目，不能作为目标') : null,
+          subtitle: blocked ? Text(context.l10n.folderPickerBlocked) : null,
           trailing: const Icon(Icons.chevron_right, size: 18),
           onTap: (_loading || blocked) ? null : () => _open(folder),
         );
@@ -622,7 +625,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('批量重命名'),
+    title: Text(context.l10n.batchRenameTitle),
     content: SizedBox(
       width: 420,
       child: Column(
@@ -634,7 +637,9 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
               Expanded(
                 child: TextField(
                   controller: _prefix,
-                  decoration: const InputDecoration(labelText: '前缀'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.renamePrefix,
+                  ),
                   onChanged: (_) => _update(),
                 ),
               ),
@@ -642,7 +647,9 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
               Expanded(
                 child: TextField(
                   controller: _suffix,
-                  decoration: const InputDecoration(labelText: '后缀'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.renameSuffix,
+                  ),
                   onChanged: (_) => _update(),
                 ),
               ),
@@ -653,7 +660,9 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
               Expanded(
                 child: TextField(
                   controller: _replaceFrom,
-                  decoration: const InputDecoration(labelText: '查找文本'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.renameFind,
+                  ),
                   onChanged: (_) => _update(),
                 ),
               ),
@@ -661,7 +670,9 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
               Expanded(
                 child: TextField(
                   controller: _replaceTo,
-                  decoration: const InputDecoration(labelText: '替换为'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.renameReplace,
+                  ),
                   onChanged: (_) => _update(),
                 ),
               ),
@@ -670,7 +681,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            title: const Text('使用序号（替换原名称）'),
+            title: Text(context.l10n.renameNumbering),
             value: _numbering,
             onChanged: (value) {
               setState(() {
@@ -682,7 +693,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
           if (_numbering)
             Row(
               children: [
-                Text('起始序号'),
+                Text(context.l10n.renameStartNumber),
                 Expanded(
                   child: Slider(
                     min: 0,
@@ -701,12 +712,15 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
               ],
             ),
           const SizedBox(height: 8),
-          const Text('预览', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            context.l10n.renamePreviewHeader,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           Flexible(
             child: SizedBox(
               height: 220,
               child: _previews.isEmpty
-                  ? const Center(child: Text('请输入重命名规则'))
+                  ? Center(child: Text(context.l10n.renamePreviewEmpty))
                   : ListView.separated(
                       itemCount: _previews.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
@@ -746,7 +760,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
     actions: [
       TextButton(
         onPressed: _running ? null : () => Navigator.pop(context),
-        child: const Text('取消'),
+        child: Text(context.l10n.commonCancel),
       ),
       FilledButton(
         onPressed:
@@ -755,7 +769,7 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
                 _previews.any((preview) => preview.error != null)
             ? null
             : _execute,
-        child: const Text('执行重命名'),
+        child: Text(context.l10n.renameExecute),
       ),
     ],
   );
@@ -764,14 +778,14 @@ class _BatchRenameDialogState extends State<BatchRenameDialog> {
 /// 批量任务逐项结果；失败项给出原因，部分成功不冒充全部成功。
 void showBatchResult(BuildContext context, BatchJob job) {
   final kindLabel = switch (job.kind) {
-    BatchKind.delete => '批量删除',
-    BatchKind.move => '批量移动',
-    BatchKind.rename => '批量重命名',
+    BatchKind.delete => context.l10n.batchKindDelete,
+    BatchKind.move => context.l10n.batchKindMove,
+    BatchKind.rename => context.l10n.batchKindRename,
   };
   showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('$kindLabel · ${job.summary()}'),
+      title: Text('$kindLabel · ${job.summary(context.l10n)}'),
       content: SizedBox(
         width: 400,
         height: 320,
@@ -814,7 +828,7 @@ void showBatchResult(BuildContext context, BatchJob job) {
       actions: [
         FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
+          child: Text(context.l10n.commonClose),
         ),
       ],
     ),
@@ -836,18 +850,24 @@ class EntryDetailsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final rows = <(String, String)>[
-      ('名称', entry.name),
-      ('位置', location),
-      ('类型', _entryTypeLabel(entry)),
-      ('大小', entry.isDirectory ? '—' : formatBytes(entry.size)),
+      (l10n.commonName, entry.name),
+      (l10n.commonLocation, location),
+      (l10n.commonType, _entryTypeLabel(entry, l10n)),
       (
-        '修改时间',
-        entry.modifiedAt == null ? '未知' : _formatTime(entry.modifiedAt!),
+        l10n.commonSize,
+        entry.isDirectory ? '—' : formatBytes(entry.size, l10n),
+      ),
+      (
+        l10n.commonModifiedTime,
+        entry.modifiedAt == null
+            ? l10n.commonUnknown
+            : _formatTime(entry.modifiedAt!),
       ),
     ];
     return AlertDialog(
-      title: const Text('文件详情'),
+      title: Text(l10n.detailsTitle),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -886,18 +906,18 @@ class EntryDetailsDialog extends StatelessWidget {
                     children: [
                       _detailRow(
                         context,
-                        '时长',
+                        l10n.commonDuration,
                         durationMs == null
-                            ? '未知'
+                            ? l10n.commonUnknown
                             : formatDuration(
                                 Duration(milliseconds: durationMs.toInt()),
                               ),
                       ),
                       _detailRow(
                         context,
-                        '尺寸',
+                        l10n.commonDimensions,
                         width == null || height == null
-                            ? '未知'
+                            ? l10n.commonUnknown
                             : '$width × $height',
                       ),
                     ],
@@ -910,7 +930,7 @@ class EntryDetailsDialog extends StatelessWidget {
       actions: [
         FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
+          child: Text(context.l10n.commonClose),
         ),
       ],
     );
@@ -942,9 +962,9 @@ String _formatTime(DateTime time) {
       '${pad(time.hour)}:${pad(time.minute)}';
 }
 
-/// 详情页类型文案：分类中文名；提供方返回 MIME 时附在右侧便于排查。
-String _entryTypeLabel(StorageEntry entry) {
-  final label = fileTypeInfo(entry.fileCategory).label;
+/// 详情页类型文案：分类本地化名称；提供方返回 MIME 时附在右侧便于排查。
+String _entryTypeLabel(StorageEntry entry, AppLocalizations l10n) {
+  final label = fileTypeInfo(entry.fileCategory, l10n).label;
   final mime = entry.mimeType;
   return mime == null || mime.isEmpty ? label : '$label · $mime';
 }
@@ -970,8 +990,8 @@ class FabAction {
 class ExpandableActionFab extends StatefulWidget {
   const ExpandableActionFab({
     required this.actions,
+    required this.tooltip,
     this.enabled = true,
-    this.tooltip = '更多操作',
     super.key,
   });
 

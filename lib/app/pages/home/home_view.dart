@@ -6,11 +6,13 @@ import '../../di/injector.dart';
 import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
+import '../../localization.dart';
 import '../../models/archive_models.dart';
 import '../../models/media_editor_args.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/preview_launcher.dart';
 import '../../routes/app_routes.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'home_controller.dart';
 import 'home_widgets.dart';
 
@@ -78,7 +80,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       }
       final count = controller.incomingShares.value.length;
       if (await controller.importIncoming(target)) {
-        _notify('已保存 $count 个文件到「${target.name}」');
+        if (!mounted) return;
+        _notify(context.l10n.homeSavedIncomingFiles(count, target.name));
       }
     } finally {
       _promptingIncoming = false;
@@ -93,16 +96,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final proceed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('请先选择存储文件夹'),
-        content: const Text('有其他应用的文件待保存，请先授权一个文件夹作为保存位置。'),
+        title: Text(context.l10n.homePickRootFirstTitle),
+        content: Text(context.l10n.homePickRootFirstBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('选择文件夹'),
+            child: Text(context.l10n.homeChooseFolder),
           ),
         ],
       ),
@@ -126,11 +129,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       builder: (_) => EntryNameDialog(
         initialName: entry?.name,
         title: entry == null
-            ? '新建文件夹'
+            ? context.l10n.homeNewFolder
             : entry.isDirectory
-            ? '重命名文件夹'
-            : '重命名文件',
-        fieldLabel: entry != null && !entry.isDirectory ? '文件名称' : '文件夹名称',
+            ? context.l10n.homeRenameFolder
+            : context.l10n.homeRenameFile,
+        fieldLabel: entry != null && !entry.isDirectory
+            ? context.l10n.homeFileName
+            : context.l10n.homeFolderName,
       ),
     );
     if (name == null) return;
@@ -145,26 +150,30 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Future<void> _createFileDialog() async {
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => const EntryNameDialog(title: '新建文件', fieldLabel: '文件名称'),
+      builder: (_) => EntryNameDialog(
+        title: context.l10n.homeNewFile,
+        fieldLabel: context.l10n.homeFileName,
+      ),
     );
     if (name == null) return;
     await controller.createFile(name);
   }
 
   Future<void> _delete(StorageEntry entry) async {
+    final l10n = context.l10n;
     try {
       controller.busy.value = true;
       final impact = await controller.storage.deletionImpact(entry);
       controller.busy.value = false;
       if (!mounted) return;
       final confirmed = await _confirmDelete(
-        title: '永久删除“${entry.name}”？',
-        content: '${impact.files} 个文件，${impact.folders} 个子文件夹\n删除后无法恢复。',
+        title: l10n.homeDeleteForeverTitle(entry.name),
+        content: l10n.homeDeleteImpact(impact.files, impact.folders),
       );
       controller.busy.value = false;
       if (confirmed == true) await controller.deleteEntry(entry);
     } catch (_) {
-      controller.error.value = '无法确认目录内容，未执行删除，请刷新后重试';
+      controller.error.value = l10n.homeDeleteImpactUnknown;
     } finally {
       controller.busy.value = false;
     }
@@ -181,14 +190,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('取消'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('永久删除'),
+          child: Text(context.l10n.homeDeleteConfirm),
         ),
       ],
     ),
@@ -196,20 +205,21 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   /// 批量删除：汇总去重后的影响数量并确认，逐项执行后展示结果。
   Future<void> _batchDelete() async {
+    final l10n = context.l10n;
     try {
       controller.busy.value = true;
       final impact = await controller.selectedImpact();
       controller.busy.value = false;
       if (!mounted) return;
       final confirmed = await _confirmDelete(
-        title: '永久删除 ${controller.selectedCount} 项？',
-        content: '${impact.files} 个文件，${impact.folders} 个子文件夹\n删除后无法恢复。',
+        title: l10n.homeDeleteForeverCountTitle(controller.selectedCount),
+        content: l10n.homeDeleteImpact(impact.files, impact.folders),
       );
       if (confirmed != true) return;
       final job = await controller.deleteSelected();
       if (job != null && mounted) showBatchResult(context, job);
     } catch (_) {
-      controller.error.value = '无法确认目录内容，未执行删除，请刷新后重试';
+      controller.error.value = l10n.homeDeleteImpactUnknown;
     } finally {
       controller.busy.value = false;
     }
@@ -254,10 +264,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Future<void> _batchZip() => _zipWithCustomName(controller.selectedEntries());
 
   Future<void> _batchShare() async {
+    final l10n = context.l10n;
     final outcome = await controller.shareSelected();
     // 打开系统分享面板本身即为反馈，成功时不再弹出提示。
     if (outcome.ok) return;
-    _notify(outcome.summary);
+    _notify(outcome.summary(l10n));
   }
 
   Future<void> _showDetails(StorageEntry entry) async {
@@ -282,7 +293,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       Routes.imageEditor,
       extra: MediaEditorArgs(entry: entry, parent: parent),
     );
-    if (saved != null && mounted) _notify('已保存副本：$saved');
+    if (saved != null && mounted) _notify(context.l10n.homeSavedCopy(saved));
     await controller.refresh();
   }
 
@@ -294,7 +305,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       Routes.videoEditor,
       extra: MediaEditorArgs(entry: entry, parent: parent),
     );
-    if (saved != null && mounted) _notify('已保存副本：$saved');
+    if (saved != null && mounted) _notify(context.l10n.homeSavedCopy(saved));
     await controller.refresh();
   }
 
@@ -339,36 +350,40 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               if (entry.canRename)
                 ListTile(
                   leading: const Icon(Icons.drive_file_rename_outline),
-                  title: Text(entry.isDirectory ? '重命名' : '重命名文件'),
+                  title: Text(
+                    entry.isDirectory
+                        ? context.l10n.homeRenameShort
+                        : context.l10n.homeRenameFile,
+                  ),
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'rename'),
                 ),
               if (entry.isImage && entry.canWrite && canWrite)
                 ListTile(
                   leading: const Icon(Icons.tune_outlined),
-                  title: const Text('编辑图片'),
-                  subtitle: const Text('另存为新文件，原图保留'),
+                  title: Text(context.l10n.homeEditImage),
+                  subtitle: Text(context.l10n.homeEditImageSubtitle),
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'edit'),
                 ),
               if (entry.isVideo && entry.canWrite && canWrite)
                 ListTile(
                   leading: const Icon(Icons.movie_creation_outlined),
-                  title: const Text('编辑视频'),
-                  subtitle: const Text('另存为新文件，原视频保留'),
+                  title: Text(context.l10n.homeEditVideo),
+                  subtitle: Text(context.l10n.homeEditVideoSubtitle),
                   enabled: !archiving,
                   onTap: () => Navigator.pop(context, 'editVideo'),
                 ),
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: const Text('详情'),
+                title: Text(context.l10n.homeDetails),
                 onTap: () => Navigator.pop(context, 'details'),
               ),
               if (looksLikeZip(entry))
                 ListTile(
                   leading: const Icon(Icons.unarchive_outlined),
-                  title: const Text('解压到新文件夹'),
-                  subtitle: const Text('同名文件夹存在时自动使用新名称'),
+                  title: Text(context.l10n.homeExtractToFolder),
+                  subtitle: Text(context.l10n.homeExtractToFolderSubtitle),
                   enabled: canWrite && !archiving,
                   onTap: () => Navigator.pop(context, 'extract'),
                 ),
@@ -377,7 +392,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   Icons.delete_outline,
                   color: Theme.of(context).colorScheme.error,
                 ),
-                title: const Text('删除'),
+                title: Text(context.l10n.commonDelete),
                 enabled: entry.canDelete && !archiving,
                 onTap: () => Navigator.pop(context, 'delete'),
               ),
@@ -398,13 +413,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case 'delete':
         await _delete(entry);
       case 'extract':
-        _notify((await controller.extractEntry(entry)).summary);
+        final outcome = await controller.extractEntry(entry);
+        if (!mounted) return;
+        _notify(outcome.summary(context.l10n));
     }
   }
 
   /// 压缩前先确认压缩包名称；缺少 .zip 后缀时由对话框自动补齐。
   Future<void> _zipWithCustomName(List<StorageEntry> entries) async {
     if (entries.isEmpty) return;
+    final l10n = context.l10n;
     final defaultName = defaultZipFileName(entries.first.name);
     final name = await showDialog<String>(
       context: context,
@@ -414,7 +432,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final outcome = await (entries.length == 1
         ? controller.zipEntry(entries.single, fileName: name)
         : controller.zipSelected(fileName: name));
-    _notify(outcome.summary);
+    if (!mounted) return;
+    _notify(outcome.summary(l10n));
   }
 
   void _notify(String message) {
@@ -433,14 +452,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         ListTile(
           dense: true,
           leading: const Icon(Icons.folder_zip_outlined),
-          title: Text(task.label),
+          title: Text(task.label(context.l10n)),
           trailing: task.canCancel
               ? TextButton(
                   onPressed: () async {
                     await controller.cancelArchive();
-                    _notify('正在取消归档任务…');
+                    if (!mounted) return;
+                    _notify(context.l10n.homeArchiveCancelling);
                   },
-                  child: const Text('取消'),
+                  child: Text(context.l10n.commonCancel),
                 )
               : null,
         ),
@@ -505,10 +525,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   actions: [
                     TextButton(
                       onPressed: busy ? null : controller.refresh,
-                      child: const Text('刷新'),
+                      child: Text(context.l10n.homeRefresh),
                     ),
                     IconButton(
-                      tooltip: '关闭提示',
+                      tooltip: context.l10n.homeDismissError,
                       onPressed: () => controller.error.value = null,
                       icon: const Icon(Icons.close),
                     ),
@@ -556,9 +576,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   current?.canCreate == true
               ? ExpandableActionFab(
                   enabled: !busy,
+                  tooltip: context.l10n.homeMoreActions,
                   actions: [
                     FabAction(
-                      label: '新建文件夹',
+                      label: context.l10n.homeNewFolder,
                       icon: const FileCategoryIcon(
                         category: FileCategory.folder,
                         folderState: FolderIconState.create,
@@ -566,23 +587,23 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       onPressed: () => _nameDialog(),
                     ),
                     FabAction(
-                      label: '新建文件',
+                      label: context.l10n.homeNewFile,
                       icon: const Icon(Icons.note_add_outlined),
                       onPressed: _createFileDialog,
                     ),
                     FabAction(
-                      label: '选择文件',
+                      label: context.l10n.homeSelectFiles,
                       icon: const Icon(Icons.insert_drive_file_outlined),
                       onPressed: () =>
                           controller.importFromPicker(const ['*/*']),
                     ),
                     FabAction(
-                      label: '拍照',
+                      label: context.l10n.homeTakePhoto,
                       icon: const Icon(Icons.photo_camera_outlined),
                       onPressed: controller.capturePhoto,
                     ),
                     FabAction(
-                      label: '录制',
+                      label: context.l10n.homeRecordVideo,
                       icon: const Icon(Icons.videocam_outlined),
                       onPressed: controller.captureVideo,
                     ),
@@ -602,13 +623,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       // 多选模式下隐藏搜索与“更多”，避免与批量操作混淆。
       if (!needsRoot && !controller.selectionMode.value)
         IconButton(
-          tooltip: '搜索文件',
+          tooltip: context.l10n.homeSearchFiles,
           onPressed: busy ? null : _beginSearch,
           icon: const Icon(Icons.search),
         ),
       if (!needsRoot)
         IconButton(
-          tooltip: controller.selectionMode.value ? '退出多选' : '多选',
+          tooltip: controller.selectionMode.value
+              ? context.l10n.homeExitSelection
+              : context.l10n.homeSelection,
           onPressed: busy
               ? null
               : controller.selectionMode.value
@@ -623,21 +646,27 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         ),
       if (!controller.selectionMode.value)
         PopupMenuButton<_HomeMenuAction>(
-          tooltip: '更多',
+          tooltip: context.l10n.homeMore,
           enabled: !busy,
           icon: const Icon(Icons.more_vert),
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
             if (!needsRoot) ...[
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: _HomeMenuAction.chooseSort,
-                child: _MenuRow(icon: Icons.sort, label: '排序方式'),
+                child: _MenuRow(
+                  icon: Icons.sort,
+                  label: context.l10n.homeSortBy,
+                ),
               ),
               const PopupMenuDivider(),
             ],
-            const PopupMenuItem(
+            PopupMenuItem(
               value: _HomeMenuAction.settings,
-              child: _MenuRow(icon: Icons.settings_outlined, label: '设置'),
+              child: _MenuRow(
+                icon: Icons.settings_outlined,
+                label: context.l10n.homeSettings,
+              ),
             ),
           ],
         ),
@@ -660,11 +689,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final preferences = controller.preferences.value;
     var selected = preferences.sort;
     var descending = preferences.descending;
+    final sortOptions = _sortOptions(context.l10n);
     final confirmed = await showDialog<(EntrySort, bool)>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('排序方式'),
+          title: Text(context.l10n.homeSortBy),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -674,21 +704,21 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (var index = 0; index < _sortOptions.length; index += 2)
+                    for (var index = 0; index < sortOptions.length; index += 2)
                       Row(
                         children: [
                           for (var offset = 0; offset < 2; offset++)
                             Expanded(
-                              child: index + offset < _sortOptions.length
+                              child: index + offset < sortOptions.length
                                   ? _SortOptionTile(
-                                      label: _sortOptions[index + offset].$2,
+                                      label: sortOptions[index + offset].$2,
                                       selected:
                                           selected ==
-                                          _sortOptions[index + offset].$1,
+                                          sortOptions[index + offset].$1,
                                       fontSize: _sortOptionFontSize,
                                       onTap: () => setState(
                                         () => selected =
-                                            _sortOptions[index + offset].$1,
+                                            sortOptions[index + offset].$1,
                                       ),
                                     )
                                   : const SizedBox.shrink(),
@@ -703,7 +733,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('排序方向'),
+                      Text(context.l10n.homeSortDirection),
                       const SizedBox(height: 4),
                       // 两个单选按钮横排；整块区域可点，避免只能点中圆圈。
                       RadioGroup<bool>(
@@ -716,13 +746,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         child: Row(
                           children: [
                             _DirectionOption(
-                              label: '升序',
+                              label: context.l10n.homeAscending,
                               value: false,
                               onTap: () => setState(() => descending = false),
                             ),
                             const SizedBox(width: 12),
                             _DirectionOption(
-                              label: '降序',
+                              label: context.l10n.homeDescending,
                               value: true,
                               onTap: () => setState(() => descending = true),
                             ),
@@ -738,12 +768,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('取消'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () =>
                   Navigator.pop(dialogContext, (selected, descending)),
-              child: const Text('确定'),
+              child: Text(context.l10n.commonConfirm),
             ),
           ],
         ),
@@ -759,18 +789,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (controller.searching.value) {
       return ListTile(
         dense: true,
-        title: const Text('正在扫描子文件夹…'),
+        title: Text(context.l10n.homeScanning),
         trailing: TextButton(
           onPressed: controller.cancelSearch,
-          child: const Text('取消'),
+          child: Text(context.l10n.commonCancel),
         ),
       );
     }
     if (controller.searchIncomplete.value) {
-      return const ListTile(
+      return ListTile(
         dense: true,
-        leading: Icon(Icons.info_outline),
-        title: Text('部分文件夹无法访问，结果不完整'),
+        leading: const Icon(Icons.info_outline),
+        title: Text(context.l10n.homeSearchIncomplete),
       );
     }
     return null;
@@ -782,23 +812,23 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     title: TextField(
       controller: _searchText,
       autofocus: false,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: '搜索文件名',
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: context.l10n.homeSearchHint,
         border: InputBorder.none,
       ),
       onChanged: (value) => controller.beginSearch(value),
     ),
     actions: [
       IconButton(
-        tooltip: '递归搜索子文件夹',
+        tooltip: context.l10n.homeSearchRecursive,
         onPressed: controller.searching.value || busy
             ? null
             : () => controller.searchAll(_searchText.text),
         icon: const Icon(Icons.account_tree_outlined),
       ),
       IconButton(
-        tooltip: '退出搜索',
+        tooltip: context.l10n.homeExitSearch,
         onPressed: controller.exitSearch,
         icon: const Icon(Icons.close),
       ),
@@ -825,12 +855,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             color: fileCategoryColor(context, FileCategory.folder),
           ),
           const SizedBox(height: 20),
-          const Text('选择存储文件夹', style: TextStyle(fontSize: 22)),
+          Text(
+            context.l10n.homeChooseStorageFolder,
+            style: const TextStyle(fontSize: 22),
+          ),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: controller.busy.value ? null : controller.pickRoot,
             icon: const Icon(Icons.folder_open),
-            label: const Text('选择文件夹'),
+            label: Text(context.l10n.homeChooseFolder),
           ),
         ],
       ),
@@ -850,7 +883,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             color: Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(height: 16),
-          const Center(child: Text('没有匹配的文件')),
+          Center(child: Text(context.l10n.homeNoMatches)),
         ],
       );
     }
@@ -871,7 +904,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return ListTile(
       leading: _entryIcon(entry),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Text('位置：${location ?? '未知'}'),
+      subtitle: Text(
+        context.l10n.homeLocation(location ?? context.l10n.commonUnknown),
+      ),
       enabled: !busy,
       onTap: () async {
         if (entry.isDirectory) {
@@ -905,7 +940,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             color: Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(height: 16),
-          const Center(child: Text('文件夹为空')),
+          Center(child: Text(context.l10n.homeEmptyFolder)),
         ],
       );
     }
@@ -931,7 +966,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final showCreated = controller.preferences.value.sort == EntrySort.created;
     final created = controller.createdAtOf(entry);
     final detail = [
-      if (!entry.isDirectory) formatBytes(entry.size),
+      if (!entry.isDirectory) formatBytes(entry.size, context.l10n),
       if (showCreated && created != null) _formatDateTime(created),
       if (date != null) _formatDateTime(date),
     ];
@@ -985,7 +1020,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: checked ? '取消选择' : '选择',
+            tooltip: checked
+                ? context.l10n.homeDeselect
+                : context.l10n.homeSelect,
             visualDensity: VisualDensity.compact,
             onPressed: () => controller.toggleSelect(entry),
             icon: Icon(
@@ -1029,11 +1066,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             children: [
               TextButton(
                 onPressed: controller.exitSelection,
-                child: const Text('取消'),
+                child: Text(context.l10n.commonCancel),
               ),
               Expanded(
                 child: Text(
-                  '已选 ${controller.selectedCount} 项',
+                  context.l10n.homeSelectedCount(controller.selectedCount),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -1043,8 +1080,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     controller.selectedCount ==
                             controller.entries.value.length &&
                         controller.entries.value.isNotEmpty
-                    ? const Text('取消全选')
-                    : const Text('全选'),
+                    ? Text(context.l10n.homeDeselectAll)
+                    : Text(context.l10n.homeSelectAll),
               ),
             ],
           ),
@@ -1053,35 +1090,35 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
-              tooltip: '删除',
+              tooltip: context.l10n.commonDelete,
               onPressed: busy || controller.selectedCount == 0
                   ? null
                   : _batchDelete,
               icon: const Icon(Icons.delete_outline),
             ),
             IconButton(
-              tooltip: '移动到…',
+              tooltip: context.l10n.homeMoveTo,
               onPressed: busy || controller.selectedCount == 0
                   ? null
                   : _batchMove,
               icon: const Icon(Icons.drive_file_move_outlined),
             ),
             IconButton(
-              tooltip: '批量重命名',
+              tooltip: context.l10n.homeBatchRename,
               onPressed: busy || controller.selectedCount == 0
                   ? null
                   : _batchRename,
               icon: const Icon(Icons.drive_file_rename_outline),
             ),
             IconButton(
-              tooltip: '压缩为 ZIP',
+              tooltip: context.l10n.homeZipAsZip,
               onPressed: busy || controller.selectedCount == 0
                   ? null
                   : _batchZip,
               icon: const Icon(Icons.folder_zip_outlined),
             ),
             IconButton(
-              tooltip: '分享',
+              tooltip: context.l10n.commonShare,
               onPressed: busy || controller.selectedCount == 0
                   ? null
                   : _batchShare,
@@ -1102,11 +1139,11 @@ String _formatDateTime(DateTime time) {
 }
 
 /// “排序方式”弹窗的可选项，顺序与展示名称。
-const _sortOptions = <(EntrySort, String)>[
-  (EntrySort.name, '按名称'),
-  (EntrySort.modified, '按修改时间'),
-  (EntrySort.created, '按创建时间'),
-  (EntrySort.size, '按文件大小'),
+List<(EntrySort, String)> _sortOptions(AppLocalizations l10n) => [
+  (EntrySort.name, l10n.sortByName),
+  (EntrySort.modified, l10n.sortByModified),
+  (EntrySort.created, l10n.sortByCreated),
+  (EntrySort.size, l10n.sortBySize),
 ];
 
 /// “排序方式”字段选项的字号；需要调整四项文本大小时集中改这里。

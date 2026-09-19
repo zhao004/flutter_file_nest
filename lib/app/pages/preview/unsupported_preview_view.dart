@@ -5,6 +5,8 @@ import '../../di/injector.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
 import '../../file_type/file_type_info.dart';
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
 import '../../services/saf_storage.dart';
@@ -48,7 +50,7 @@ class UnsupportedPreviewView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '暂不支持在应用内预览此文件',
+                context.l10n.unsupportedPreview,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -59,14 +61,14 @@ class UnsupportedPreviewView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => storage.openFile(entry),
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('用其他应用打开'),
+                label: Text(context.l10n.commonOpenExternal),
               ),
               if (archive != null) ...[
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () => archive.share([entry]),
                   icon: const Icon(Icons.ios_share),
-                  label: const Text('分享'),
+                  label: Text(context.l10n.commonShare),
                 ),
               ],
             ],
@@ -90,9 +92,21 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _row(context, '类型', fileCategoryLabel(entry.fileCategory)),
-          _row(context, '大小', formatBytes(entry.size)),
-          _row(context, '修改时间', _formatTime(entry.modifiedAt)),
+          _row(
+            context,
+            context.l10n.commonType,
+            fileCategoryLabel(entry.fileCategory, context.l10n),
+          ),
+          _row(
+            context,
+            context.l10n.commonSize,
+            formatBytes(entry.size, context.l10n),
+          ),
+          _row(
+            context,
+            context.l10n.commonModifiedTime,
+            _formatTime(entry.modifiedAt),
+          ),
         ],
       ),
     ),
@@ -118,7 +132,7 @@ class _InfoCard extends StatelessWidget {
 }
 
 String _formatTime(DateTime? time) {
-  if (time == null) return '未知';
+  if (time == null) return AppL10n.current.commonUnknown;
   String two(int value) => value.toString().padLeft(2, '0');
   return '${time.year}-${two(time.month)}-${two(time.day)} '
       '${two(time.hour)}:${two(time.minute)}';

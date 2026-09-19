@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../di/injector.dart';
-
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
 import 'preview_widgets.dart';
@@ -52,7 +53,7 @@ class _FontPreviewViewState extends State<FontPreviewView> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = '无法加载此字体文件，可能已损坏或格式不受支持';
+        _error = AppL10n.current.fontLoadFailed;
       });
     }
   }
@@ -75,7 +76,7 @@ class _FontPreviewViewState extends State<FontPreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => getIt<StorageGateway>().openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -118,7 +119,7 @@ class _FontPreviewViewState extends State<FontPreviewView> {
         ),
         const SizedBox(height: 16),
         Text(
-          '天地玄黄，宇宙洪荒。日月盈昃，辰宿列张。',
+          context.l10n.fontSample,
           style: TextStyle(fontFamily: _family, fontSize: 18, height: 1.8),
         ),
       ],

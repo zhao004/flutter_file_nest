@@ -57,6 +57,16 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _localeMeta = const VerificationMeta('locale');
+  @override
+  late final GeneratedColumn<String> locale = GeneratedColumn<String>(
+    'locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(kDefaultLocaleName),
+  );
   static const VerificationMeta _themeSchemeMeta = const VerificationMeta(
     'themeScheme',
   );
@@ -179,6 +189,7 @@ class $AppSettingsTable extends AppSettings
     rootUri,
     sortField,
     sortDescending,
+    locale,
     themeScheme,
     themeMode,
     textFontSize,
@@ -223,6 +234,12 @@ class $AppSettingsTable extends AppSettings
           data['sort_descending']!,
           _sortDescendingMeta,
         ),
+      );
+    }
+    if (data.containsKey('locale')) {
+      context.handle(
+        _localeMeta,
+        locale.isAcceptableOrUnknown(data['locale']!, _localeMeta),
       );
     }
     if (data.containsKey('theme_scheme')) {
@@ -324,6 +341,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}sort_descending'],
       )!,
+      locale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}locale'],
+      )!,
       themeScheme: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}theme_scheme'],
@@ -375,6 +396,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final String sortField;
   final bool sortDescending;
 
+  /// 语言偏好名称；system / zh / en。
+  final String locale;
+
   /// 当前配色方案名称；对应 FlexScheme 枚举的 name。
   final String themeScheme;
 
@@ -404,6 +428,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.rootUri,
     required this.sortField,
     required this.sortDescending,
+    required this.locale,
     required this.themeScheme,
     required this.themeMode,
     required this.textFontSize,
@@ -423,6 +448,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     map['sort_field'] = Variable<String>(sortField);
     map['sort_descending'] = Variable<bool>(sortDescending);
+    map['locale'] = Variable<String>(locale);
     map['theme_scheme'] = Variable<String>(themeScheme);
     map['theme_mode'] = Variable<String>(themeMode);
     map['text_font_size'] = Variable<double>(textFontSize);
@@ -443,6 +469,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           : Value(rootUri),
       sortField: Value(sortField),
       sortDescending: Value(sortDescending),
+      locale: Value(locale),
       themeScheme: Value(themeScheme),
       themeMode: Value(themeMode),
       textFontSize: Value(textFontSize),
@@ -465,6 +492,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       rootUri: serializer.fromJson<String?>(json['rootUri']),
       sortField: serializer.fromJson<String>(json['sortField']),
       sortDescending: serializer.fromJson<bool>(json['sortDescending']),
+      locale: serializer.fromJson<String>(json['locale']),
       themeScheme: serializer.fromJson<String>(json['themeScheme']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       textFontSize: serializer.fromJson<double>(json['textFontSize']),
@@ -484,6 +512,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'rootUri': serializer.toJson<String?>(rootUri),
       'sortField': serializer.toJson<String>(sortField),
       'sortDescending': serializer.toJson<bool>(sortDescending),
+      'locale': serializer.toJson<String>(locale),
       'themeScheme': serializer.toJson<String>(themeScheme),
       'themeMode': serializer.toJson<String>(themeMode),
       'textFontSize': serializer.toJson<double>(textFontSize),
@@ -501,6 +530,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<String?> rootUri = const Value.absent(),
     String? sortField,
     bool? sortDescending,
+    String? locale,
     String? themeScheme,
     String? themeMode,
     double? textFontSize,
@@ -515,6 +545,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     rootUri: rootUri.present ? rootUri.value : this.rootUri,
     sortField: sortField ?? this.sortField,
     sortDescending: sortDescending ?? this.sortDescending,
+    locale: locale ?? this.locale,
     themeScheme: themeScheme ?? this.themeScheme,
     themeMode: themeMode ?? this.themeMode,
     textFontSize: textFontSize ?? this.textFontSize,
@@ -533,6 +564,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       sortDescending: data.sortDescending.present
           ? data.sortDescending.value
           : this.sortDescending,
+      locale: data.locale.present ? data.locale.value : this.locale,
       themeScheme: data.themeScheme.present
           ? data.themeScheme.value
           : this.themeScheme,
@@ -564,6 +596,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('rootUri: $rootUri, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('locale: $locale, ')
           ..write('themeScheme: $themeScheme, ')
           ..write('themeMode: $themeMode, ')
           ..write('textFontSize: $textFontSize, ')
@@ -583,6 +616,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     rootUri,
     sortField,
     sortDescending,
+    locale,
     themeScheme,
     themeMode,
     textFontSize,
@@ -601,6 +635,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.rootUri == this.rootUri &&
           other.sortField == this.sortField &&
           other.sortDescending == this.sortDescending &&
+          other.locale == this.locale &&
           other.themeScheme == this.themeScheme &&
           other.themeMode == this.themeMode &&
           other.textFontSize == this.textFontSize &&
@@ -617,6 +652,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<String?> rootUri;
   final Value<String> sortField;
   final Value<bool> sortDescending;
+  final Value<String> locale;
   final Value<String> themeScheme;
   final Value<String> themeMode;
   final Value<double> textFontSize;
@@ -631,6 +667,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.rootUri = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.locale = const Value.absent(),
     this.themeScheme = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.textFontSize = const Value.absent(),
@@ -646,6 +683,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.rootUri = const Value.absent(),
     this.sortField = const Value.absent(),
     this.sortDescending = const Value.absent(),
+    this.locale = const Value.absent(),
     this.themeScheme = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.textFontSize = const Value.absent(),
@@ -661,6 +699,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<String>? rootUri,
     Expression<String>? sortField,
     Expression<bool>? sortDescending,
+    Expression<String>? locale,
     Expression<String>? themeScheme,
     Expression<String>? themeMode,
     Expression<double>? textFontSize,
@@ -676,6 +715,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (rootUri != null) 'root_uri': rootUri,
       if (sortField != null) 'sort_field': sortField,
       if (sortDescending != null) 'sort_descending': sortDescending,
+      if (locale != null) 'locale': locale,
       if (themeScheme != null) 'theme_scheme': themeScheme,
       if (themeMode != null) 'theme_mode': themeMode,
       if (textFontSize != null) 'text_font_size': textFontSize,
@@ -693,6 +733,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<String?>? rootUri,
     Value<String>? sortField,
     Value<bool>? sortDescending,
+    Value<String>? locale,
     Value<String>? themeScheme,
     Value<String>? themeMode,
     Value<double>? textFontSize,
@@ -708,6 +749,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       rootUri: rootUri ?? this.rootUri,
       sortField: sortField ?? this.sortField,
       sortDescending: sortDescending ?? this.sortDescending,
+      locale: locale ?? this.locale,
       themeScheme: themeScheme ?? this.themeScheme,
       themeMode: themeMode ?? this.themeMode,
       textFontSize: textFontSize ?? this.textFontSize,
@@ -734,6 +776,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     }
     if (sortDescending.present) {
       map['sort_descending'] = Variable<bool>(sortDescending.value);
+    }
+    if (locale.present) {
+      map['locale'] = Variable<String>(locale.value);
     }
     if (themeScheme.present) {
       map['theme_scheme'] = Variable<String>(themeScheme.value);
@@ -772,6 +817,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('rootUri: $rootUri, ')
           ..write('sortField: $sortField, ')
           ..write('sortDescending: $sortDescending, ')
+          ..write('locale: $locale, ')
           ..write('themeScheme: $themeScheme, ')
           ..write('themeMode: $themeMode, ')
           ..write('textFontSize: $textFontSize, ')
@@ -1348,6 +1394,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<String?> rootUri,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<String> locale,
       Value<String> themeScheme,
       Value<String> themeMode,
       Value<double> textFontSize,
@@ -1364,6 +1411,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<String?> rootUri,
       Value<String> sortField,
       Value<bool> sortDescending,
+      Value<String> locale,
       Value<String> themeScheme,
       Value<String> themeMode,
       Value<double> textFontSize,
@@ -1401,6 +1449,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get sortDescending => $composableBuilder(
     column: $table.sortDescending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locale => $composableBuilder(
+    column: $table.locale,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1479,6 +1532,11 @@ class $$AppSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get themeScheme => $composableBuilder(
     column: $table.themeScheme,
     builder: (column) => ColumnOrderings(column),
@@ -1547,6 +1605,9 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.sortDescending,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get locale =>
+      $composableBuilder(column: $table.locale, builder: (column) => column);
 
   GeneratedColumn<String> get themeScheme => $composableBuilder(
     column: $table.themeScheme,
@@ -1623,6 +1684,7 @@ class $$AppSettingsTableTableManager
                 Value<String?> rootUri = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<String> locale = const Value.absent(),
                 Value<String> themeScheme = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<double> textFontSize = const Value.absent(),
@@ -1637,6 +1699,7 @@ class $$AppSettingsTableTableManager
                 rootUri: rootUri,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                locale: locale,
                 themeScheme: themeScheme,
                 themeMode: themeMode,
                 textFontSize: textFontSize,
@@ -1653,6 +1716,7 @@ class $$AppSettingsTableTableManager
                 Value<String?> rootUri = const Value.absent(),
                 Value<String> sortField = const Value.absent(),
                 Value<bool> sortDescending = const Value.absent(),
+                Value<String> locale = const Value.absent(),
                 Value<String> themeScheme = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<double> textFontSize = const Value.absent(),
@@ -1667,6 +1731,7 @@ class $$AppSettingsTableTableManager
                 rootUri: rootUri,
                 sortField: sortField,
                 sortDescending: sortDescending,
+                locale: locale,
                 themeScheme: themeScheme,
                 themeMode: themeMode,
                 textFontSize: textFontSize,

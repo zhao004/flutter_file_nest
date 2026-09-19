@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
+import '../../localization.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 
@@ -17,7 +18,7 @@ class ThemePickerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('主题配色')),
+    appBar: AppBar(title: Text(context.l10n.settingsColorScheme)),
     body: SignalBuilder(
       builder: (context) {
         // 在 SignalBuilder 构建期读取可观察值，避免依赖懒加载 itemBuilder 触发订阅。

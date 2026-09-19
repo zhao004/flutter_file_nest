@@ -4,6 +4,8 @@ import 'dart:collection';
 import 'package:flutter/services.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../i18n/app_l10n.dart';
+
 import '../../models/archive_models.dart';
 import '../../models/batch_models.dart';
 import '../../models/incoming_share.dart';
@@ -223,7 +225,7 @@ class HomeController {
   });
 
   Future<void> createFolder(String name) => _run(() async {
-    final invalid = validateEntryName(name);
+    final invalid = validateEntryName(name, AppL10n.current);
     if (invalid != null) {
       throw PlatformException(code: 'invalid_name', message: invalid);
     }
@@ -239,7 +241,7 @@ class HomeController {
 
   /// 在当前目录新建空文件；扩展名由用户输入决定，用于后续类型识别。
   Future<void> createFile(String name) => _run(() async {
-    final invalid = validateEntryName(name);
+    final invalid = validateEntryName(name, AppL10n.current);
     if (invalid != null) {
       throw PlatformException(code: 'invalid_name', message: invalid);
     }
@@ -256,7 +258,7 @@ class HomeController {
 
   /// 重命名文件或文件夹（P3B-04 单文件入口）。
   Future<void> renameEntry(StorageEntry entry, String name) => _run(() async {
-    final invalid = validateEntryName(name);
+    final invalid = validateEntryName(name, AppL10n.current);
     if (invalid != null) {
       throw PlatformException(code: 'invalid_name', message: invalid);
     }
@@ -300,7 +302,10 @@ class HomeController {
   Future<void> importFromPicker(List<String> mimeTypes) => _run(() async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
-      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+      throw PlatformException(
+        code: 'read_only',
+        message: AppL10n.current.errorReadOnly,
+      );
     }
     try {
       final imported = await storage.pickImport(mimeTypes, folder);
@@ -337,7 +342,10 @@ class HomeController {
   Future<void> capturePhoto() => _run(() async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
-      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+      throw PlatformException(
+        code: 'read_only',
+        message: AppL10n.current.errorReadOnly,
+      );
     }
     final photo = await storage.takePhoto(folder);
     if (photo == null) return;
@@ -357,7 +365,10 @@ class HomeController {
   Future<void> captureVideo() => _run(() async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
-      throw PlatformException(code: 'read_only', message: '当前目录不可写入');
+      throw PlatformException(
+        code: 'read_only',
+        message: AppL10n.current.errorReadOnly,
+      );
     }
     final video = await storage.takeVideo(folder);
     if (video == null) return;
@@ -442,7 +453,7 @@ class HomeController {
       } catch (failure) {
         item
           ..status = BatchItemStatus.failed
-          ..message = userError(failure);
+          ..message = userError(failure, AppL10n.current);
       }
       _refreshBatch();
     }
@@ -462,16 +473,18 @@ class HomeController {
   /// 目标由应用内目录选择器给出（从根逐级导航），trail 为根到目标路径；
   /// 祖先关系仅通过导航轨迹判断，不解析 documentId 字符串。
   String? moveTargetIssue(List<StorageEntry> trail) {
-    if (current == null) return '当前目录不可用';
-    if (trail.isEmpty) return '目标位置无效';
+    if (current == null) return AppL10n.current.moveCurrentUnavailable;
+    if (trail.isEmpty) return AppL10n.current.moveInvalidTarget;
     final target = trail.last;
-    if (target.documentId == current!.documentId) return '目标位置与来源相同';
+    if (target.documentId == current!.documentId) {
+      return AppL10n.current.moveSameTarget;
+    }
     final selectedFolders = selectedEntries().where(
       (entry) => entry.isDirectory,
     );
     for (final folder in selectedFolders) {
       if (trail.any((item) => item.documentId == folder.documentId)) {
-        return '目标位于所选文件夹 ${folder.name} 内部';
+        return AppL10n.current.moveInsideFolder(folder.name);
       }
     }
     return null;
@@ -502,7 +515,7 @@ class HomeController {
             } else {
               item
                 ..status = BatchItemStatus.copiedSourceKept
-                ..message = '复制完成，源未删除';
+                ..message = AppL10n.current.moveSourceKept;
               // 源仍在原位置：为其副本登记创建时间，但不迁移旧键。
               final time = _createdTimes[entry.uri];
               if (time != null) {
@@ -517,7 +530,7 @@ class HomeController {
           } catch (failure) {
             item
               ..status = BatchItemStatus.failed
-              ..message = userError(failure);
+              ..message = userError(failure, AppL10n.current);
           }
           _refreshBatch();
         }
@@ -529,7 +542,7 @@ class HomeController {
 
   /// 生成批量重命名预览并逐项校验；界面禁止在有错误项时执行。
   List<RenamePreview> previewRenameSelected(BatchRenamePlan plan) =>
-      previewRename(selectedEntries(), plan);
+      previewRename(selectedEntries(), plan, AppL10n.current);
 
   Future<BatchJob?> renameSelected(List<RenamePreview> previews) =>
       _batchRun(() async {
@@ -537,7 +550,7 @@ class HomeController {
         if (previews.any((preview) => preview.error != null)) {
           throw PlatformException(
             code: 'invalid_name',
-            message: '存在无效名称，已取消批量重命名',
+            message: AppL10n.current.batchRenameInvalidPlan,
           );
         }
         final job = BatchJob(BatchKind.rename, [
@@ -558,7 +571,7 @@ class HomeController {
           } catch (failure) {
             item
               ..status = BatchItemStatus.failed
-              ..message = userError(failure);
+              ..message = userError(failure, AppL10n.current);
           }
           _refreshBatch();
         }
@@ -573,17 +586,17 @@ class HomeController {
     final folder = current;
     final targets = selectedEntries();
     if (folder == null || folder.canCreate != true) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.zip,
         'read_only',
-        '当前目录不可写入',
+        AppL10n.current.errorReadOnly,
       );
     }
     if (targets.isEmpty) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.zip,
         'invalid_argument',
-        '没有可压缩的条目',
+        AppL10n.current.archiveNoEntries,
       );
     }
     return _finishArchive(
@@ -605,10 +618,10 @@ class HomeController {
   }) async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.zip,
         'read_only',
-        '当前目录不可写入',
+        AppL10n.current.errorReadOnly,
       );
     }
     return _finishArchive(
@@ -624,10 +637,10 @@ class HomeController {
   Future<ArchiveOutcome> extractEntry(StorageEntry entry) async {
     final folder = current;
     if (folder == null || folder.canCreate != true) {
-      return const ArchiveOutcome.failure(
+      return ArchiveOutcome.failure(
         ArchiveKind.extract,
         'read_only',
-        '当前目录不可写入',
+        AppL10n.current.errorReadOnly,
       );
     }
     return _finishArchive(
@@ -642,7 +655,7 @@ class HomeController {
     if (outcome.ok) {
       if (outcome.target != null) await _load();
     } else if (!outcome.cancelled) {
-      error.value = outcome.message ?? '归档任务失败';
+      error.value = outcome.message ?? AppL10n.current.archiveOutcomeFailed;
     }
     return outcome;
   }
@@ -773,7 +786,7 @@ class HomeController {
     try {
       await action();
     } catch (failure) {
-      error.value = userError(failure);
+      error.value = userError(failure, AppL10n.current);
       if (failure is PlatformException &&
           ['permission_denied', 'invalid_root'].contains(failure.code)) {
         rootRequired.value = true;
@@ -795,7 +808,7 @@ class HomeController {
     try {
       return await action();
     } catch (failure) {
-      error.value = userError(failure);
+      error.value = userError(failure, AppL10n.current);
       return null;
     } finally {
       busy.value = false;

@@ -36,6 +36,8 @@
 ## 技术栈
 
 - Flutter + Dart 3（`useMaterial3`）；signals 负责状态，go_router 负责路由，get_it 负责依赖注入。
+- 国际化：`flutter_localizations` + ARB（`lib/l10n/`），内置简体中文与英文；设置页可切换
+  跟随系统 / 简体中文 / English，偏好持久化到数据库。
 - Drift（SQLite）保存设置、本应用登记的文件创建时间与媒体续播位置。
 - Kotlin 平台通道封装 SAF、缩略图、ZIP 归档与分享。
 - `media_kit` 播放视频与音频；`flutter_svg`、`flutter_markdown_plus`、`flutter_highlight`、`archive`、`charset_converter`、`xml` 与 `flutter_widget_from_html_core` 支撑各类型预览。
@@ -52,21 +54,35 @@
 
 各查看器共用 `PreviewSettingsController` 持久化字号、换行与 Markdown 模式。
 
+## 国际化
+
+- 文案源文件为 `lib/l10n/app_zh.arb`（模板）与 `app_en.arb`，由 Flutter 工具生成
+  `lib/l10n/generated/` 下的 `AppLocalizations`（`flutter pub get` 或 `flutter gen-l10n`
+  自动生成，禁止手工编辑生成文件）。
+- 控件文案使用 `context.l10n.xxx`；控制器、服务与模型层没有 BuildContext，统一读取
+  `AppL10n.current`（由 `LocaleController` 在语言变化时更新）。
+- 语言偏好（system / zh / en）保存在 `app_settings.locale`，由设置页「语言」入口切换。
+- 新增文案的步骤：在 `app_zh.arb` 添加入口（含占位符元数据）→ 在 `app_en.arb` 添加对应
+  翻译 → 运行 `flutter gen-l10n` → 在代码中引用。
+
 ## 目录结构
 
 ```
 lib/
   main.dart                     应用入口与依赖注册（get_it）
+  l10n/                         国际化源文案（app_zh.arb / app_en.arb）与生成代码
   app/
     di/                         get_it 服务定位器与启动注册
+    i18n/                       语言偏好控制器与非控件文案入口
+    localization.dart           本地化委托、支持语言与 context.l10n 扩展
     routes/                     go_router 路由表与路径常量
     pages/
       home/                     文件列表：控制器、视图、列表/对话框组件
       preview/                  各类型预览页与预览偏好控制器
       video/                    视频播放
-      settings/                 设置
+      settings/                 设置（外观、语言、编辑器配置）
     preview/                    预览解析层：类型解析、启动器、文本/CSV/字幕/EPUB/归档解析
-    database/                   Drift 数据库、表定义与迁移（schema v8）
+    database/                   Drift 数据库、表定义与迁移（schema v10）
     models/                     存储条目、归档与批量操作模型
     services/                   SAF、缩略图、归档、数据库存储封装
 android/app/src/main/kotlin/...  MainActivity 与 storage/（SAF、归档、分享）

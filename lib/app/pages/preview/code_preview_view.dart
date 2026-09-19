@@ -8,6 +8,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
 import '../../file_type/file_extension_map.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/code_language.dart';
 import '../../preview/text_content.dart';
@@ -69,7 +70,7 @@ class _CodePreviewViewState extends State<CodePreviewView> {
       await Clipboard.setData(ClipboardData(text: content.text));
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已复制全部内容')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.textCopiedAll)));
     } catch (_) {
       /* 复制失败不提示。 */
     }
@@ -92,24 +93,26 @@ class _CodePreviewViewState extends State<CodePreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: _searching ? '关闭搜索' : '搜索',
+          tooltip: _searching
+              ? context.l10n.commonCloseSearch
+              : context.l10n.commonSearch,
           onPressed: _toggleSearch,
           icon: Icon(_searching ? Icons.search_off : Icons.search),
         ),
         PopupMenuButton<_CodeMenu>(
-          tooltip: '代码选项',
+          tooltip: context.l10n.codeOptions,
           onSelected: (value) => switch (value) {
             _CodeMenu.zoomIn => _settings.stepFontSize(2),
             _CodeMenu.zoomOut => _settings.stepFontSize(-2),
             _CodeMenu.copyAll => _copyAll(),
           },
-          itemBuilder: (context) => const [
+          itemBuilder: (context) => [
             PopupMenuItem(
               value: _CodeMenu.zoomIn,
               child: ListTile(
                 dense: true,
                 leading: Icon(Icons.zoom_in),
-                title: Text('增大字号'),
+                title: Text(context.l10n.textZoomIn),
               ),
             ),
             PopupMenuItem(
@@ -117,7 +120,7 @@ class _CodePreviewViewState extends State<CodePreviewView> {
               child: ListTile(
                 dense: true,
                 leading: Icon(Icons.zoom_out),
-                title: Text('减小字号'),
+                title: Text(context.l10n.textZoomOut),
               ),
             ),
             PopupMenuItem(
@@ -125,19 +128,19 @@ class _CodePreviewViewState extends State<CodePreviewView> {
               child: ListTile(
                 dense: true,
                 leading: Icon(Icons.copy_all_outlined),
-                title: Text('复制全部'),
+                title: Text(context.l10n.textCopyAll),
               ),
             ),
           ],
         ),
         if (widget.entry.canWrite)
           IconButton(
-            tooltip: '编辑',
+            tooltip: context.l10n.commonEdit,
             onPressed: _edit,
             icon: const Icon(Icons.edit_outlined),
           ),
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -178,7 +181,7 @@ class _CodePreviewViewState extends State<CodePreviewView> {
       decoration: InputDecoration(
         isDense: true,
         prefixIcon: const Icon(Icons.search),
-        hintText: '在代码中查找',
+        hintText: context.l10n.codeSearchHint,
         border: const OutlineInputBorder(),
       ),
       onChanged: (value) => _query.value = value,

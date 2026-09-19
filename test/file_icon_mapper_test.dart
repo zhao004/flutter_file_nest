@@ -5,10 +5,12 @@ import 'package:filenest/app/file_type/file_icon_mapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import 'support/localization.dart';
+
 void main() {
   test('每个分类都有非空标签与图标', () {
     for (final category in FileCategory.values) {
-      final info = fileTypeInfo(category);
+      final info = fileTypeInfo(category, zhL10n);
       expect(info.label, isNotEmpty, reason: category.name);
       expect(info.icon, isNotEmpty, reason: category.name);
     }

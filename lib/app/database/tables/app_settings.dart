@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../i18n/locale_defaults.dart';
 import '../../preview/preview_defaults.dart';
 import '../../theme/theme_defaults.dart';
 
@@ -12,6 +13,10 @@ class AppSettings extends Table {
 
   BoolColumn get sortDescending =>
       boolean().withDefault(const Constant(true))();
+
+  /// 语言偏好名称；system / zh / en。
+  TextColumn get locale =>
+      text().withDefault(const Constant(kDefaultLocaleName))();
 
   /// 当前配色方案名称；对应 FlexScheme 枚举的 name。
   TextColumn get themeScheme =>

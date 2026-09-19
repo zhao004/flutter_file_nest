@@ -3,6 +3,8 @@ import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/epub_reader.dart';
 import '../../preview/preview_limits.dart';
@@ -69,7 +71,7 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
         _loading = false;
         _error = failure is EpubReadException
             ? failure.message
-            : '无法解析此 EPUB 文件';
+            : AppL10n.current.epubParseFailed;
       });
     }
   }
@@ -113,12 +115,12 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
         actions: [
           if (book != null)
             IconButton(
-              tooltip: '目录',
+              tooltip: context.l10n.epubToc,
               onPressed: _openToc,
               icon: const Icon(Icons.list_alt),
             ),
           IconButton(
-            tooltip: '用其他应用打开',
+            tooltip: context.l10n.commonOpenExternal,
             onPressed: () => _storage.openFile(widget.entry),
             icon: const Icon(Icons.open_in_new),
           ),
@@ -131,8 +133,11 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  '第 ${_index + 1} / ${book.chapters.length} 章 · '
-                  '${book.chapters[_index].title}',
+                  context.l10n.epubChapterIndicator(
+                    _index + 1,
+                    book.chapters.length,
+                    book.chapters[_index].title,
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -171,8 +176,9 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
             customWidgetBuilder: (element) =>
                 element.localName == 'img' ? const SizedBox.shrink() : null,
             onTapUrl: (url) async {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text('链接：$url')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.commonLink(url))),
+              );
               return true;
             },
           ),

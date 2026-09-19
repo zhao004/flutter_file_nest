@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../di/injector.dart';
 
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/csv_parser.dart';
 import '../../preview/preview_limits.dart';
@@ -37,7 +38,7 @@ class _CsvPreviewViewState extends State<CsvPreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -65,7 +66,7 @@ class _CsvPreviewViewState extends State<CsvPreviewView> {
   Widget _table(TextContent content) {
     final rows = parseCsv(content.text);
     if (rows.isEmpty) {
-      return const Center(child: Text('没有可显示的表格内容'));
+      return Center(child: Text(context.l10n.csvEmpty));
     }
     final header = rows.first;
     final body = rows.skip(1).take(maxCsvRows).toList();
@@ -74,10 +75,10 @@ class _CsvPreviewViewState extends State<CsvPreviewView> {
       children: [
         if (content.truncated) TruncatedNotice(entry: widget.entry),
         if (truncated)
-          const ListTile(
+          ListTile(
             dense: true,
-            leading: Icon(Icons.info_outline, size: 20),
-            title: Text('表格较大，仅显示前 $maxCsvRows 行数据'),
+            leading: const Icon(Icons.info_outline, size: 20),
+            title: Text(context.l10n.csvTruncated(maxCsvRows)),
           ),
         Expanded(
           child: Scrollbar(

@@ -6,6 +6,8 @@ import '../../di/injector.dart';
 
 import 'package:media_kit/media_kit.dart';
 
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
 import '../../services/vault_store.dart';
@@ -73,13 +75,13 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
       if (!mounted) return;
       setState(() => _ready = true);
     } catch (_) {
-      if (mounted) setState(() => _error = '无法播放此音频，文件可能已移动或格式不受支持');
+      if (mounted) setState(() => _error = AppL10n.current.audioCannotPlay);
     }
   }
 
   void _onError(String message) {
     if (!mounted || _error != null || message.trim().isEmpty) return;
-    setState(() => _error = '音频播放失败');
+    setState(() => _error = AppL10n.current.audioPlayFailed);
   }
 
   void _onPlaying(bool playing) {
@@ -135,7 +137,7 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
         await player.playOrPause();
       }
     } catch (_) {
-      if (mounted) setState(() => _error = '音频播放失败');
+      if (mounted) setState(() => _error = AppL10n.current.audioPlayFailed);
     }
   }
 
@@ -214,7 +216,7 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
       ),
       actions: [
         PopupMenuButton<double>(
-          tooltip: '播放速度',
+          tooltip: context.l10n.audioSpeed,
           onSelected: _setSpeed,
           itemBuilder: (context) => [
             for (final speed in _speeds)
@@ -239,7 +241,7 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
           ],
         ),
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => getIt<StorageGateway>().openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -286,7 +288,9 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
               Text(_format(_duration)),
               const Spacer(),
               IconButton(
-                tooltip: _muted ? '取消静音' : '静音',
+                tooltip: _muted
+                    ? context.l10n.audioUnmute
+                    : context.l10n.audioMute,
                 onPressed: _toggleMute,
                 icon: Icon(_muted ? Icons.volume_off : Icons.volume_up),
               ),
@@ -296,21 +300,23 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                tooltip: '后退 10 秒',
+                tooltip: context.l10n.audioBack10,
                 iconSize: 32,
                 onPressed: _ready ? () => _seekBy(-_step) : null,
                 icon: const Icon(Icons.replay_10),
               ),
               const SizedBox(width: 16),
               IconButton.filled(
-                tooltip: _playing ? '暂停' : '播放',
+                tooltip: _playing
+                    ? context.l10n.audioPause
+                    : context.l10n.audioPlay,
                 iconSize: 40,
                 onPressed: _ready ? _togglePlay : null,
                 icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
               ),
               const SizedBox(width: 16),
               IconButton(
-                tooltip: '前进 10 秒',
+                tooltip: context.l10n.audioForward10,
                 iconSize: 32,
                 onPressed: _ready ? () => _seekBy(_step) : null,
                 icon: const Icon(Icons.forward_10),

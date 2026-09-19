@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database/database.dart';
+import '../i18n/locale_defaults.dart';
 import '../models/storage_entry.dart';
 import '../preview/preview_defaults.dart';
 
@@ -15,6 +16,7 @@ class VaultPreferences {
     this.showLineNumbers = kDefaultShowLineNumbers,
     this.editorTabWidth = kDefaultEditorTabWidth,
     this.editorAutoIndent = kDefaultEditorAutoIndent,
+    this.locale = kDefaultLocaleName,
   });
   final String? rootUri;
   final EntrySort sort;
@@ -38,6 +40,9 @@ class VaultPreferences {
   /// 编辑器是否启用自动缩进。
   final bool editorAutoIndent;
 
+  /// 语言偏好名称：system / zh / en。
+  final String locale;
+
   VaultPreferences copyWith({
     String? rootUri,
     EntrySort? sort,
@@ -48,6 +53,7 @@ class VaultPreferences {
     bool? showLineNumbers,
     int? editorTabWidth,
     bool? editorAutoIndent,
+    String? locale,
   }) => VaultPreferences(
     rootUri: rootUri ?? this.rootUri,
     sort: sort ?? this.sort,
@@ -58,6 +64,7 @@ class VaultPreferences {
     showLineNumbers: showLineNumbers ?? this.showLineNumbers,
     editorTabWidth: editorTabWidth ?? this.editorTabWidth,
     editorAutoIndent: editorAutoIndent ?? this.editorAutoIndent,
+    locale: locale ?? this.locale,
   );
 }
 
@@ -103,6 +110,7 @@ class DriftVaultStore implements VaultStore {
       showLineNumbers: row.showLineNumbers,
       editorTabWidth: row.editorTabWidth,
       editorAutoIndent: row.editorAutoIndent,
+      locale: row.locale,
     );
   }
 
@@ -119,6 +127,7 @@ class DriftVaultStore implements VaultStore {
       showLineNumbers: Value(value.showLineNumbers),
       editorTabWidth: Value(value.editorTabWidth),
       editorAutoIndent: Value(value.editorAutoIndent),
+      locale: Value(value.locale),
       updatedAt: Value(DateTime.now().toUtc()),
     ),
   );

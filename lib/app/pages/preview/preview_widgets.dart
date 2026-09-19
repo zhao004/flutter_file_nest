@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../di/injector.dart';
 
 import '../../models/storage_entry.dart';
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../services/saf_storage.dart';
 
 /// 预览读取失败的统一样式：说明、重试与外部打开入口。
@@ -38,13 +40,13 @@ class PreviewErrorView extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('重试'),
+                label: Text(context.l10n.commonRetry),
               ),
               const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: () => getIt<StorageGateway>().openFile(entry),
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('用其他应用打开'),
+                label: Text(context.l10n.commonOpenExternal),
               ),
             ],
           ),
@@ -66,24 +68,24 @@ class TruncatedNotice extends StatelessWidget {
     child: ListTile(
       dense: true,
       leading: const Icon(Icons.info_outline, size: 20),
-      title: const Text('文件较大，仅显示前一部分内容'),
+      title: Text(context.l10n.previewTruncated),
       trailing: TextButton(
         onPressed: () => getIt<StorageGateway>().openFile(entry),
-        child: const Text('其他应用'),
+        child: Text(context.l10n.commonOpenExternalShort),
       ),
     ),
   );
 }
 
 /// 将读取异常转换为可展示的中文文案。
-String previewErrorMessage(Object error, {String fallback = '无法读取此文件'}) {
+String previewErrorMessage(Object error, {String? fallback}) {
   if (error is PlatformException) {
     return switch (error.code) {
-      'not_found' => '文件或存储设备不可用',
-      'permission_denied' => '目录访问权限已失效，请重新选择存储文件夹',
-      'read_failed' || 'io_error' => '文件读取失败',
-      _ => error.message ?? fallback,
+      'not_found' => AppL10n.current.previewErrorNotFound,
+      'permission_denied' => AppL10n.current.previewErrorPermission,
+      'read_failed' || 'io_error' => AppL10n.current.previewErrorRead,
+      _ => error.message ?? fallback ?? AppL10n.current.previewErrorFallback,
     };
   }
-  return fallback;
+  return fallback ?? AppL10n.current.previewErrorFallback;
 }

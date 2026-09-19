@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+import '../i18n/app_l10n.dart';
 import '../models/batch_models.dart';
 import '../models/storage_entry.dart';
 
@@ -144,7 +146,10 @@ class SafStorage implements StorageGateway {
   ) async {
     final value = await channel.invokeMapMethod<Object?, Object?>(method, args);
     if (value == null) {
-      throw PlatformException(code: 'invalid_response', message: '存储响应为空');
+      throw PlatformException(
+        code: 'invalid_response',
+        message: AppL10n.current.storageEmptyResponse,
+      );
     }
     return StorageEntry.fromMap(value);
   }
@@ -204,7 +209,10 @@ class SafStorage implements StorageGateway {
       },
     );
     if (result == null) {
-      throw PlatformException(code: 'invalid_response', message: '移动响应为空');
+      throw PlatformException(
+        code: 'invalid_response',
+        message: AppL10n.current.storageMoveEmptyResponse,
+      );
     }
     return MoveResult(
       StorageEntry.fromMap(result['entry']! as Map<Object?, Object?>),
@@ -327,7 +335,10 @@ class SafStorage implements StorageGateway {
       _entry(entry),
     );
     if (path == null || path.isEmpty) {
-      throw PlatformException(code: 'invalid_response', message: '缓存导出响应为空');
+      throw PlatformException(
+        code: 'invalid_response',
+        message: AppL10n.current.storageCacheExportEmptyResponse,
+      );
     }
     return path;
   }
@@ -342,7 +353,10 @@ class SafStorage implements StorageGateway {
       {..._entry(entry), 'maxBytes': maxBytes},
     );
     if (value == null) {
-      throw PlatformException(code: 'invalid_response', message: '读取响应为空');
+      throw PlatformException(
+        code: 'invalid_response',
+        message: AppL10n.current.storageReadEmptyResponse,
+      );
     }
     final raw = value['bytes'];
     final bytes = raw is Uint8List
@@ -361,7 +375,10 @@ class SafStorage implements StorageGateway {
       {..._entry(entry), 'bytes': bytes},
     );
     if (value == null) {
-      throw PlatformException(code: 'invalid_response', message: '写入响应为空');
+      throw PlatformException(
+        code: 'invalid_response',
+        message: AppL10n.current.storageWriteEmptyResponse,
+      );
     }
     return StorageEntry.fromMap(value);
   }
@@ -383,7 +400,10 @@ class SafStorage implements StorageGateway {
       });
 }
 
-String userError(Object error) {
-  if (error is PlatformException) return error.message ?? '文件操作失败';
-  return '操作未完成，请重试';
+/// 将读取异常转换为可展示的本地化文案。
+String userError(Object error, AppLocalizations l10n) {
+  if (error is PlatformException) {
+    return error.message ?? l10n.storageOperationFailed;
+  }
+  return l10n.storageOperationIncomplete;
 }

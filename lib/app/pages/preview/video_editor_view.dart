@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../di/injector.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../models/video_export_request.dart';
 import '../../preview/media_editor_format.dart';
@@ -82,7 +83,10 @@ class _VideoEditorViewState extends State<VideoEditorView> {
     } catch (failure) {
       if (!mounted) return;
       setState(
-        () => _error = previewErrorMessage(failure, fallback: '无法打开视频进行编辑'),
+        () => _error = previewErrorMessage(
+          failure,
+          fallback: context.l10n.videoEditorOpenFailed,
+        ),
       );
     }
   }
@@ -118,7 +122,12 @@ class _VideoEditorViewState extends State<VideoEditorView> {
       setState(() => _rendering = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(previewErrorMessage(failure, fallback: '视频导出失败，请重试')),
+          content: Text(
+            previewErrorMessage(
+              failure,
+              fallback: context.l10n.videoEditorExportFailed,
+            ),
+          ),
         ),
       );
     }
@@ -179,16 +188,19 @@ class _VideoEditorViewState extends State<VideoEditorView> {
             ),
           ),
           if (_rendering)
-            const Positioned.fill(
+            Positioned.fill(
               child: ColoredBox(
                 color: Colors.black54,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 12),
-                      Text('正在导出视频…', style: TextStyle(color: Colors.white)),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text(
+                        context.l10n.videoEditorExporting,
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ],
                   ),
                 ),
@@ -205,16 +217,16 @@ Future<List<VideoAudioTrackSpec>> pickAudioTracks(BuildContext context) async {
   final add = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('添加背景音乐？'),
-      content: const Text('可从设备选择音频文件，在编辑器中叠加到视频上。'),
+      title: Text(context.l10n.videoEditorAddMusicTitle),
+      content: Text(context.l10n.videoEditorAddMusicBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('跳过'),
+          child: Text(context.l10n.videoEditorSkip),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('选择音频'),
+          child: Text(context.l10n.videoEditorChooseAudio),
         ),
       ],
     ),

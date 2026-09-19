@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';
+import 'support/localization.dart';
 
 /// 假渲染器：直接回传输出路径，或按需抛出错误。
 class FakeRenderer implements VideoRenderer {
@@ -67,8 +68,8 @@ void main() {
 
   Future<void> openEditor(WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
+      localizedApp(
+        Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(

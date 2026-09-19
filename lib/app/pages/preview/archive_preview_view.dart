@@ -9,6 +9,7 @@ import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_extension_map.dart';
 import '../../file_type/file_type_detector.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/archive_reader.dart';
 import '../../preview/preview_limits.dart';
@@ -76,7 +77,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -94,7 +95,10 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
             entry: widget.entry,
             message: error is ArchiveReadException
                 ? error.message
-                : previewErrorMessage(error, fallback: '无法解析此压缩包'),
+                : previewErrorMessage(
+                    error,
+                    fallback: context.l10n.archiveParseFailed,
+                  ),
             icon: Icons.folder_zip_outlined,
             onRetry: _retry,
           );
@@ -106,7 +110,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
             if (_prefix.isNotEmpty) _breadcrumb(),
             Expanded(
               child: rows.isEmpty
-                  ? const Center(child: Text('压缩包为空'))
+                  ? Center(child: Text(context.l10n.archiveEmpty))
                   : ListView.separated(
                       itemCount: rows.length,
                       separatorBuilder: (_, _) =>
@@ -126,7 +130,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
     child: Row(
       children: [
         IconButton(
-          tooltip: '上一级',
+          tooltip: context.l10n.commonPrevious,
           onPressed: () {
             final parent = _prefix.replaceFirst(RegExp(r'[^/]+/$'), '');
             setState(() => _prefix = parent);
@@ -148,7 +152,9 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
             : detectFileCategory(name: row.name),
       ),
       title: Text(row.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: row.isDirectory ? null : Text(formatBytes(row.size)),
+      subtitle: row.isDirectory
+          ? null
+          : Text(formatBytes(row.size, context.l10n)),
       trailing: row.isDirectory
           ? const Icon(Icons.chevron_right, size: 18)
           : null,
@@ -164,8 +170,9 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
       bytes = contents.readEntry(row.path);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('无法读取该条目')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.archiveEntryReadFailed)),
+        );
       }
       return;
     }
@@ -175,13 +182,13 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
       content = SvgPicture.memory(
         bytes,
         fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => const Text('无法预览此图片'),
+        errorBuilder: (_, _, _) => Text(context.l10n.archiveImagePreviewFailed),
       );
     } else if (_imageExtensions.contains(extension)) {
       content = Image.memory(
         bytes,
         fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => const Text('无法预览此图片'),
+        errorBuilder: (_, _, _) => Text(context.l10n.archiveImagePreviewFailed),
       );
     } else if (_isTextLike(row.name)) {
       final display = bytes.length > _inlineTextLimit
@@ -196,7 +203,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
         style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
       );
     } else {
-      content = const Center(child: Text('此类型不支持内嵌预览'));
+      content = Center(child: Text(context.l10n.archiveEmbeddedUnsupported));
     }
     if (!mounted) return;
     await showDialog<void>(
@@ -213,7 +220,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('关闭'),
+            child: Text(context.l10n.commonClose),
           ),
         ],
       ),

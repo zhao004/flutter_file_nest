@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:charset_converter/charset_converter.dart';
 
+import '../i18n/app_l10n.dart';
 import '../models/storage_entry.dart';
 import '../services/saf_storage.dart';
 import 'preview_limits.dart';
@@ -87,13 +88,13 @@ Future<Uint8List> encodeTextBytes(
           await CharsetConverter.encode('GBK', normalized),
         );
       } catch (_) {
-        throw const TextEncodeException('无法按 GBK 编码保存，请使用其他应用编辑');
+        throw TextEncodeException(AppL10n.current.textEncodeGbkFailed);
       }
     case 'Latin-1':
       try {
         return Uint8List.fromList(latin1.encode(normalized));
       } on ArgumentError {
-        throw const TextEncodeException('内容含无法以 Latin-1 保存的字符');
+        throw TextEncodeException(AppL10n.current.textEncodeLatin1Failed);
       }
     default:
       final bytes = utf8.encode(normalized);

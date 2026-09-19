@@ -1,4 +1,5 @@
 import 'package:filenest/app/di/injector.dart';
+import 'package:filenest/app/localization.dart';
 import 'package:filenest/app/models/media_editor_args.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
@@ -32,7 +33,14 @@ void main() {
   /// 图片编辑器不应被分发成其他类型（如视频）。
   testWidgets('图片编辑路由经 extra 携带参数可正常进入', (tester) async {
     final router = createAppRouter();
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      MaterialApp.router(
+        locale: const Locale('zh'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        routerConfig: router,
+      ),
+    );
     expect(find.text('FileNest'), findsOneWidget);
 
     router.push(

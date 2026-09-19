@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../di/injector.dart';
+import '../../i18n/app_l10n.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/image_editor_host.dart';
 import '../../preview/media_editor_format.dart';
@@ -58,7 +60,7 @@ class _ImageEditorViewState extends State<ImageEditorView> {
       final bytes = await _storage.readDocument(widget.entry);
       if (!mounted) return;
       if (bytes == null || bytes.isEmpty) {
-        setState(() => _error = '无法在应用内编辑此图片，可能是不受支持的格式');
+        setState(() => _error = AppL10n.current.imageEditUnsupported);
         return;
       }
       setState(() => _bytes = bytes);
@@ -81,7 +83,12 @@ class _ImageEditorViewState extends State<ImageEditorView> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(previewErrorMessage(failure, fallback: '保存失败，请重试')),
+          content: Text(
+            previewErrorMessage(
+              failure,
+              fallback: context.l10n.editorSaveFailed,
+            ),
+          ),
         ),
       );
     }

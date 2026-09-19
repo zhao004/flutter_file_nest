@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import 'file_category.dart';
 import 'file_type_info.dart';
 
@@ -78,12 +79,13 @@ Color fileCategoryColor(
   };
 }
 
-/// 组合分类的中文标签与图标；文件夹图标随 [folderState] 变化。
+/// 组合分类的本地化标签与图标；文件夹图标随 [folderState] 变化。
 FileTypeInfo fileTypeInfo(
-  FileCategory category, {
+  FileCategory category,
+  AppLocalizations l10n, {
   FolderIconState folderState = FolderIconState.closed,
 }) => FileTypeInfo(
   category: category,
-  label: fileCategoryLabel(category),
+  label: fileCategoryLabel(category, l10n),
   icon: fileCategoryIcon(category, folderState: folderState),
 );

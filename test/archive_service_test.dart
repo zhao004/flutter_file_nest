@@ -6,6 +6,8 @@ import 'package:filenest/app/models/archive_models.dart';
 import 'package:filenest/app/models/storage_entry.dart';
 import 'package:filenest/app/services/archive_service.dart';
 
+import 'support/localization.dart';
+
 StorageEntry _entry(String name, {bool directory = false, String? mime}) =>
     StorageEntry(
       rootUri: 'content://test/tree/root',
@@ -153,7 +155,7 @@ void main() {
     );
     expect(outcome.ok, false);
     expect(outcome.code, 'unsafe_archive');
-    expect(outcome.summary, contains('不安全'));
+    expect(outcome.summary(zhL10n), contains('不安全'));
     expect(service.active.value, isNull);
   });
 
@@ -170,6 +172,6 @@ void main() {
     final outcome = await service.share([_entry('视频.mp4', mime: 'video/mp4')]);
     expect(outcome.ok, false);
     expect(outcome.code, 'no_app');
-    expect(outcome.summary, contains('未找到'));
+    expect(outcome.summary(zhL10n), contains('未找到'));
   });
 }

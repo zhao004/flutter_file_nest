@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../di/injector.dart';
 
 import '../../file_type/file_type_info.dart';
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/archive_service.dart';
 import '../../services/saf_storage.dart';
@@ -58,29 +59,35 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('图片信息'),
+        title: Text(context.l10n.imageInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _infoRow(dialogContext, '名称', entry.name),
+            _infoRow(dialogContext, dialogContext.l10n.commonName, entry.name),
             _infoRow(
               dialogContext,
-              '类型',
-              fileCategoryLabel(entry.fileCategory),
+              dialogContext.l10n.commonType,
+              fileCategoryLabel(entry.fileCategory, dialogContext.l10n),
             ),
-            _infoRow(dialogContext, '大小', formatBytes(entry.size)),
             _infoRow(
               dialogContext,
-              '修改时间',
-              entry.modifiedAt == null ? '未知' : _formatTime(entry.modifiedAt!),
+              dialogContext.l10n.commonSize,
+              formatBytes(entry.size, dialogContext.l10n),
+            ),
+            _infoRow(
+              dialogContext,
+              dialogContext.l10n.commonModifiedTime,
+              entry.modifiedAt == null
+                  ? dialogContext.l10n.commonUnknown
+                  : _formatTime(entry.modifiedAt!),
             ),
           ],
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('关闭'),
+            child: Text(context.l10n.commonClose),
           ),
         ],
       ),
@@ -128,18 +135,18 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '图片信息',
+          tooltip: context.l10n.imageInfo,
           onPressed: _showInfo,
           icon: const Icon(Icons.info_outline),
         ),
         if (getIt.isRegistered<ArchiveGateway>())
           IconButton(
-            tooltip: '分享',
+            tooltip: context.l10n.commonShare,
             onPressed: _share,
             icon: const Icon(Icons.ios_share),
           ),
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -192,15 +199,12 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
         children: [
           const Icon(Icons.broken_image_outlined, size: 56, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text(
-            '无法在应用内预览此图片，可能是不受支持的格式（如 HEIC）',
-            textAlign: TextAlign.center,
-          ),
+          Text(context.l10n.imageUnsupported, textAlign: TextAlign.center),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () => _storage.openFile(widget.entry),
             icon: const Icon(Icons.open_in_new),
-            label: const Text('用其他应用打开'),
+            label: Text(context.l10n.commonOpenExternal),
           ),
         ],
       ),

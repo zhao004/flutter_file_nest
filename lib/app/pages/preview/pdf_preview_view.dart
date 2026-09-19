@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../di/injector.dart';
 
+import '../../localization.dart';
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
 import 'preview_app_bar.dart';
@@ -67,7 +68,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
       ),
       actions: [
         IconButton(
-          tooltip: '用其他应用打开',
+          tooltip: context.l10n.commonOpenExternal,
           onPressed: () => _storage.openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
@@ -86,7 +87,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
           }
           final count = snapshot.data ?? 0;
           if (count <= 0) {
-            return const Center(child: Text('此 PDF 没有可显示的页面'));
+            return Center(child: Text(context.l10n.pdfNoPages));
           }
           return Column(
             children: [
@@ -102,7 +103,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
-                  '第 ${_current + 1} / $count 页',
+                  context.l10n.pdfPageIndicator(_current + 1, count),
                   style: const TextStyle(color: Colors.white70),
                 ),
               ),
@@ -115,9 +116,10 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
 
   Widget _errorBody(BuildContext context, Object error) {
     final message = switch (error) {
-      PlatformException(code: 'pdf_protected') => '此 PDF 受密码保护，无法在应用内预览',
-      PlatformException(code: 'pdf_invalid') => '无法读取此 PDF，文件可能已损坏',
-      _ => '无法读取此 PDF，请稍后重试',
+      PlatformException(code: 'pdf_protected') =>
+        context.l10n.pdfPasswordProtected,
+      PlatformException(code: 'pdf_invalid') => context.l10n.pdfInvalid,
+      _ => context.l10n.pdfReadFailed,
     };
     return Center(
       child: Padding(
@@ -136,7 +138,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
             FilledButton.icon(
               onPressed: () => _storage.openFile(widget.entry),
               icon: const Icon(Icons.open_in_new),
-              label: const Text('用其他应用打开'),
+              label: Text(context.l10n.commonOpenExternal),
             ),
           ],
         ),
@@ -168,9 +170,12 @@ class _PdfPageState extends State<_PdfPage> with AutomaticKeepAliveClientMixin {
           }
           final bytes = snapshot.data;
           if (bytes == null) {
-            return const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('此页无法渲染', style: TextStyle(color: Colors.white70)),
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                context.l10n.pdfPageUnrenderable,
+                style: const TextStyle(color: Colors.white70),
+              ),
             );
           }
           return InteractiveViewer(
@@ -178,8 +183,10 @@ class _PdfPageState extends State<_PdfPage> with AutomaticKeepAliveClientMixin {
             child: Image.memory(
               bytes,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stack) =>
-                  const Text('此页无法渲染', style: TextStyle(color: Colors.white70)),
+              errorBuilder: (context, error, stack) => Text(
+                context.l10n.pdfPageUnrenderable,
+                style: const TextStyle(color: Colors.white70),
+              ),
             ),
           );
         },
