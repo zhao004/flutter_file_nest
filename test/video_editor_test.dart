@@ -82,7 +82,6 @@ void main() {
                         parent: root,
                         editorBuilder: builder,
                         renderer: renderer,
-                        audioTrackPicker: (_) async => const [],
                         tempDirectoryProvider: () async => Directory.systemTemp,
                       ),
                     ),

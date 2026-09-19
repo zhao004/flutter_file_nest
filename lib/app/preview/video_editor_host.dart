@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show ImageByteFormat;
 
-import 'package:audioplayers/audioplayers.dart' as audio;
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -22,7 +21,6 @@ class VideoEditorHostConfig {
     required this.onExport,
     required this.onClose,
     required this.onError,
-    this.audioTracks = const [],
   });
 
   /// 待编辑视频的本地文件路径（已从 SAF 导出到缓存）。
@@ -30,9 +28,6 @@ class VideoEditorHostConfig {
 
   /// 选取一个视频片段并复制到缓存；取消返回 null。
   final Future<String?> Function() pickClip;
-
-  /// 可叠加的背景音轨（设备选取的本地文件）。
-  final List<VideoAudioTrackSpec> audioTracks;
 
   /// 导出回调：编辑器完成时回传渲染请求，页面据此渲染并保存。
   final Future<void> Function(VideoExportRequest request) onExport;
@@ -65,7 +60,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
   static const Duration _minTrimDuration = Duration(seconds: 1);
 
   final _editorKey = GlobalKey<ProImageEditorState>();
-  final _audioPlayer = audio.AudioPlayer();
 
   late EditorVideo _video = EditorVideo.file(widget.config.filePath);
   VideoPlayerController? _videoController;
@@ -73,7 +67,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
   List<ImageProvider>? _thumbnails;
   late VideoMetadata _metadata;
 
-  List<AudioTrack> _audioTracks = const [];
   List<VideoClip> _clips = const [];
 
   TrimDurationSpan? _durationSpan;
@@ -92,14 +85,13 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
     playTimeSmoothingDuration: Duration(milliseconds: 600),
   );
 
-  /// 编辑器配置：在音轨与片段解析完成后构建，合并片段后重建。
+  /// 编辑器配置：在片段解析完成后构建，合并片段后重建。
   late ProImageEditorConfigs _configs;
 
   ProImageEditorConfigs _buildConfigs() => ProImageEditorConfigs(
     mainEditor: MainEditorConfigs(
       tools: const [
         SubEditorMode.videoClips,
-        SubEditorMode.audio,
         SubEditorMode.paint,
         SubEditorMode.text,
         SubEditorMode.cropRotate,
@@ -131,7 +123,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
         PaintMode.eraser,
       ],
     ),
-    audioEditor: AudioEditorConfigs(audioTracks: _audioTracks),
     clipsEditor: ClipsEditorConfigs(clips: _clips),
     videoEditor: _videoEditorConfigs,
     imageGeneration: const ImageGenerationConfigs(
@@ -153,16 +144,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       },
       onTrimSpanEnd: _seekToPosition,
     ),
-    audioEditorCallbacks: AudioEditorCallbacks(
-      onPlay: _playAudio,
-      onStop: (track) => _audioPlayer.pause(),
-      onMuteToggle: (isMuted) => _audioPlayer.setVolume(isMuted ? 0 : 1),
-      onStartTimeChange: (startTime) async {
-        if (_audioPlayer.state == audio.PlayerState.playing) {
-          await _audioPlayer.seek(startTime);
-        }
-      },
-    ),
     clipsEditorCallbacks: ClipsEditorCallbacks(
       onReadKeyFrame: _readKeyFrame,
       onReadKeyFrames: _readKeyFrames,
@@ -182,13 +163,11 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
     _videoController?.removeListener(_onDurationChange);
     _videoController?.dispose();
     _proVideoController?.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
   Future<void> _initialize() async {
     try {
-      _audioTracks = await _buildAudioTracks();
       _metadata = await ProVideoEditor.instance.getMetadata(_video);
       _clips = [
         VideoClip(
@@ -229,33 +208,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       setState(() {});
       widget.config.onError(AppL10n.current.videoEditorHostUnsupported);
     }
-  }
-
-  Future<List<AudioTrack>> _buildAudioTracks() async {
-    final tracks = <AudioTrack>[];
-    for (final spec in widget.config.audioTracks) {
-      var duration = Duration.zero;
-      try {
-        final meta = await ProVideoEditor.instance.getMetadata(
-          EditorVideo.file(spec.path),
-        );
-        duration = meta.duration;
-      } catch (_) {
-        // 无法读取时长时仍保留音轨，后续由编辑器按整段处理。
-      }
-      tracks.add(
-        AudioTrack(
-          id: spec.path,
-          title: _basename(spec.path),
-          subtitle: '',
-          duration: duration,
-          audio: EditorAudio.file(spec.path),
-          volume: spec.volume,
-          loop: spec.loop,
-        ),
-      );
-    }
-    return tracks;
   }
 
   Future<void> _generateThumbnails({bool updateClip = true}) async {
@@ -332,17 +284,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
 
   Future<void> _pause() async {
     await _videoController?.pause();
-  }
-
-  Future<void> _playAudio(AudioTrack track) async {
-    final path = track.audio.file?.path;
-    if (path == null) return;
-    await _audioPlayer.setReleaseMode(audio.ReleaseMode.loop);
-    await _audioPlayer.play(
-      audio.DeviceFileSource(path),
-      position: track.startTime ?? Duration.zero,
-    );
-    await _audioPlayer.setVolume(track.volume);
   }
 
   Future<Uint8List> _readKeyFrame(VideoClip source) async {
@@ -482,23 +423,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       specs.add(VideoClipSpec(path: widget.config.filePath));
     }
 
-    final audioTracks = <VideoAudioTrackSpec>[];
-    for (final track in parameters.audioTracks) {
-      final path = track.audio.file?.path;
-      if (path == null) continue;
-      audioTracks.add(
-        VideoAudioTrackSpec(
-          path: path,
-          volume: track.volume,
-          loop: track.loop,
-          audioStartTime: track.audioStartTime,
-          audioEndTime: track.audioEndTime,
-          startTime: track.startTime,
-          endTime: track.endTime,
-        ),
-      );
-    }
-
     await widget.config.onExport(
       VideoExportRequest(
         clips: specs,
@@ -522,7 +446,6 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
             : null,
         enableAudio: _proVideoController?.isAudioEnabled ?? true,
         bitrate: _metadata.bitrate,
-        audioTracks: audioTracks,
       ),
     );
   }

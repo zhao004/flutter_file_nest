@@ -369,22 +369,14 @@ class FakeStorage implements StorageGateway {
     return pickImageResult;
   }
 
-  /// 视频片段选择与音频音轨选择的结果与调用计数。
+  /// 视频片段选择的结果与调用计数。
   String? pickVideoResult = 'C:/cache/picked.mp4';
-  List<String> pickAudioResults = const ['C:/cache/picked.mp3'];
   int videoPicks = 0;
-  int audioPicks = 0;
 
   @override
   Future<String?> pickVideoToCache() async {
     videoPicks++;
     return pickVideoResult;
-  }
-
-  @override
-  Future<List<String>> pickAudioToCache() async {
-    audioPicks++;
-    return List.of(pickAudioResults);
   }
 
   /// 单文档读取结果；置 null 模拟无法解码（如不支持的图片格式）。

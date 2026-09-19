@@ -15,16 +15,15 @@ import 'preview_widgets.dart';
 
 /// 视频编辑器：pro_image_editor 视频界面 + pro_video_editor 渲染。
 ///
-/// 先把 SAF 文档导出为本地缓存文件供编辑器使用，进入前可选择背景音轨；
-/// 导出时渲染到缓存并导入保险库，保存为同目录下的 `原名_edited.mp4`，
-/// 原文件不变。保存成功后以新文件名作为路由返回值 pop。
+/// 先把 SAF 文档导出为本地缓存文件供编辑器使用；导出时渲染到缓存并导入
+/// 保险库，保存为同目录下的 `原名_edited.mp4`，原文件不变。保存成功后以
+/// 新文件名作为路由返回值 pop。
 class VideoEditorView extends StatefulWidget {
   const VideoEditorView({
     required this.entry,
     required this.parent,
     this.editorBuilder = buildProVideoEditor,
     this.renderer = const ProVideoRenderer(),
-    this.audioTrackPicker = pickAudioTracks,
     this.tempDirectoryProvider = getTemporaryDirectory,
     super.key,
   });
@@ -40,10 +39,6 @@ class VideoEditorView extends StatefulWidget {
   /// 渲染器；测试注入假实现。
   final VideoRenderer renderer;
 
-  /// 背景音轨选择器；测试注入固定结果。
-  final Future<List<VideoAudioTrackSpec>> Function(BuildContext context)
-  audioTrackPicker;
-
   /// 渲染输出目录提供者；测试可替换为本地临时目录。
   final Future<Directory> Function() tempDirectoryProvider;
 
@@ -55,7 +50,6 @@ class _VideoEditorViewState extends State<VideoEditorView> {
   late final StorageGateway _storage = getIt<StorageGateway>();
 
   String? _filePath;
-  List<VideoAudioTrackSpec> _audioTracks = const [];
   String? _error;
   bool _rendering = false;
   bool _closed = false;
@@ -74,12 +68,7 @@ class _VideoEditorViewState extends State<VideoEditorView> {
     try {
       final path = await _storage.exportToCache(widget.entry);
       if (!mounted) return;
-      final tracks = await widget.audioTrackPicker(context);
-      if (!mounted) return;
-      setState(() {
-        _filePath = path;
-        _audioTracks = tracks;
-      });
+      setState(() => _filePath = path);
     } catch (failure) {
       if (!mounted) return;
       setState(
@@ -181,7 +170,6 @@ class _VideoEditorViewState extends State<VideoEditorView> {
             VideoEditorHostConfig(
               filePath: path,
               pickClip: _storage.pickVideoToCache,
-              audioTracks: _audioTracks,
               onExport: _onExport,
               onClose: _onClose,
               onError: (message) => setState(() => _error = message),
@@ -210,28 +198,4 @@ class _VideoEditorViewState extends State<VideoEditorView> {
       ),
     );
   }
-}
-
-/// 弹窗确认后从设备选择音频文件作为背景音轨；跳过返回空列表。
-Future<List<VideoAudioTrackSpec>> pickAudioTracks(BuildContext context) async {
-  final add = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(context.l10n.videoEditorAddMusicTitle),
-      content: Text(context.l10n.videoEditorAddMusicBody),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: Text(context.l10n.videoEditorSkip),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: Text(context.l10n.videoEditorChooseAudio),
-        ),
-      ],
-    ),
-  );
-  if (add != true) return const [];
-  final paths = await getIt<StorageGateway>().pickAudioToCache();
-  return paths.map((path) => VideoAudioTrackSpec(path: path)).toList();
 }

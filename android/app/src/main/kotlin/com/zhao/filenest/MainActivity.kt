@@ -92,9 +92,6 @@ class MainActivity : FlutterFragmentActivity() {
     private val mediaPickSingleLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> finishMediaPick(if (uri == null) emptyList() else listOf(uri)) }
-    private val mediaPickMultipleLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris -> finishMediaPick(uris ?: emptyList()) }
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
@@ -127,8 +124,7 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "pickImport" -> startImport(call, result)
                 "pickImage" -> startImagePick(result)
-                "pickVideoToCache" -> startMediaPick(result, arrayOf("video/*"), false)
-                "pickAudioToCache" -> startMediaPick(result, arrayOf("audio/*"), true)
+                "pickVideoToCache" -> startMediaPick(result, arrayOf("video/*"))
                 "importDocuments" -> startImportDocuments(call, result)
                 "takePhoto" -> startPhotoCapture(call, result)
                 "takeVideo" -> startVideoCapture(call, result)
@@ -295,14 +291,13 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     /**
-     * 选取视频（单个）或音频（多个）并复制到应用缓存，返回本地路径列表。
+     * 选取视频（单个）并复制到应用缓存，返回本地路径列表。
      *
-     * 供视频编辑器的片段与背景音轨选择使用；不导入保险库，调用方负责清理。
+     * 供视频编辑器的片段选择使用；不导入保险库，调用方负责清理。
      */
     private fun startMediaPick(
         result: MethodChannel.Result,
         mimeTypes: Array<String>,
-        multiple: Boolean,
     ) {
         if (mediaPickResult != null) {
             result.error("busy", "选择器已打开", null)
@@ -310,11 +305,7 @@ class MainActivity : FlutterFragmentActivity() {
         }
         mediaPickResult = result
         try {
-            if (multiple) {
-                mediaPickMultipleLauncher.launch(mimeTypes)
-            } else {
-                mediaPickSingleLauncher.launch(mimeTypes)
-            }
+            mediaPickSingleLauncher.launch(mimeTypes)
         } catch (_: Exception) {
             mediaPickResult = null
             result.error("unavailable", "无法打开系统选择器", null)

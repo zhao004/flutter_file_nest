@@ -741,19 +741,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoSpeed => 'Playback speed';
 
   @override
-  String get videoEditorAddMusicTitle => 'Add background music?';
-
-  @override
-  String get videoEditorAddMusicBody =>
-      'Choose an audio file from your device to overlay on the video.';
-
-  @override
-  String get videoEditorSkip => 'Skip';
-
-  @override
-  String get videoEditorChooseAudio => 'Choose audio';
-
-  @override
   String get videoEditorExporting => 'Exporting video…';
 
   @override

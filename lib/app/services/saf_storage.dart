@@ -81,11 +81,6 @@ abstract interface class StorageGateway {
   /// 供视频编辑器的片段选择使用；不导入保险库，调用方负责清理。
   Future<String?> pickVideoToCache();
 
-  /// 从系统选择器选取多个音频并复制到应用缓存，返回本地路径列表。
-  ///
-  /// 供视频编辑器的背景音轨选择使用；取消返回空列表，调用方负责清理。
-  Future<List<String>> pickAudioToCache();
-
   /// 读取文档字节；仅用于应用内图片预览等有界场景。
   Future<Uint8List?> readDocument(StorageEntry entry);
 
@@ -319,10 +314,6 @@ class SafStorage implements StorageGateway {
     final values = await channel.invokeListMethod<String>('pickVideoToCache');
     return (values == null || values.isEmpty) ? null : values.first;
   }
-
-  @override
-  Future<List<String>> pickAudioToCache() async =>
-      await channel.invokeListMethod<String>('pickAudioToCache') ?? const [];
 
   @override
   Future<Uint8List?> readDocument(StorageEntry entry) =>

@@ -9,27 +9,6 @@ class VideoClipSpec {
   final Duration? endTime;
 }
 
-/// 叠加音轨；来自设备选取的本地音频文件。
-class VideoAudioTrackSpec {
-  const VideoAudioTrackSpec({
-    required this.path,
-    this.volume = 1.0,
-    this.loop = false,
-    this.audioStartTime,
-    this.audioEndTime,
-    this.startTime,
-    this.endTime,
-  });
-
-  final String path;
-  final double volume;
-  final bool loop;
-  final Duration? audioStartTime;
-  final Duration? audioEndTime;
-  final Duration? startTime;
-  final Duration? endTime;
-}
-
 /// 导出时的裁剪/旋转/翻转变换。
 class VideoExportTransform {
   const VideoExportTransform({
@@ -67,7 +46,6 @@ class VideoExportRequest {
     this.transform,
     this.enableAudio = true,
     this.bitrate,
-    this.audioTracks = const [],
   });
 
   final List<VideoClipSpec> clips;
@@ -83,5 +61,4 @@ class VideoExportRequest {
   final VideoExportTransform? transform;
   final bool enableAudio;
   final int? bitrate;
-  final List<VideoAudioTrackSpec> audioTracks;
 }

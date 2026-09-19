@@ -63,18 +63,5 @@ VideoRenderData buildVideoRenderData(VideoExportRequest request) {
     bitrate: request.bitrate,
     startTime: request.useSegments ? null : request.startTime,
     endTime: request.useSegments ? null : request.endTime,
-    audioTracks: request.audioTracks
-        .map(
-          (track) => VideoAudioTrack(
-            path: track.path,
-            volume: track.volume,
-            loop: track.loop,
-            audioStartTime: track.audioStartTime,
-            audioEndTime: track.audioEndTime,
-            startTime: track.startTime,
-            endTime: track.endTime,
-          ),
-        )
-        .toList(),
   );
 }

@@ -1442,30 +1442,6 @@ abstract class AppLocalizations {
   /// **'播放速度'**
   String get videoSpeed;
 
-  /// No description provided for @videoEditorAddMusicTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'添加背景音乐？'**
-  String get videoEditorAddMusicTitle;
-
-  /// No description provided for @videoEditorAddMusicBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'可从设备选择音频文件，在编辑器中叠加到视频上。'**
-  String get videoEditorAddMusicBody;
-
-  /// No description provided for @videoEditorSkip.
-  ///
-  /// In zh, this message translates to:
-  /// **'跳过'**
-  String get videoEditorSkip;
-
-  /// No description provided for @videoEditorChooseAudio.
-  ///
-  /// In zh, this message translates to:
-  /// **'选择音频'**
-  String get videoEditorChooseAudio;
-
   /// No description provided for @videoEditorExporting.
   ///
   /// In zh, this message translates to:

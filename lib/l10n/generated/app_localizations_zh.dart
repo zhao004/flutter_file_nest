@@ -724,18 +724,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoSpeed => '播放速度';
 
   @override
-  String get videoEditorAddMusicTitle => '添加背景音乐？';
-
-  @override
-  String get videoEditorAddMusicBody => '可从设备选择音频文件，在编辑器中叠加到视频上。';
-
-  @override
-  String get videoEditorSkip => '跳过';
-
-  @override
-  String get videoEditorChooseAudio => '选择音频';
-
-  @override
   String get videoEditorExporting => '正在导出视频…';
 
   @override
