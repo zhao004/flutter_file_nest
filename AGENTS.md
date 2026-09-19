@@ -2,9 +2,10 @@
 
 ## 项目结构与模块组织
 
-Flutter 入口位于 `lib/main.dart`。页面按 GetX 功能模块放在
-`lib/app/pages/<feature>/`，同一功能的 View、Controller 和 Binding 保持相邻；路由集中在
-`lib/app/routes/`。Drift 表、数据库访问和类型转换位于 `lib/app/database/`，只编辑源文件，
+Flutter 入口位于 `lib/main.dart`。页面按功能模块放在 `lib/app/pages/<feature>/`，同一功能的
+View 与 Controller 保持相邻；路由使用 go_router，集中在 `lib/app/routes/`；依赖注入使用
+get_it，注册入口在 `lib/app/di/injector.dart`；响应式状态使用 signals，View 通过
+`SignalBuilder` 订阅。Drift 表、数据库访问和类型转换位于 `lib/app/database/`，只编辑源文件，
 不要手动修改 `*.g.dart` 生成文件。Widget 测试放在 `test/`，Android 宿主工程位于 `android/`。
 新增静态资源时放入 `assets/` 并在 `pubspec.yaml` 中声明。
 
@@ -22,7 +23,7 @@ Flutter 入口位于 `lib/main.dart`。页面按 GetX 功能模块放在
 
 提交前运行 `dart format lib test`，使用 Dart 默认的两空格缩进。文件名使用
 `lower_snake_case.dart`，类型和 Widget 使用 `UpperCamelCase`，成员与局部变量使用
-`lowerCamelCase`。优先使用 `const` Widget，并保持 View、Controller、Binding 的职责分离。
+`lowerCamelCase`。优先使用 `const` Widget，并保持 View 与 Controller 的职责分离。
 公共 Widget 使用中文 `///` 文档注释说明用途和必要的生命周期约束。
 
 ## 测试指南

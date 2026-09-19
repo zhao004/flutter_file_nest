@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 import '../models/archive_models.dart';
 import '../models/storage_entry.dart';
@@ -9,7 +9,7 @@ import '../models/storage_entry.dart';
 /// 归档与分享的平台契约；测试通过替代实现覆盖任务失败与取消状态。
 abstract interface class ArchiveGateway {
   /// 当前前台任务；null 表示空闲。同一时间只允许一个归档任务。
-  Rxn<ArchiveTaskState> get active;
+  ReadonlySignal<ArchiveTaskState?> get active;
 
   /// 压缩条目到目标文件夹；输出不会包含压缩包自身。
   Future<ArchiveOutcome> zip({
@@ -47,8 +47,10 @@ class ArchiveService implements ArchiveGateway {
   static const _channel = MethodChannel('filenest/archive');
   static const _events = EventChannel('filenest/archive_events');
 
+  final _active = signal<ArchiveTaskState?>(null);
+
   @override
-  final active = Rxn<ArchiveTaskState>();
+  ReadonlySignal<ArchiveTaskState?> get active => _active;
 
   int _counter = 0;
 
@@ -59,9 +61,13 @@ class ArchiveService implements ArchiveGateway {
     if (event is! Map<Object?, Object?>) return;
     final operationId = event['operationId'] as String?;
     if (operationId == null) return;
-    final current = active.value;
+    final current = _active.value;
     if (current == null || current.operationId != operationId) return;
-    active.value = ArchiveTaskState.fromEvent(operationId, current.kind, event);
+    _active.value = ArchiveTaskState.fromEvent(
+      operationId,
+      current.kind,
+      event,
+    );
   }
 
   Future<void> _cleanup() async {
@@ -94,7 +100,7 @@ class ArchiveService implements ArchiveGateway {
     required List<StorageEntry> entries,
     required StorageEntry targetFolder,
   }) async {
-    if (active.value != null) {
+    if (_active.value != null) {
       return const ArchiveOutcome.failure(
         ArchiveKind.zip,
         'busy',
@@ -102,7 +108,7 @@ class ArchiveService implements ArchiveGateway {
       );
     }
     final operationId = _nextId();
-    active.value = ArchiveTaskState(
+    _active.value = ArchiveTaskState(
       operationId: operationId,
       kind: ArchiveKind.zip,
       stage: ArchiveStage.scanning,
@@ -140,7 +146,7 @@ class ArchiveService implements ArchiveGateway {
         error.message ?? '压缩失败，请重试',
       );
     } finally {
-      if (active.value?.operationId == operationId) active.value = null;
+      if (_active.value?.operationId == operationId) _active.value = null;
     }
   }
 
@@ -150,7 +156,7 @@ class ArchiveService implements ArchiveGateway {
     required StorageEntry targetFolder,
     String? folderName,
   }) async {
-    if (active.value != null) {
+    if (_active.value != null) {
       return const ArchiveOutcome.failure(
         ArchiveKind.extract,
         'busy',
@@ -158,7 +164,7 @@ class ArchiveService implements ArchiveGateway {
       );
     }
     final operationId = _nextId();
-    active.value = ArchiveTaskState(
+    _active.value = ArchiveTaskState(
       operationId: operationId,
       kind: ArchiveKind.extract,
       stage: ArchiveStage.scanning,
@@ -200,7 +206,7 @@ class ArchiveService implements ArchiveGateway {
         error.message ?? '解压失败，请检查压缩包是否完整',
       );
     } finally {
-      if (active.value?.operationId == operationId) active.value = null;
+      if (_active.value?.operationId == operationId) _active.value = null;
     }
   }
 
@@ -209,7 +215,7 @@ class ArchiveService implements ArchiveGateway {
     if (entries.isEmpty) {
       return const ShareOutcome.failure('invalid_argument', '没有可分享的内容');
     }
-    if (active.value != null) {
+    if (_active.value != null) {
       return const ShareOutcome.failure('busy', '已有归档任务在进行，请稍后再分享');
     }
     final documentUris = <String>[
@@ -255,7 +261,7 @@ class ArchiveService implements ArchiveGateway {
   /// 文件夹先写入应用私有分享缓存，再经 FileProvider 受限分享。
   Future<_PreparedZip> _prepareFolderZip(StorageEntry folder) async {
     final operationId = _nextId();
-    active.value = ArchiveTaskState(
+    _active.value = ArchiveTaskState(
       operationId: operationId,
       kind: ArchiveKind.share,
       stage: ArchiveStage.scanning,
@@ -279,13 +285,13 @@ class ArchiveService implements ArchiveGateway {
     } on PlatformException catch (error) {
       return _PreparedZip.failure(error.code, error.message ?? '分享缓存准备失败');
     } finally {
-      if (active.value?.operationId == operationId) active.value = null;
+      if (_active.value?.operationId == operationId) _active.value = null;
     }
   }
 
   @override
   Future<void> cancelActive() async {
-    final current = active.value;
+    final current = _active.value;
     if (current == null || current.terminal) return;
     try {
       await _channel.invokeMethod<bool>('cancel', {

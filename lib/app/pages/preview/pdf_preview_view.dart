@@ -2,7 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
@@ -19,7 +20,7 @@ class PdfPreviewView extends StatefulWidget {
 }
 
 class _PdfPreviewViewState extends State<PdfPreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final Future<int> _pageCount = _loadPageCount();
   final PageController _controller = PageController();
   final LinkedHashMap<int, Future<Uint8List?>> _pages = LinkedHashMap();

@@ -37,11 +37,11 @@ void main() {
     expect(controller.rootRequired.value, false);
     storage.contents['root']!.add(entry('外部视频.mp4'));
     await controller.refresh();
-    expect(controller.entries.single.name, '外部视频.mp4');
+    expect(controller.entries.value.single.name, '外部视频.mp4');
     storage.permissionDenied = true;
     await controller.refresh();
     expect(controller.rootRequired.value, true);
-    expect(controller.entries, isEmpty);
+    expect(controller.entries.value, isEmpty);
   });
   test('创建和返回父目录后从真实存储刷新', () async {
     final storage = FakeStorage();
@@ -52,10 +52,10 @@ void main() {
     );
     await controller.pickRoot();
     await controller.createFolder('现场');
-    await controller.enter(controller.entries.single);
+    await controller.enter(controller.entries.value.single);
     expect(controller.canGoBack, true);
     await controller.back();
-    expect(controller.entries.single.name, '现场');
+    expect(controller.entries.value.single.name, '现场');
     await controller.createFolder('../错误');
     expect(storage.creates, 1);
     expect(controller.error.value, isNotNull);
@@ -71,7 +71,7 @@ void main() {
     await controller.pickRoot();
     await controller.createFile('说明.txt');
     expect(storage.fileCreates, 1);
-    final created = controller.entries.single;
+    final created = controller.entries.value.single;
     expect(created.name, '说明.txt');
     expect(created.isDirectory, false);
     expect(controller.createdAtOf(created), isNotNull);
@@ -93,7 +93,7 @@ void main() {
       thumbnails: thumbs,
     );
     await controller.pickRoot();
-    await controller.enter(controller.entries.single);
+    await controller.enter(controller.entries.value.single);
     expect(thumbs.clears, 1);
     await controller.back();
     expect(thumbs.clears, 2);
@@ -110,7 +110,7 @@ void main() {
     await controller.pickRoot();
     storage.contents['root']!.add(entry('视频.mp4', mime: 'video/mp4'));
     await controller.refresh();
-    final outcome = await controller.zipEntry(controller.entries.single);
+    final outcome = await controller.zipEntry(controller.entries.value.single);
     expect(archive.zipCalls, ['视频.mp4']);
     expect(outcome.ok, true);
     expect(outcome.summary, contains('压缩结果.zip'));
@@ -133,7 +133,7 @@ void main() {
     await controller.pickRoot();
     storage.contents['root']!.add(entry('视频.mp4'));
     await controller.refresh();
-    final outcome = await controller.zipEntry(controller.entries.single);
+    final outcome = await controller.zipEntry(controller.entries.value.single);
     expect(outcome.ok, false);
     expect(controller.error.value, contains('文件读写失败'));
   });
@@ -155,7 +155,9 @@ void main() {
     await controller.pickRoot();
     storage.contents['root']!.add(entry('素材.zip', mime: 'application/zip'));
     await controller.refresh();
-    final outcome = await controller.extractEntry(controller.entries.single);
+    final outcome = await controller.extractEntry(
+      controller.entries.value.single,
+    );
     expect(archive.extractCalls, ['素材.zip']);
     expect(outcome.summary, contains('跳过 1 项'));
   });
@@ -172,7 +174,7 @@ void main() {
     storage.contents['root']!.add(entry('视频.mp4'));
     await controller.refresh();
     controller.startSelection();
-    controller.toggleSelect(controller.entries.single);
+    controller.toggleSelect(controller.entries.value.single);
     final outcome = await controller.shareSelected();
     expect(archive.shareCalls, ['视频.mp4']);
     expect(outcome.summary, contains('未找到'));
@@ -197,9 +199,9 @@ void main() {
     controller.startSelection();
     expect(controller.selectionMode.value, true);
     expect(controller.selectedCount, 0);
-    controller.toggleSelect(controller.entries.last);
+    controller.toggleSelect(controller.entries.value.last);
     expect(controller.selectedCount, 1);
-    controller.toggleSelect(controller.entries.last);
+    controller.toggleSelect(controller.entries.value.last);
     expect(controller.selectedCount, 0);
     controller.toggleSelectAll();
     expect(controller.selectedCount, 2);
@@ -222,7 +224,7 @@ void main() {
       ..add(entry('b.mp4'));
     await controller.refresh();
     controller.startSelection();
-    controller.toggleSelect(controller.entries.first);
+    controller.toggleSelect(controller.entries.value.first);
     expect(controller.selectedCount, 1);
     storage.contents['root']!.removeWhere((value) => value.name == 'a.mp4');
     await controller.refresh();
@@ -270,12 +272,12 @@ void main() {
     await controller.createFolder('目标');
     storage.contents['root']!.add(entry('视频.mp4'));
     await controller.refresh();
-    final source = controller.entries.firstWhere((e) => e.name == '来源');
+    final source = controller.entries.value.firstWhere((e) => e.name == '来源');
     controller.toggleSelect(source);
-    final rootTrail = [controller.folders.first];
+    final rootTrail = [controller.folders.value.first];
     expect(controller.moveTargetIssue(rootTrail), '目标位置与来源相同');
     expect(controller.moveTargetIssue([...rootTrail, source]), contains('内部'));
-    final target = controller.entries.firstWhere((e) => e.name == '目标');
+    final target = controller.entries.value.firstWhere((e) => e.name == '目标');
     expect(controller.moveTargetIssue([...rootTrail, target]), isNull);
   });
 
@@ -291,16 +293,16 @@ void main() {
     storage.contents['root']!.add(entry('视频.mp4', size: 10));
     await controller.refresh();
     controller.toggleSelect(
-      controller.entries.firstWhere((e) => !e.isDirectory),
+      controller.entries.value.firstWhere((e) => !e.isDirectory),
     );
     await controller.moveSelected([
-      controller.folders.first,
-      controller.entries.firstWhere((e) => e.isDirectory),
+      controller.folders.value.first,
+      controller.entries.value.firstWhere((e) => e.isDirectory),
     ]);
     expect(storage.moves, ['视频.mp4']);
-    expect(controller.entries.map((e) => e.name), ['目标']);
-    await controller.enter(controller.entries.single);
-    expect(controller.entries.single.name, '视频.mp4');
+    expect(controller.entries.value.map((e) => e.name), ['目标']);
+    await controller.enter(controller.entries.value.single);
+    expect(controller.entries.value.single.name, '视频.mp4');
   });
 
   test('移动回退复制完成但源未删除时逐项报告', () async {
@@ -315,11 +317,11 @@ void main() {
     storage.contents['root']!.add(entry('视频.mp4'));
     await controller.refresh();
     controller.toggleSelect(
-      controller.entries.firstWhere((e) => !e.isDirectory),
+      controller.entries.value.firstWhere((e) => !e.isDirectory),
     );
     final job = await controller.moveSelected([
-      controller.folders.first,
-      controller.entries.firstWhere((e) => e.isDirectory),
+      controller.folders.value.first,
+      controller.entries.value.firstWhere((e) => e.isDirectory),
     ]);
     expect(job!.keptSourceCount, 1);
     expect(job.items.single.message, contains('源未删除'));
@@ -410,15 +412,15 @@ void main() {
     storage.contents['root']!.add(entry('现场1.mp4'));
     await controller.refresh();
     controller.beginSearch('现场');
-    expect(controller.searchResults.single.name, '现场1.mp4');
+    expect(controller.searchResults.value.single.name, '现场1.mp4');
     expect(
-      controller.searchLocationOf(controller.searchResults.single),
+      controller.searchLocationOf(controller.searchResults.value.single),
       '测试目录',
     );
     await controller.searchAll('现场');
     expect(controller.searching.value, false);
-    expect(controller.searchResults.length, 2);
-    final nested = controller.searchResults.firstWhere(
+    expect(controller.searchResults.value.length, 2);
+    final nested = controller.searchResults.value.firstWhere(
       (value) => value.name == '现场2.mp4',
     );
     expect(controller.searchLocationOf(nested), '测试目录/素材');
@@ -438,7 +440,7 @@ void main() {
     await controller.refresh();
     await controller.searchAll('现场');
     expect(controller.searchIncomplete.value, true);
-    expect(controller.searchResults.single.name, '现场1.mp4');
+    expect(controller.searchResults.value.single.name, '现场1.mp4');
   });
 
   test('创建时间排序：未登记的条目排在末尾，不冒充修改时间', () async {
@@ -454,7 +456,7 @@ void main() {
     storage.contents['root']!.add(entry('未登记.mp4'));
     await controller.refresh();
     await controller.setSort(EntrySort.created, false);
-    final names = controller.entries.map((value) => value.name).toList();
+    final names = controller.entries.value.map((value) => value.name).toList();
     expect(names, ['早创建', '晚创建', '未登记.mp4']);
   });
 
@@ -469,7 +471,7 @@ void main() {
     await controller.pickRoot();
     storage.contents['root']!.add(entry('旧名.mp4', mime: 'video/mp4'));
     await controller.refresh();
-    final file = controller.entries.single;
+    final file = controller.entries.value.single;
     await store.recordCreated(file.uri, DateTime(2026));
     await controller.renameEntry(file, '新名.mp4');
     expect(store.created.keys.any((uri) => uri.contains('新名')), true);
@@ -490,7 +492,7 @@ void main() {
     await controller.importFromPicker(const ['*/*']);
     expect(storage.imports.single, '*/*');
     expect(
-      controller.entries.map((value) => value.name),
+      controller.entries.value.map((value) => value.name),
       containsAll(['照片.jpg', '合同.pdf']),
     );
     expect(controller.error.value, isNull);
@@ -511,13 +513,15 @@ void main() {
     await controller.pickRoot();
     incoming.emit([const IncomingShare(uri: 'content://wx/1', name: '文档.pdf')]);
     await pumpEventQueue();
-    expect(controller.incomingShares, hasLength(1));
+    expect(controller.incomingShares.value, hasLength(1));
 
-    final saved = await controller.importIncoming(controller.folders.first);
+    final saved = await controller.importIncoming(
+      controller.folders.value.first,
+    );
     expect(saved, true);
     expect(storage.importDocumentCalls, ['content://wx/1']);
-    expect(controller.incomingShares, isEmpty);
-    expect(controller.entries.single.name, '文档.pdf');
+    expect(controller.incomingShares.value, isEmpty);
+    expect(controller.entries.value.single.name, '文档.pdf');
   });
 
   test('外部分享保存失败时上报错误并消费待保存项', () async {
@@ -539,10 +543,12 @@ void main() {
     incoming.emit([const IncomingShare(uri: 'content://wx/2')]);
     await pumpEventQueue();
 
-    final saved = await controller.importIncoming(controller.folders.first);
+    final saved = await controller.importIncoming(
+      controller.folders.value.first,
+    );
     expect(saved, false);
     expect(controller.error.value, contains('无法读取'));
-    expect(controller.incomingShares, isEmpty);
+    expect(controller.incomingShares.value, isEmpty);
   });
 
   test('部分导入失败仍刷新已成功文件并上报错误', () async {
@@ -559,7 +565,7 @@ void main() {
     );
     await controller.pickRoot();
     await controller.importFromPicker(const ['*/*']);
-    expect(controller.entries.single.name, '成功.jpg');
+    expect(controller.entries.value.single.name, '成功.jpg');
     expect(controller.error.value, contains('失败'));
   });
 
@@ -572,7 +578,7 @@ void main() {
     );
     await controller.pickRoot();
     await controller.importFromPicker(const ['application/pdf']);
-    expect(controller.entries, isEmpty);
+    expect(controller.entries.value, isEmpty);
     expect(controller.error.value, isNull);
   });
 
@@ -587,7 +593,7 @@ void main() {
     await controller.pickRoot();
     await controller.importFromPicker(const ['application/pdf']);
     expect(storage.imports.single, 'application/pdf');
-    expect(controller.entries.single.isPdf, true);
+    expect(controller.entries.value.single.isPdf, true);
   });
 
   test('拍照导入当前目录并登记创建时间', () async {
@@ -602,7 +608,7 @@ void main() {
     await controller.pickRoot();
     await controller.capturePhoto();
     expect(storage.photoCaptures, 1);
-    expect(controller.entries.single.name, 'IMG_001.jpg');
+    expect(controller.entries.value.single.name, 'IMG_001.jpg');
     // 拍照是本应用创建的内容，登记创建时间用于排序。
     expect(store.created.keys.any((uri) => uri.contains('IMG_001')), true);
     // 导入的外部内容不登记创建时间，避免倒推不实信息。
@@ -631,7 +637,7 @@ void main() {
     storage.contents['root']!.add(entry('素材'));
     await controller.refresh();
     final outcome = await controller.zipEntry(
-      controller.entries.single,
+      controller.entries.value.single,
       fileName: '现场资料.zip',
     );
     expect(archive.zipNames.single, '现场资料.zip');
@@ -680,7 +686,7 @@ void main() {
     await controller.pickRoot();
     await controller.captureVideo();
     expect(storage.videoCaptures, 1);
-    expect(controller.entries.single.name, 'VID_001.mp4');
+    expect(controller.entries.value.single.name, 'VID_001.mp4');
     expect(store.created.keys.any((uri) => uri.contains('VID_001')), true);
   });
 
@@ -694,7 +700,7 @@ void main() {
     await controller.pickRoot();
     await controller.captureVideo();
     expect(storage.videoCaptures, 1);
-    expect(controller.entries, isEmpty);
+    expect(controller.entries.value, isEmpty);
     expect(controller.error.value, isNull);
   });
 }

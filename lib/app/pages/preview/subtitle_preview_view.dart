@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../file_type/file_extension_map.dart';
 import '../../models/storage_entry.dart';
@@ -21,7 +22,7 @@ class SubtitlePreviewView extends StatefulWidget {
 }
 
 class _SubtitlePreviewViewState extends State<SubtitlePreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late Future<TextContent> _future = _load();
 
   Future<TextContent> _load() => loadTextContent(_storage, widget.entry);

@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
-import '../../routes/app_pages.dart';
+import '../../di/injector.dart';
+import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 import '../home/home_controller.dart';
 import '../preview/preview_settings_controller.dart';
 
 /// 管理活动根目录与外观设置；文件导入与录制均交由系统应用完成。
-class SettingsView extends GetView<HomeController> {
+class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
+
+  HomeController get controller => getIt<HomeController>();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Get.find<ThemeController>();
-    final editor = Get.find<PreviewSettingsController>();
-    return Obx(
-      () => Scaffold(
+    final theme = getIt<ThemeController>();
+    final editor = getIt<PreviewSettingsController>();
+    return SignalBuilder(
+      builder: (context) => Scaffold(
         appBar: AppBar(title: const Text('设置')),
         body: ListView(
           children: [
@@ -32,7 +36,9 @@ class SettingsView extends GetView<HomeController> {
             ListTile(
               leading: const Icon(Icons.folder_open),
               title: const Text('存储文件夹'),
-              subtitle: Text(controller.folders.firstOrNull?.name ?? '尚未选择'),
+              subtitle: Text(
+                controller.folders.value.firstOrNull?.name ?? '尚未选择',
+              ),
               trailing: const Icon(Icons.chevron_right),
               enabled: !controller.busy.value,
               onTap: controller.pickRoot,
@@ -49,7 +55,7 @@ class SettingsView extends GetView<HomeController> {
               title: const Text('主题配色'),
               subtitle: Text(theme.scheme.value.data.name),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Get.toNamed<void>(Routes.themePicker),
+              onTap: () => context.push<void>(Routes.themePicker),
             ),
             const Divider(height: 1),
             ListTile(
@@ -57,7 +63,7 @@ class SettingsView extends GetView<HomeController> {
               title: const Text('编辑器配置'),
               subtitle: Text('字号 ${editor.fontSize.value.round()}'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Get.toNamed<void>(Routes.editorSettings),
+              onTap: () => context.push<void>(Routes.editorSettings),
             ),
           ],
         ),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/epub_reader.dart';
 import '../../preview/preview_limits.dart';
@@ -23,9 +24,9 @@ class EpubPreviewView extends StatefulWidget {
 }
 
 class _EpubPreviewViewState extends State<EpubPreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
+      getIt<PreviewSettingsController>();
   final _pageController = PageController();
 
   EpubBook? _book;
@@ -158,8 +159,8 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
       controller: _pageController,
       itemCount: book.chapters.length,
       onPageChanged: (index) => setState(() => _index = index),
-      itemBuilder: (context, index) => Obx(
-        () => SingleChildScrollView(
+      itemBuilder: (context, index) => SignalBuilder(
+        builder: (context) => SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: HtmlWidget(
             book.chapters[index].html,

@@ -1,7 +1,8 @@
-import 'package:get/get.dart';
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/storage_entry.dart';
-import '../routes/app_pages.dart';
+import '../routes/app_routes.dart';
 import '../services/saf_storage.dart';
 import 'preview_kind.dart';
 import 'preview_limits.dart';
@@ -24,6 +25,7 @@ bool prefersTextEditor(StorageEntry entry) {
 /// 返回 true 表示进入了应用内页面，调用方可在返回后刷新列表以反映
 /// 预览/编辑可能产生的改动。
 Future<bool> openEntryPreview(
+  BuildContext context,
   StorageEntry entry, {
   required StorageGateway storage,
 }) async {
@@ -33,9 +35,9 @@ Future<bool> openEntryPreview(
     return false;
   }
   if (prefersTextEditor(entry)) {
-    await Get.toNamed<void>(Routes.textEditor, arguments: entry);
+    await context.push<void>(Routes.textEditor, extra: entry);
     return true;
   }
-  await Get.toNamed<void>(Routes.preview, arguments: entry);
+  await context.push<void>(Routes.preview, extra: entry);
   return true;
 }

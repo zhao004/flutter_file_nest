@@ -1,63 +1,42 @@
 import 'package:flutter/material.dart';
-
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import 'app/di/injector.dart';
 import 'app/localization.dart';
-import 'app/routes/app_pages.dart';
-import 'app/database/database.dart';
-import 'app/pages/preview/preview_settings_controller.dart';
-import 'app/services/archive_service.dart';
-import 'app/services/incoming_share_service.dart';
-import 'app/services/saf_storage.dart';
-import 'app/services/thumbnail_service.dart';
-import 'app/services/vault_store.dart';
+import 'app/routes/app_router.dart';
 import 'app/theme/theme_controller.dart';
-import 'app/theme/theme_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // media_kit 使用 libmpv，需在创建 Player 前完成初始化。
   MediaKit.ensureInitialized();
-  final storage = SafStorage();
-  Get.put<StorageGateway>(storage, permanent: true);
-  Get.put<ThumbnailGateway>(ThumbnailService(storage), permanent: true);
-  // 主题与库偏好共用同一数据库连接。
-  final database = AppDatabase();
-  Get.put<VaultStore>(DriftVaultStore(database), permanent: true);
-  // 预览显示偏好与库偏好共用同一存储，启动时注册为常驻实例。
-  Get.put<PreviewSettingsController>(
-    PreviewSettingsController(Get.find<VaultStore>()),
-    permanent: true,
-  );
-  final themeController = Get.put<ThemeController>(
-    ThemeController(DriftThemeStore(database)),
-    permanent: true,
-  );
-  Get.put<ArchiveGateway>(ArchiveService(), permanent: true);
-  Get.put<IncomingShareGateway>(const IncomingShareService(), permanent: true);
-  // 首帧前完成主题加载，避免启动时先亮后暗的闪烁。
-  await themeController.initialize();
-  runApp(const FileNestApp());
+  // 依赖注册必须在首帧前完成，主题读取失败时保留默认值。
+  await configureDependencies();
+  runApp(FileNestApp(router: createAppRouter()));
 }
 
-/// Android 文件与录制应用入口；功能控制器通过各页 Binding 管理生命周期。
+/// Android 文件与录制应用入口；主题变化时仅重建应用根配置。
 class FileNestApp extends StatelessWidget {
-  const FileNestApp({super.key});
+  const FileNestApp({required this.router, super.key});
+
+  final GoRouter router;
 
   @override
-  Widget build(BuildContext context) => Obx(() {
-    final theme = Get.find<ThemeController>();
-    return GetMaterialApp(
-      title: 'FileNest',
-      debugShowCheckedModeBanner: false,
-      theme: theme.lightTheme,
-      darkTheme: theme.darkTheme,
-      themeMode: theme.mode.value,
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: appSupportedLocales,
-      initialRoute: AppPages.initial,
-      getPages: AppPages.routes,
-    );
-  });
+  Widget build(BuildContext context) => SignalBuilder(
+    builder: (context) {
+      final theme = getIt<ThemeController>();
+      return MaterialApp.router(
+        title: 'FileNest',
+        debugShowCheckedModeBanner: false,
+        theme: theme.lightTheme,
+        darkTheme: theme.darkTheme,
+        themeMode: theme.mode.value,
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        routerConfig: router,
+      );
+    },
+  );
 }

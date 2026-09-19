@@ -15,7 +15,7 @@ import 'package:filenest/app/pages/preview/unsupported_preview_view.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:filenest/app/di/injector.dart';
 
 import 'support/fakes.dart';
 
@@ -24,13 +24,13 @@ void main() {
 
   setUp(() {
     storage = FakeStorage();
-    Get.put<StorageGateway>(storage);
-    Get.put<PreviewSettingsController>(
+    getIt.registerSingleton<StorageGateway>(storage);
+    getIt.registerSingleton<PreviewSettingsController>(
       PreviewSettingsController(MemoryStore()),
     );
   });
 
-  tearDown(Get.reset);
+  tearDown(() => getIt.reset());
 
   Future<void> pumpView(WidgetTester tester, Widget view) async {
     await tester.pumpWidget(MaterialApp(home: view));
@@ -59,7 +59,7 @@ void main() {
   });
 
   testWidgets('关闭行号偏好后代码预览不显示行号', (tester) async {
-    await Get.find<PreviewSettingsController>().setLineNumbers(false);
+    await getIt<PreviewSettingsController>().setLineNumbers(false);
     await pumpView(tester, CodePreviewView(entry: entry('script.sh')));
     expect(find.text('1\n2'), findsNothing);
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
@@ -35,7 +36,7 @@ class _FontPreviewViewState extends State<FontPreviewView> {
 
   Future<void> _load() async {
     try {
-      final bytes = await Get.find<StorageGateway>().readDocument(widget.entry);
+      final bytes = await getIt<StorageGateway>().readDocument(widget.entry);
       if (bytes == null || bytes.isEmpty) {
         throw StateError('empty font');
       }
@@ -75,7 +76,7 @@ class _FontPreviewViewState extends State<FontPreviewView> {
       actions: [
         IconButton(
           tooltip: '用其他应用打开',
-          onPressed: () => Get.find<StorageGateway>().openFile(widget.entry),
+          onPressed: () => getIt<StorageGateway>().openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
       ],

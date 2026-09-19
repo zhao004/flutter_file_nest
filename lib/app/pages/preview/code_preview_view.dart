@@ -3,13 +3,15 @@ import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_highlight/themes/atom-one-light.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../file_type/file_extension_map.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/code_language.dart';
 import '../../preview/text_content.dart';
-import '../../routes/app_pages.dart';
+import '../../routes/app_routes.dart';
 import '../../services/saf_storage.dart';
 import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
@@ -29,13 +31,13 @@ class CodePreviewView extends StatefulWidget {
 }
 
 class _CodePreviewViewState extends State<CodePreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
+      getIt<PreviewSettingsController>();
   late Future<TextContent> _future = _load();
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
-  final _query = ''.obs;
+  final _query = signal('');
   bool _searching = false;
 
   Future<TextContent> _load() => loadTextContent(_storage, widget.entry);
@@ -46,6 +48,7 @@ class _CodePreviewViewState extends State<CodePreviewView> {
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
+    _query.dispose();
     super.dispose();
   }
 
@@ -74,7 +77,7 @@ class _CodePreviewViewState extends State<CodePreviewView> {
 
   /// 进入编辑页；返回后重新加载以反映保存结果。
   Future<void> _edit() async {
-    await Get.toNamed<void>(Routes.textEditor, arguments: widget.entry);
+    await context.push<void>(Routes.textEditor, extra: widget.entry);
     if (!mounted) return;
     setState(() => _future = _load());
   }
@@ -182,37 +185,39 @@ class _CodePreviewViewState extends State<CodePreviewView> {
     ),
   );
 
-  Widget _body(TextContent content) => Obx(() {
-    final query = _query.value;
-    final brightness = Theme.of(context).brightness;
-    final language = highlightLanguageFor(fileExtension(widget.entry.name));
-    final fontSize = _settings.fontSize.value;
-    final base = TextStyle(
-      fontFamily: 'monospace',
-      fontSize: fontSize,
-      height: 1.4,
-    );
-    final code = Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      child: _code(content, query, language, brightness, base),
-    );
-    // 代码预览保持横向滚动，行号才能与行内容对齐；自动换行仅作用于文本预览与编辑器。
-    return SingleChildScrollView(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_settings.lineNumbers.value)
-            _lineNumbers(context, content.text, base),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: code,
+  Widget _body(TextContent content) => SignalBuilder(
+    builder: (context) {
+      final query = _query.value;
+      final brightness = Theme.of(context).brightness;
+      final language = highlightLanguageFor(fileExtension(widget.entry.name));
+      final fontSize = _settings.fontSize.value;
+      final base = TextStyle(
+        fontFamily: 'monospace',
+        fontSize: fontSize,
+        height: 1.4,
+      );
+      final code = Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        child: _code(content, query, language, brightness, base),
+      );
+      // 代码预览保持横向滚动，行号才能与行内容对齐；自动换行仅作用于文本预览与编辑器。
+      return SingleChildScrollView(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_settings.lineNumbers.value)
+              _lineNumbers(context, content.text, base),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: code,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  });
+          ],
+        ),
+      );
+    },
+  );
 
   Widget _code(
     TextContent content,

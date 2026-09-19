@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../preview/preview_defaults.dart';
 import '../preview/preview_settings_controller.dart';
 
@@ -8,14 +9,17 @@ import '../preview/preview_settings_controller.dart';
 ///
 /// 所有选项即时生效并持久化到 [PreviewSettingsController]；字号、自动换行、
 /// 行号同时作用于文本/代码预览与编辑器，Tab 缩进与自动缩进仅编辑器使用。
-class EditorSettingsView extends GetView<PreviewSettingsController> {
+class EditorSettingsView extends StatelessWidget {
   const EditorSettingsView({super.key});
+
+  PreviewSettingsController get controller =>
+      getIt<PreviewSettingsController>();
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('编辑器配置')),
-    body: Obx(
-      () => ListView(
+    body: SignalBuilder(
+      builder: (context) => ListView(
         children: [
           const _SectionHeader('文本与代码'),
           _fontSizeTile(context),

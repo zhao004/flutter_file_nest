@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/models/video_export_request.dart';
 import 'package:filenest/app/pages/preview/video_editor_view.dart';
 import 'package:filenest/app/preview/video_editor_host.dart';
@@ -8,7 +9,6 @@ import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 
 import 'support/fakes.dart';
 
@@ -36,15 +36,14 @@ void main() {
   String? saved;
 
   setUp(() {
-    Get.testMode = true;
     storage = FakeStorage();
     renderer = FakeRenderer();
     captured = null;
     saved = null;
-    Get.put<StorageGateway>(storage);
+    getIt.registerSingleton<StorageGateway>(storage);
   });
 
-  tearDown(Get.reset);
+  tearDown(() => getIt.reset());
 
   Widget builder(VideoEditorHostConfig config) {
     captured = config;
@@ -73,20 +72,21 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => VideoEditorView(
-                      entry: entry('clip.mp4', mime: 'video/mp4'),
-                      parent: root,
-                      onSaved: (value) => saved = value,
-                      editorBuilder: builder,
-                      renderer: renderer,
-                      audioTrackPicker: (_) async => const [],
-                      tempDirectoryProvider: () async => Directory.systemTemp,
+                onPressed: () async {
+                  saved = await Navigator.push<String>(
+                    context,
+                    MaterialPageRoute<String>(
+                      builder: (_) => VideoEditorView(
+                        entry: entry('clip.mp4', mime: 'video/mp4'),
+                        parent: root,
+                        editorBuilder: builder,
+                        renderer: renderer,
+                        audioTrackPicker: (_) async => const [],
+                        tempDirectoryProvider: () async => Directory.systemTemp,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 child: const Text('打开'),
               ),
             ),

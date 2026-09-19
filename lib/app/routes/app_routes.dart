@@ -1,8 +1,7 @@
-part of 'app_pages.dart';
-
+/// 应用路由路径常量；供路由表与页面导航共用。
 abstract class Routes {
   Routes._();
-  static const home = _Paths.home;
+  static const home = '/home';
   static const preview = '/preview';
   static const textEditor = '/preview/edit';
   static const imageEditor = '/preview/edit-image';
@@ -10,9 +9,4 @@ abstract class Routes {
   static const settings = '/settings';
   static const themePicker = '/settings/theme';
   static const editorSettings = '/settings/editor';
-}
-
-abstract class _Paths {
-  _Paths._();
-  static const home = '/home';
 }

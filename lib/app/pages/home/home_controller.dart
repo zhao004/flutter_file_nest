@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../models/archive_models.dart';
 import '../../models/batch_models.dart';
@@ -18,7 +18,7 @@ import '../../services/vault_store.dart';
 ///
 /// 批量操作仅作用于当前目录快照中的条目：选择集合不会跨目录累积，
 /// 因此父子项不会同时被选中；刷新后自动剔除已消失的选中项。
-class HomeController extends GetxController {
+class HomeController {
   HomeController({
     required this.storage,
     required this.store,
@@ -31,43 +31,46 @@ class HomeController extends GetxController {
   final ArchiveGateway archive;
   final ThumbnailGateway thumbnails;
   final IncomingShareGateway? incoming;
-  final folders = <StorageEntry>[].obs;
-  final entries = <StorageEntry>[].obs;
+  final folders = signal<List<StorageEntry>>([]);
+  final entries = signal<List<StorageEntry>>([]);
 
   /// 来自其他应用、等待选择目标文件夹保存的文件。
-  final incomingShares = <IncomingShare>[].obs;
+  final incomingShares = signal<List<IncomingShare>>([]);
   StreamSubscription<List<IncomingShare>>? _incomingSub;
-  final preferences = const VaultPreferences().obs;
-  final busy = false.obs;
-  final error = RxnString();
-  final rootRequired = true.obs;
+  final preferences = signal(const VaultPreferences());
+  final busy = signal(false);
+  final error = signal<String?>(null);
+  final rootRequired = signal(true);
 
   /// 创建时间元数据（可重建缓存）；键为条目 URI，仅包含本应用登记过的文件。
   final _createdTimes = <String, DateTime>{};
 
+  /// 首页挂载标记；[start] 只执行一次订阅与初始化。
+  bool _started = false;
+
   // ---- 批量选择（P3B-01）----
-  final selectionMode = false.obs;
+  final selectionMode = signal(false);
 
   /// 已选中条目的 URI；仅限当前目录，刷新后剔除已不存在的选中项。
-  final selected = RxSet<String>();
+  final selected = signal<Set<String>>({});
 
   /// 进行中或刚结束的批量任务；用于进度展示与逐项结果对话框。
-  final batchJob = Rxn<BatchJob>();
+  final batchJob = signal<BatchJob?>(null);
 
   // ---- 搜索（P3B-05）----
   /// null 表示未进入搜索；非空时列表展示搜索结果。
-  final searchQuery = RxnString();
-  final searchResults = <StorageEntry>[].obs;
-  final searchRecursive = false.obs;
-  final searching = false.obs;
-  final searchIncomplete = false.obs;
+  final searchQuery = signal<String?>(null);
+  final searchResults = signal<List<StorageEntry>>([]);
+  final searchRecursive = signal(false);
+  final searching = signal(false);
+  final searchIncomplete = signal(false);
   final _searchLocations = <String, String>{};
   int _searchToken = 0;
   static const int _searchFlushSize = 20;
 
-  StorageEntry? get current => folders.lastOrNull;
-  bool get canGoBack => folders.length > 1;
-  int get selectedCount => selected.length;
+  StorageEntry? get current => folders.value.lastOrNull;
+  bool get canGoBack => folders.value.length > 1;
+  int get selectedCount => selected.value.length;
 
   /// 本应用登记的创建时间；外部文件无依据时保持未知。
   DateTime? createdAtOf(StorageEntry entry) => _createdTimes[entry.uri];
@@ -75,26 +78,27 @@ class HomeController extends GetxController {
   /// 搜索结果的位置标注；用于结果列表展示“位置：xxx”。
   String? searchLocationOf(StorageEntry entry) => _searchLocations[entry.uri];
 
-  @override
-  void onInit() {
-    super.onInit();
+  /// 首页挂载时调用；重复调用无副作用，测试也可直接调用。
+  void start() {
+    if (_started) return;
+    _started = true;
     startIncoming();
-    initialize();
+    unawaited(initialize());
   }
 
   /// 订阅外部打开/分享事件；重复调用无副作用，测试也可直接调用。
   void startIncoming() {
     // 事件通道仅在真实运行时可用；缺失时静默忽略。
     _incomingSub ??= incoming?.shares.listen(
-      incomingShares.addAll,
+      (shares) => incomingShares.addAll(shares),
       onError: (_) {},
     );
   }
 
-  @override
-  void onClose() {
+  /// 释放订阅；控制器为应用级实例，仅在测试或退出时调用。
+  void dispose() {
     _incomingSub?.cancel();
-    super.onClose();
+    _incomingSub = null;
   }
 
   /// 放弃当前待保存的外部分享文件。
@@ -104,7 +108,7 @@ class HomeController extends GetxController {
     preferences.value = await store.loadPreferences();
     final uri = preferences.value.rootUri;
     if (uri != null) {
-      folders.assignAll([await storage.validateRoot(uri)]);
+      folders.value = [await storage.validateRoot(uri)];
       rootRequired.value = false;
       await _load();
     }
@@ -116,12 +120,11 @@ class HomeController extends GetxController {
     final next = preferences.value.copyWith(rootUri: root.rootUri);
     await store.savePreferences(next);
     preferences.value = next;
-    folders.assignAll([root]);
+    folders.value = [root];
     rootRequired.value = false;
     await _load();
   });
 
-  @override
   Future<void> refresh() => _run(() async {
     if (current == null) return;
     final StorageEntry root;
@@ -146,22 +149,20 @@ class HomeController extends GetxController {
       children,
       await store.createdTimes(children.map((value) => value.uri)),
     );
-    entries.assignAll(
-      sortEntries(
-        children,
-        preferences.value.sort,
-        preferences.value.descending,
-        createdAt: _createdTimes,
-      ),
+    entries.value = sortEntries(
+      children,
+      preferences.value.sort,
+      preferences.value.descending,
+      createdAt: _createdTimes,
     );
     // 导航进入子目录后，旧目录的选择与搜索上下文失效。
     exitSelection();
     if (searchQuery.value != null) exitSearch();
   });
 
-  Future<void> back() => goTo(folders.length - 2);
+  Future<void> back() => goTo(folders.value.length - 2);
   Future<void> goTo(int index) => _run(() async {
-    if (index < 0 || index >= folders.length) return;
+    if (index < 0 || index >= folders.value.length) return;
     if (searchQuery.value != null) {
       _searchToken++;
       searchQuery.value = null;
@@ -169,7 +170,7 @@ class HomeController extends GetxController {
       searching.value = false;
       searchIncomplete.value = false;
     }
-    folders.removeRange(index + 1, folders.length);
+    folders.removeRange(index + 1, folders.value.length);
     await _load(resetThumbnails: true);
   });
 
@@ -182,18 +183,16 @@ class HomeController extends GetxController {
       children,
       await store.createdTimes(children.map((value) => value.uri)),
     );
-    entries.assignAll(
-      sortEntries(
-        children,
-        preferences.value.sort,
-        preferences.value.descending,
-        createdAt: _createdTimes,
-      ),
+    entries.value = sortEntries(
+      children,
+      preferences.value.sort,
+      preferences.value.descending,
+      createdAt: _createdTimes,
     );
     // 刷新后剔除已不存在的选中项（P3B-01）。
     final existing = children.map((value) => value.uri).toSet();
     selected.retainAll(existing);
-    if (selectionMode.value && selected.isEmpty) _exitSelectionOnly();
+    if (selectionMode.value && selected.value.isEmpty) _exitSelectionOnly();
   }
 
   void _loadCreatedTimes(
@@ -214,8 +213,11 @@ class HomeController extends GetxController {
     if (sort == EntrySort.created) {
       await _load();
     } else {
-      entries.assignAll(
-        sortEntries(entries, sort, descending, createdAt: _createdTimes),
+      entries.value = sortEntries(
+        entries.value,
+        sort,
+        descending,
+        createdAt: _createdTimes,
       );
     }
   });
@@ -314,7 +316,7 @@ class HomeController extends GetxController {
   /// 确认保存后即消费待保存列表；部分失败仍刷新已成功条目并上报错误，
   /// 避免重复保存同一批文件。
   Future<bool> importIncoming(StorageEntry folder) async {
-    final sources = [for (final share in incomingShares) share.uri];
+    final sources = [for (final share in incomingShares.value) share.uri];
     if (sources.isEmpty) return false;
     incomingShares.clear();
     var saved = false;
@@ -383,12 +385,12 @@ class HomeController extends GetxController {
 
   /// 全选当前目录条目；再次调用取消全选。
   void toggleSelectAll() {
-    if (selected.length == entries.length) {
+    if (selected.value.length == entries.value.length) {
       selected.clear();
     } else {
       selected
         ..clear()
-        ..addAll(entries.map((value) => value.uri));
+        ..addAll(entries.value.map((value) => value.uri));
     }
   }
 
@@ -406,8 +408,8 @@ class HomeController extends GetxController {
 
   /// 当前选中且仍存在于列表中的条目；顺序与列表一致。
   List<StorageEntry> selectedEntries() => [
-    for (final entry in entries)
-      if (selected.contains(entry.uri)) entry,
+    for (final entry in entries.value)
+      if (selected.value.contains(entry.uri)) entry,
   ];
 
   /// 批量删除前的影响汇总；调用方负责展示确认对话框。
@@ -442,7 +444,7 @@ class HomeController extends GetxController {
           ..status = BatchItemStatus.failed
           ..message = userError(failure);
       }
-      batchJob.refresh();
+      _refreshBatch();
     }
     // 失败项保留选中状态以便重试；成功项随刷新消失。
     selected.removeAll([
@@ -517,7 +519,7 @@ class HomeController extends GetxController {
               ..status = BatchItemStatus.failed
               ..message = userError(failure);
           }
-          batchJob.refresh();
+          _refreshBatch();
         }
         await _load();
         return job;
@@ -558,7 +560,7 @@ class HomeController extends GetxController {
               ..status = BatchItemStatus.failed
               ..message = userError(failure);
           }
-          batchJob.refresh();
+          _refreshBatch();
         }
         await _load();
         return job;
@@ -653,21 +655,21 @@ class HomeController extends GetxController {
     searchQuery.value = keyword;
     searchIncomplete.value = false;
     searchRecursive.value = false;
-    searchResults.assignAll(_filterCurrent(keyword));
+    searchResults.value = _filterCurrent(keyword);
     _searchLocations.clear();
     final folder = current;
     if (folder != null) {
-      for (final result in searchResults) {
+      for (final result in searchResults.value) {
         _searchLocations[result.uri] = folder.name;
       }
     }
   }
 
   List<StorageEntry> _filterCurrent(String keyword) {
-    if (keyword.isEmpty) return List.of(entries);
+    if (keyword.isEmpty) return List.of(entries.value);
     final lowered = keyword.toLowerCase();
     return [
-      for (final entry in entries)
+      for (final entry in entries.value)
         if (entry.name.toLowerCase().contains(lowered)) entry,
     ];
   }
@@ -781,6 +783,9 @@ class HomeController extends GetxController {
       busy.value = false;
     }
   }
+
+  /// 批量任务项原地更新后强制通知进度；可变对象不改变引用，需跳过相等判断。
+  void _refreshBatch() => batchJob.set(batchJob.value, force: true);
 
   /// 批量任务执行器；与 [userError] 相同的错误策略，返回任务供界面展示。
   Future<T?> _batchRun<T>(Future<T?> Function() action) async {

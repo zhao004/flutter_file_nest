@@ -35,11 +35,16 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # flex_color_scheme 9.x 返回独立包 material_ui 的 ThemeData，与 GetX 的
-  # GetMaterialApp（仍基于 flutter/material）类型不兼容；整体迁移到
+  # flex_color_scheme 9.x 返回独立包 material_ui 的 ThemeData，与应用根
+  # MaterialApp.router（基于 flutter/material）类型不兼容；整体迁移到
   # material_ui/cupertino_ui 是独立重构，待 Flutter 正式弃用后再随生态跟进。
   flex_color_scheme: ^8.4.0
-  get: 4.7.3
+  # signals_flutter 已包含 signals_core 并额外提供 SignalBuilder 等
+  # Flutter 响应式组件；无需再引入 signals 元包（其只导出 core，且会
+  # 带入未使用的 signals_hooks）。
+  signals_flutter: ^7.1.0
+  go_router: ^18.0.1
+  get_it: ^9.2.1
   # drift 2.32+ 改用 sqlite3 3.x，由 build hooks 在构建时自动打包 SQLite，
   # 不再需要 sqlite3_flutter_libs（0.6.0+eol 起已无功能）。
   drift: ^2.35.0

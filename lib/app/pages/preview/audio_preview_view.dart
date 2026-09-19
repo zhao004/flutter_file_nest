@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
+
 import 'package:media_kit/media_kit.dart';
 
 import '../../models/storage_entry.dart';
@@ -30,7 +32,7 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
   /// 快进快退步长。
   static const _step = Duration(seconds: 10);
 
-  late final VaultStore _store = Get.find<VaultStore>();
+  late final VaultStore _store = getIt<VaultStore>();
   Player? _player;
   final _subscriptions = <StreamSubscription<dynamic>>[];
   bool _ready = false;
@@ -238,7 +240,7 @@ class _AudioPreviewViewState extends State<AudioPreviewView>
         ),
         IconButton(
           tooltip: '用其他应用打开',
-          onPressed: () => Get.find<StorageGateway>().openFile(widget.entry),
+          onPressed: () => getIt<StorageGateway>().openFile(widget.entry),
           icon: const Icon(Icons.open_in_new),
         ),
       ],

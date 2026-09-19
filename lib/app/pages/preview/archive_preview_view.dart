@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
@@ -42,7 +43,7 @@ class _ArchivePreviewViewState extends State<ArchivePreviewView> {
     'ico',
   };
 
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late Future<ArchiveContents> _future = _load();
   String _prefix = '';
 

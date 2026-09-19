@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
@@ -19,9 +20,9 @@ class UnsupportedPreviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final storage = Get.find<StorageGateway>();
-    final archive = Get.isRegistered<ArchiveGateway>()
-        ? Get.find<ArchiveGateway>()
+    final storage = getIt<StorageGateway>();
+    final archive = getIt.isRegistered<ArchiveGateway>()
+        ? getIt<ArchiveGateway>()
         : null;
     final category = entry.fileCategory;
     return Scaffold(

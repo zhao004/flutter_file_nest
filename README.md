@@ -35,7 +35,7 @@
 
 ## 技术栈
 
-- Flutter + Dart 3（`useMaterial3`），GetX 负责路由与状态。
+- Flutter + Dart 3（`useMaterial3`）；signals 负责状态，go_router 负责路由，get_it 负责依赖注入。
 - Drift（SQLite）保存设置、本应用登记的文件创建时间与媒体续播位置。
 - Kotlin 平台通道封装 SAF、缩略图、ZIP 归档与分享。
 - `media_kit` 播放视频与音频；`flutter_svg`、`flutter_markdown_plus`、`flutter_highlight`、`archive`、`charset_converter`、`xml` 与 `flutter_widget_from_html_core` 支撑各类型预览。
@@ -56,9 +56,10 @@
 
 ```
 lib/
-  main.dart                     应用入口与依赖注册
+  main.dart                     应用入口与依赖注册（get_it）
   app/
-    routes/                     GetX 路由表
+    di/                         get_it 服务定位器与启动注册
+    routes/                     go_router 路由表与路径常量
     pages/
       home/                     文件列表：控制器、视图、列表/对话框组件
       preview/                  各类型预览页与预览偏好控制器

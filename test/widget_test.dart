@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:get/get.dart';
+import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/models/archive_models.dart';
 import 'package:filenest/app/models/incoming_share.dart';
 import 'package:filenest/app/models/storage_entry.dart';
@@ -19,21 +19,18 @@ import 'support/fakes.dart';
 import 'support/archive_fakes.dart';
 
 void main() {
-  setUp(() {
-    Get.testMode = true;
-  });
-  tearDown(() => Get.reset());
+  tearDown(() => getIt.reset());
 
   testWidgets('选择根目录、新建文件夹并校验非法名称', (tester) async {
     final storage = FakeStorage();
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore(),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.text('选择文件夹'));
     await tester.pumpAndSettle();
@@ -56,14 +53,14 @@ void main() {
 
   testWidgets('新建文件并校验非法名称', (tester) async {
     final storage = FakeStorage();
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     // 操作入口为可展开悬浮按钮；点击展开后的小按钮。
     await tester.tap(find.byTooltip('更多操作'));
@@ -85,14 +82,14 @@ void main() {
   testWidgets('删除前显示影响数量，取消不会删除，确认后刷新', (tester) async {
     final storage = FakeStorage();
     storage.contents['root']!.add(entry('现场', directory: true));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     Future<void> showDelete() async {
       // 操作入口为长按文件行。
@@ -133,14 +130,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final storage = FakeStorage();
       storage.contents['root']!.add(entry('很长的文件名称' * 12));
-      Get.put(
+      getIt.registerSingleton(
         HomeController(
           storage: storage,
           store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
           archive: FakeArchive(),
         ),
       );
-      await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+      await tester.pumpWidget(const MaterialApp(home: HomeView()));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('更多操作'), findsOneWidget);
@@ -151,14 +148,14 @@ void main() {
     final storage = FakeStorage();
     final archive = FakeArchive();
     storage.contents['root']!.add(entry('素材.zip', mime: 'application/zip'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     // 操作入口为长按文件行。
     await tester.longPress(find.text('素材.zip'));
@@ -175,14 +172,14 @@ void main() {
     final storage = FakeStorage();
     final archive = FakeArchive();
     storage.contents['root']!.add(entry('素材.mp4', mime: 'video/mp4'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -202,14 +199,14 @@ void main() {
     final storage = FakeStorage();
     final archive = FakeArchive();
     storage.contents['root']!.add(entry('视频.mp4'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: archive,
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     archive.emit(
       const ArchiveTaskState(
@@ -235,14 +232,14 @@ void main() {
         entry('资料.pdf', mime: 'application/pdf'),
         entry('照片.jpg', mime: 'image/jpeg'),
       ];
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('更多操作'));
     await tester.pumpAndSettle();
@@ -261,14 +258,14 @@ void main() {
   testWidgets('悬浮菜单点击空白或目录行自动收起', (tester) async {
     final storage = FakeStorage();
     storage.contents['root']!.add(entry('子目录', directory: true));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     // 展开状态由主按钮旋转角标识：展开 0.125 圈，收起为 0。
     double fabTurns() => tester
@@ -302,14 +299,14 @@ void main() {
     final storage = FakeStorage()
       ..takePhotoResult = entry('IMG_001.jpg', mime: 'image/jpeg')
       ..takeVideoResult = entry('VID_001.mp4', mime: 'video/mp4');
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('更多操作'));
     await tester.pumpAndSettle();
@@ -327,10 +324,10 @@ void main() {
     final storage = FakeStorage();
     final store = MemoryStore()
       ..value = VaultPreferences(rootUri: root.rootUri);
-    Get.put(
+    getIt.registerSingleton(
       HomeController(storage: storage, store: store, archive: FakeArchive()),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     // 搜索为独立图标按钮；设置仅存在于“更多”菜单。
     expect(find.byIcon(Icons.search), findsOneWidget);
@@ -393,14 +390,14 @@ void main() {
     storage.contents['root']!.add(
       entry('很长的文件名' * 8 + '.mp4', size: 2048, modified: DateTime(2026, 9, 18)),
     );
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     expect(find.byTooltip('多选'), findsOneWidget);
     await tester.tap(find.byTooltip('多选'));
@@ -439,8 +436,8 @@ void main() {
       archive: FakeArchive(),
       thumbnails: thumbs,
     );
-    Get.put(controller);
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    getIt.registerSingleton(controller);
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     expect(thumbs.loads, hasLength(1));
 
@@ -466,14 +463,14 @@ void main() {
       ..add(entry('乙', directory: true))
       ..add(entry('文件.mp4', mime: 'video/mp4'));
     storage.contents['甲'] = [entry('内部', directory: true)];
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -519,14 +516,14 @@ void main() {
     storage.contents['root']!
       ..add(entry('甲', directory: true))
       ..add(entry('文件.mp4', mime: 'video/mp4'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('多选'));
     await tester.pumpAndSettle();
@@ -558,7 +555,7 @@ void main() {
     storage.contents['root']!.add(entry('子目录', directory: true));
     final incoming = FakeIncomingShares();
     addTearDown(incoming.close);
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
@@ -566,7 +563,7 @@ void main() {
         incoming: incoming,
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     // 先进入子目录，分享应保存到该目录而非根目录。
     await tester.tap(find.text('子目录'));
@@ -587,7 +584,7 @@ void main() {
     final incoming = FakeIncomingShares();
     addTearDown(incoming.close);
     // 无持久化根目录：首次收到分享应先弹出授权提示。
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore(),
@@ -595,7 +592,7 @@ void main() {
         incoming: incoming,
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
     incoming.emit([const IncomingShare(uri: 'content://wx/7', name: '分享.pdf')]);
     await tester.pumpAndSettle();
@@ -616,7 +613,7 @@ void main() {
   testWidgets('视频预览页初始化失败时展示错误态与外部打开入口', (tester) async {
     // 测试环境没有 media_kit 原生库（libmpv），初始化失败应回落到错误态。
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         home: VideoView(entry: entry('视频.mp4', mime: 'video/mp4')),
       ),
     );
@@ -627,9 +624,9 @@ void main() {
   });
 
   testWidgets('PDF 预览页按页渲染并显示页码', (tester) async {
-    Get.put<StorageGateway>(FakeStorage(), permanent: true);
+    getIt.registerSingleton<StorageGateway>(FakeStorage());
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         home: PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
       ),
     );
@@ -642,10 +639,10 @@ void main() {
   });
 
   testWidgets('图片预览页顶部按钮在黑色背景上保持白色图标', (tester) async {
-    Get.put<StorageGateway>(FakeStorage(), permanent: true);
+    getIt.registerSingleton<StorageGateway>(FakeStorage());
     // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         theme: buildLightTheme(FlexScheme.blue),
         home: Builder(
           builder: (context) => Scaffold(
@@ -681,10 +678,10 @@ void main() {
   });
 
   testWidgets('PDF 预览页顶部按钮在黑色背景上保持白色图标', (tester) async {
-    Get.put<StorageGateway>(FakeStorage(), permanent: true);
+    getIt.registerSingleton<StorageGateway>(FakeStorage());
     // 浅色主题的 AppBar 图标色为深色；沉浸式黑底仍需白色图标。
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         theme: buildLightTheme(FlexScheme.blue),
         home: PdfPreviewView(entry: entry('合同.pdf', mime: 'application/pdf')),
       ),
@@ -703,14 +700,14 @@ void main() {
     storage.contents['root']!
       ..add(entry('照片.jpg', mime: 'image/jpeg'))
       ..add(entry('备忘.txt', mime: 'text/plain'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
 
     await tester.longPress(find.text('照片.jpg'));
@@ -730,14 +727,14 @@ void main() {
     storage.contents['root']!
       ..add(entry('短片.mp4', mime: 'video/mp4'))
       ..add(entry('照片.png', mime: 'image/png'));
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: storage,
         store: MemoryStore()..value = VaultPreferences(rootUri: root.rootUri),
         archive: FakeArchive(),
       ),
     );
-    await tester.pumpWidget(const GetMaterialApp(home: HomeView()));
+    await tester.pumpWidget(const MaterialApp(home: HomeView()));
     await tester.pumpAndSettle();
 
     await tester.longPress(find.text('短片.mp4'));

@@ -7,7 +7,7 @@ import 'package:filenest/app/pages/preview/text_editor_view.dart';
 import 'package:filenest/app/preview/editor_surface.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:filenest/app/di/injector.dart';
 
 import 'support/fakes.dart';
 
@@ -95,17 +95,16 @@ void main() {
   late _FakeHolder holder;
 
   setUp(() {
-    Get.testMode = true;
     holder = _FakeHolder();
     storage = FakeStorage()
       ..readDocumentLimitedResult = Uint8List.fromList(utf8.encode('hello'));
-    Get.put<StorageGateway>(storage);
-    Get.put<PreviewSettingsController>(
+    getIt.registerSingleton<StorageGateway>(storage);
+    getIt.registerSingleton<PreviewSettingsController>(
       PreviewSettingsController(MemoryStore()),
     );
   });
 
-  tearDown(Get.reset);
+  tearDown(() => getIt.reset());
 
   Widget builder(CodeEditorHostConfig config) =>
       _FakeEditorHost(config: config, holder: holder);
@@ -158,7 +157,7 @@ void main() {
   });
 
   testWidgets('编辑器按偏好应用字号、换行、行号与缩进', (tester) async {
-    final settings = Get.find<PreviewSettingsController>();
+    final settings = getIt<PreviewSettingsController>();
     await settings.setFontSize(20);
     await settings.setWrap(false);
     await settings.setLineNumbers(false);

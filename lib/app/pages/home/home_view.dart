@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../file_type/file_category.dart';
 import '../../file_type/file_category_icon.dart';
 import '../../file_type/file_icon_mapper.dart';
@@ -8,7 +10,7 @@ import '../../models/archive_models.dart';
 import '../../models/media_editor_args.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/preview_launcher.dart';
-import '../../routes/app_pages.dart';
+import '../../routes/app_routes.dart';
 import 'home_controller.dart';
 import 'home_widgets.dart';
 
@@ -23,24 +25,29 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
-  HomeController get controller => Get.find<HomeController>();
+  HomeController get controller => getIt<HomeController>();
 
   /// 待保存外部分享的处理状态；避免重复弹窗。
-  Worker? _incomingWorker;
+  EffectCleanup? _incomingEffect;
   bool _promptingIncoming = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _incomingWorker = ever(controller.incomingShares, (_) => _handleIncoming());
+    controller.start();
+    // 分享列表变化时立即处理；effect 创建时会先执行一次。
+    _incomingEffect = effect(() {
+      controller.incomingShares.value;
+      _handleIncoming();
+    });
     // 冷启动时可能已存在待保存项，构建完成后补处理一次。
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleIncoming());
   }
 
   @override
   void dispose() {
-    _incomingWorker?.dispose();
+    _incomingEffect?.call();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -50,7 +57,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   /// 当前文件夹不可写时回退到授权根目录；完全没有可用目录（首次或授权失效）
   /// 时弹一次授权，授权后保存到根目录。
   Future<void> _handleIncoming() async {
-    if (_promptingIncoming || !mounted || controller.incomingShares.isEmpty) {
+    if (_promptingIncoming ||
+        !mounted ||
+        controller.incomingShares.value.isEmpty) {
       return;
     }
     _promptingIncoming = true;
@@ -62,12 +71,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       }
       final target = controller.current?.canCreate == true
           ? controller.current
-          : controller.folders.firstOrNull;
+          : controller.folders.value.firstOrNull;
       if (target == null) {
         controller.clearIncoming();
         return;
       }
-      final count = controller.incomingShares.length;
+      final count = controller.incomingShares.value.length;
       if (await controller.importIncoming(target)) {
         _notify('已保存 $count 个文件到「${target.name}」');
       }
@@ -208,7 +217,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   /// 批量移动：应用内目录选择器确定目标，禁止移入自身或后代。
   Future<void> _batchMove() async {
-    final root = controller.folders.firstOrNull;
+    final root = controller.folders.value.firstOrNull;
     if (root == null) return;
     final trail = await showDialog<List<StorageEntry>>(
       context: context,
@@ -252,7 +261,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Future<void> _showDetails(StorageEntry entry) async {
-    final location = controller.folders.map((value) => value.name).join(' / ');
+    final location = controller.folders.value
+        .map((value) => value.name)
+        .join(' / ');
     await showDialog<void>(
       context: context,
       builder: (_) => EntryDetailsDialog(
@@ -267,14 +278,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Future<void> _editImage(StorageEntry entry) async {
     final parent = controller.current;
     if (parent == null) return;
-    await Get.toNamed<void>(
+    final saved = await context.push<String>(
       Routes.imageEditor,
-      arguments: MediaEditorArgs(
-        entry: entry,
-        parent: parent,
-        onSaved: (name) => _notify('已保存副本：$name'),
-      ),
+      extra: MediaEditorArgs(entry: entry, parent: parent),
     );
+    if (saved != null && mounted) _notify('已保存副本：$saved');
     await controller.refresh();
   }
 
@@ -282,14 +290,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Future<void> _editVideo(StorageEntry entry) async {
     final parent = controller.current;
     if (parent == null) return;
-    await Get.toNamed<void>(
+    final saved = await context.push<String>(
       Routes.videoEditor,
-      arguments: MediaEditorArgs(
-        entry: entry,
-        parent: parent,
-        onSaved: (name) => _notify('已保存副本：$name'),
-      ),
+      extra: MediaEditorArgs(entry: entry, parent: parent),
     );
+    if (saved != null && mounted) _notify('已保存副本：$saved');
     await controller.refresh();
   }
 
@@ -304,7 +309,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
     // 外部类型由启动器直接交给系统；应用内预览返回后刷新，反映预览页
     // 可能产生的改动（例如归档解压产生的新文件）。
-    final inApp = await openEntryPreview(entry, storage: controller.storage);
+    final inApp = await openEntryPreview(
+      context,
+      entry,
+      storage: controller.storage,
+    );
     if (inApp) await controller.refresh();
   }
 
@@ -457,126 +466,133 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Obx(() {
-    final busy = controller.busy.value;
-    final needsRoot = controller.rootRequired.value;
-    final current = controller.current;
-    final selectionMode = controller.selectionMode.value;
-    final searching = controller.searching.value;
-    final inSearch = controller.searchQuery.value != null;
-    // 搜索状态行仅在扫描中或结果不完整时出现，不再常驻结果数量提示。
-    final searchStatus = inSearch ? _searchStatus() : null;
-    // 项目固定的 build_runner/analyzer 无法解析 `?element` 空安全元素新语法，
-    // 用可空列表配合展开运算符达到同等效果。
-    final statusWidgets = searchStatus == null ? null : <Widget>[searchStatus];
-    return PopScope(
-      canPop:
-          !selectionMode && !inSearch && (!controller.canGoBack || needsRoot),
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _handlePop();
-      },
-      child: Scaffold(
-        appBar: inSearch ? _searchBar(busy) : _appBar(busy, needsRoot),
-        body: Column(
-          children: [
-            SizedBox(
-              height: 3,
-              child: busy || searching ? const LinearProgressIndicator() : null,
-            ),
-            if (controller.archive.active.value != null)
-              _archiveBanner(controller.archive.active.value!),
-            if (controller.error.value != null)
-              MaterialBanner(
-                content: Text(controller.error.value!),
-                actions: [
-                  TextButton(
-                    onPressed: busy ? null : controller.refresh,
-                    child: const Text('刷新'),
-                  ),
-                  IconButton(
-                    tooltip: '关闭提示',
-                    onPressed: () => controller.error.value = null,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ...?statusWidgets,
-            if (!needsRoot && current != null && !inSearch)
+  Widget build(BuildContext context) => SignalBuilder(
+    builder: (context) {
+      final busy = controller.busy.value;
+      final needsRoot = controller.rootRequired.value;
+      final current = controller.current;
+      final selectionMode = controller.selectionMode.value;
+      final searching = controller.searching.value;
+      final inSearch = controller.searchQuery.value != null;
+      // 搜索状态行仅在扫描中或结果不完整时出现，不再常驻结果数量提示。
+      final searchStatus = inSearch ? _searchStatus() : null;
+      // 项目固定的 build_runner/analyzer 无法解析 `?element` 空安全元素新语法，
+      // 用可空列表配合展开运算符达到同等效果。
+      final statusWidgets = searchStatus == null
+          ? null
+          : <Widget>[searchStatus];
+      return PopScope(
+        canPop:
+            !selectionMode && !inSearch && (!controller.canGoBack || needsRoot),
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _handlePop();
+        },
+        child: Scaffold(
+          appBar: inSearch ? _searchBar(busy) : _appBar(busy, needsRoot),
+          body: Column(
+            children: [
               SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: controller.folders.length,
-                  separatorBuilder: (_, _) =>
-                      const Icon(Icons.chevron_right, size: 16),
-                  itemBuilder: (context, index) => TextButton(
-                    onPressed: busy ? null : () => controller.goTo(index),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 180),
-                      child: Text(
-                        controller.folders[index].name,
-                        overflow: TextOverflow.ellipsis,
+                height: 3,
+                child: busy || searching
+                    ? const LinearProgressIndicator()
+                    : null,
+              ),
+              if (controller.archive.active.value != null)
+                _archiveBanner(controller.archive.active.value!),
+              if (controller.error.value != null)
+                MaterialBanner(
+                  content: Text(controller.error.value!),
+                  actions: [
+                    TextButton(
+                      onPressed: busy ? null : controller.refresh,
+                      child: const Text('刷新'),
+                    ),
+                    IconButton(
+                      tooltip: '关闭提示',
+                      onPressed: () => controller.error.value = null,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ...?statusWidgets,
+              if (!needsRoot && current != null && !inSearch)
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: controller.folders.value.length,
+                    separatorBuilder: (_, _) =>
+                        const Icon(Icons.chevron_right, size: 16),
+                    itemBuilder: (context, index) => TextButton(
+                      onPressed: busy ? null : () => controller.goTo(index),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 180),
+                        child: Text(
+                          controller.folders.value[index].name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
                 ),
+              Expanded(
+                child: needsRoot
+                    ? _rootPrompt()
+                    : inSearch
+                    ? _searchResults(busy)
+                    : _entryList(busy, selectionMode),
               ),
-            Expanded(
-              child: needsRoot
-                  ? _rootPrompt()
-                  : inSearch
-                  ? _searchResults(busy)
-                  : _entryList(busy, selectionMode),
-            ),
-          ],
-        ),
-        // 多选模式保留批量操作栏；浏览模式改用可展开悬浮按钮。
-        bottomNavigationBar: !needsRoot && selectionMode
-            ? _selectionBar(busy)
-            : null,
-        floatingActionButton:
-            !needsRoot &&
-                !selectionMode &&
-                !inSearch &&
-                current?.canCreate == true
-            ? ExpandableActionFab(
-                enabled: !busy,
-                actions: [
-                  FabAction(
-                    label: '新建文件夹',
-                    icon: const FileCategoryIcon(
-                      category: FileCategory.folder,
-                      folderState: FolderIconState.create,
+            ],
+          ),
+          // 多选模式保留批量操作栏；浏览模式改用可展开悬浮按钮。
+          bottomNavigationBar: !needsRoot && selectionMode
+              ? _selectionBar(busy)
+              : null,
+          floatingActionButton:
+              !needsRoot &&
+                  !selectionMode &&
+                  !inSearch &&
+                  current?.canCreate == true
+              ? ExpandableActionFab(
+                  enabled: !busy,
+                  actions: [
+                    FabAction(
+                      label: '新建文件夹',
+                      icon: const FileCategoryIcon(
+                        category: FileCategory.folder,
+                        folderState: FolderIconState.create,
+                      ),
+                      onPressed: () => _nameDialog(),
                     ),
-                    onPressed: () => _nameDialog(),
-                  ),
-                  FabAction(
-                    label: '新建文件',
-                    icon: const Icon(Icons.note_add_outlined),
-                    onPressed: _createFileDialog,
-                  ),
-                  FabAction(
-                    label: '选择文件',
-                    icon: const Icon(Icons.insert_drive_file_outlined),
-                    onPressed: () => controller.importFromPicker(const ['*/*']),
-                  ),
-                  FabAction(
-                    label: '拍照',
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    onPressed: controller.capturePhoto,
-                  ),
-                  FabAction(
-                    label: '录制',
-                    icon: const Icon(Icons.videocam_outlined),
-                    onPressed: controller.captureVideo,
-                  ),
-                ],
-              )
-            : null,
-      ),
-    );
-  });
+                    FabAction(
+                      label: '新建文件',
+                      icon: const Icon(Icons.note_add_outlined),
+                      onPressed: _createFileDialog,
+                    ),
+                    FabAction(
+                      label: '选择文件',
+                      icon: const Icon(Icons.insert_drive_file_outlined),
+                      onPressed: () =>
+                          controller.importFromPicker(const ['*/*']),
+                    ),
+                    FabAction(
+                      label: '拍照',
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      onPressed: controller.capturePhoto,
+                    ),
+                    FabAction(
+                      label: '录制',
+                      icon: const Icon(Icons.videocam_outlined),
+                      onPressed: controller.captureVideo,
+                    ),
+                  ],
+                )
+              : null,
+        ),
+      );
+    },
+  );
 
   PreferredSizeWidget _appBar(bool busy, bool needsRoot) => AppBar(
     // 标题固定为应用名，不随目录导航变化；返回改用系统返回与路径栏。
@@ -634,7 +650,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case _HomeMenuAction.chooseSort:
         await _chooseSort();
       case _HomeMenuAction.settings:
-        await Get.toNamed<void>(Routes.settings);
+        await context.push<void>(Routes.settings);
         await controller.refresh();
     }
   }
@@ -822,7 +838,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   );
 
   Widget _searchResults(bool busy) {
-    if (controller.searchResults.isEmpty) {
+    if (controller.searchResults.value.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: _listPadding,
@@ -841,10 +857,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: _listPadding,
-      itemCount: controller.searchResults.length,
+      itemCount: controller.searchResults.value.length,
       separatorBuilder: (_, _) => const Divider(height: 1, indent: 64),
       itemBuilder: (context, index) =>
-          _searchRow(controller.searchResults[index], busy),
+          _searchRow(controller.searchResults.value[index], busy),
     );
   }
 
@@ -862,6 +878,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           await controller.enter(entry);
         } else {
           final inApp = await openEntryPreview(
+            context,
             entry,
             storage: controller.storage,
           );
@@ -876,7 +893,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom);
 
   Widget _entryList(bool busy, bool selectionMode) {
-    if (controller.entries.isEmpty) {
+    if (controller.entries.value.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: _listPadding,
@@ -897,10 +914,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: _listPadding,
-        itemCount: controller.entries.length,
+        itemCount: controller.entries.value.length,
         separatorBuilder: (_, _) => const Divider(height: 1, indent: 64),
         itemBuilder: (context, index) {
-          final entry = controller.entries[index];
+          final entry = controller.entries.value[index];
           if (selectionMode) return _selectionRow(entry);
           return _browseRow(entry, busy);
         },
@@ -961,7 +978,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   /// 选择行：缩略图左侧是选择按钮，文件信息与浏览行一致，点击整行切换选中。
   Widget _selectionRow(StorageEntry entry) {
-    final checked = controller.selected.contains(entry.uri);
+    final checked = controller.selected.value.contains(entry.uri);
     final detail = _entryDetail(entry);
     return ListTile(
       leading: Row(
@@ -1023,8 +1040,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               TextButton(
                 onPressed: controller.toggleSelectAll,
                 child:
-                    controller.selectedCount == controller.entries.length &&
-                        controller.entries.isNotEmpty
+                    controller.selectedCount ==
+                            controller.entries.value.length &&
+                        controller.entries.value.isNotEmpty
                     ? const Text('取消全选')
                     : const Text('全选'),
               ),

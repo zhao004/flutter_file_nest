@@ -1,7 +1,8 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 
@@ -9,41 +10,45 @@ import '../../theme/theme_controller.dart';
 ///
 /// 每个方案左侧以浅/深双色块预览主、次、三级色，选中项以勾选标识；
 /// 选择后立即生效并持久化。
-class ThemePickerView extends GetView<ThemeController> {
+class ThemePickerView extends StatelessWidget {
   const ThemePickerView({super.key});
+
+  ThemeController get controller => getIt<ThemeController>();
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('主题配色')),
-    body: Obx(() {
-      // 在 Obx 构建期读取可观察值，避免依赖懒加载 itemBuilder 触发订阅。
-      final selectedScheme = controller.scheme.value;
-      return ListView.separated(
-        itemCount: selectableFlexSchemes.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, index) {
-          final scheme = selectableFlexSchemes[index];
-          final selected = scheme == selectedScheme;
-          return ListTile(
-            leading: _SchemeSwatch(scheme: scheme),
-            title: Text(scheme.data.name),
-            subtitle: Text(
-              scheme.data.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: selected
-                ? Icon(
-                    Icons.check,
-                    color: Theme.of(context).colorScheme.primary,
-                  )
-                : null,
-            selected: selected,
-            onTap: () => controller.setScheme(scheme),
-          );
-        },
-      );
-    }),
+    body: SignalBuilder(
+      builder: (context) {
+        // 在 SignalBuilder 构建期读取可观察值，避免依赖懒加载 itemBuilder 触发订阅。
+        final selectedScheme = controller.scheme.value;
+        return ListView.separated(
+          itemCount: selectableFlexSchemes.length,
+          separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
+          itemBuilder: (context, index) {
+            final scheme = selectableFlexSchemes[index];
+            final selected = scheme == selectedScheme;
+            return ListTile(
+              leading: _SchemeSwatch(scheme: scheme),
+              title: Text(scheme.data.name),
+              subtitle: Text(
+                scheme.data.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: selected
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : null,
+              selected: selected,
+              onTap: () => controller.setScheme(scheme),
+            );
+          },
+        );
+      },
+    ),
   );
 }
 

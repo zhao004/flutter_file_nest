@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 import 'package:filenest/app/models/archive_models.dart';
 import 'package:filenest/app/models/storage_entry.dart';
 import 'package:filenest/app/services/archive_service.dart';
@@ -7,8 +7,11 @@ import 'fakes.dart';
 
 /// 可编程归档网关假件；覆盖成功、失败、取消与分享无接收方等状态。
 class FakeArchive implements ArchiveGateway {
+  final _active = signal<ArchiveTaskState?>(null);
+
   @override
-  final active = Rxn<ArchiveTaskState>();
+  ReadonlySignal<ArchiveTaskState?> get active => _active;
+
   final zipCalls = <String>[];
   final zipNames = <String?>[];
   final extractCalls = <String>[];
@@ -26,7 +29,7 @@ class FakeArchive implements ArchiveGateway {
   );
   ShareOutcome shareResult = const ShareOutcome.shared();
 
-  void emit(ArchiveTaskState task) => active.value = task;
+  void emit(ArchiveTaskState task) => _active.value = task;
 
   @override
   Future<ArchiveOutcome> zip({
@@ -58,6 +61,6 @@ class FakeArchive implements ArchiveGateway {
   @override
   Future<void> cancelActive() async {
     cancels++;
-    active.value = null;
+    _active.value = null;
   }
 }

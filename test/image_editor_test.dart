@@ -1,10 +1,10 @@
+import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
 import 'package:filenest/app/preview/image_editor_host.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 
 import 'support/fakes.dart';
 
@@ -14,14 +14,13 @@ void main() {
   String? saved;
 
   setUp(() {
-    Get.testMode = true;
     storage = FakeStorage();
     captured = null;
     saved = null;
-    Get.put<StorageGateway>(storage);
+    getIt.registerSingleton<StorageGateway>(storage);
   });
 
-  tearDown(Get.reset);
+  tearDown(() => getIt.reset());
 
   Widget builder(ImageEditorHostConfig config) {
     captured = config;
@@ -45,17 +44,18 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => ImageEditorView(
-                      entry: entry(name),
-                      parent: root,
-                      onSaved: (value) => saved = value,
-                      editorBuilder: builder,
+                onPressed: () async {
+                  saved = await Navigator.push<String>(
+                    context,
+                    MaterialPageRoute<String>(
+                      builder: (_) => ImageEditorView(
+                        entry: entry(name),
+                        parent: root,
+                        editorBuilder: builder,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 child: const Text('打开'),
               ),
             ),
@@ -67,7 +67,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('保存 JPEG 原图时另存为 jpg 副本并回调文件名', (tester) async {
+  testWidgets('保存 JPEG 原图时另存为 jpg 副本并返回文件名', (tester) async {
     await openEditor(tester, 'photo.jpg');
 
     await tester.tap(find.text('完成'));

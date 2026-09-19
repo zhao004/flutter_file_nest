@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../models/video_export_request.dart';
 import '../../preview/media_editor_format.dart';
@@ -16,12 +16,11 @@ import 'preview_widgets.dart';
 ///
 /// 先把 SAF 文档导出为本地缓存文件供编辑器使用，进入前可选择背景音轨；
 /// 导出时渲染到缓存并导入保险库，保存为同目录下的 `原名_edited.mp4`，
-/// 原文件不变。保存成功后以新文件名作为返回值 pop。
+/// 原文件不变。保存成功后以新文件名作为路由返回值 pop。
 class VideoEditorView extends StatefulWidget {
   const VideoEditorView({
     required this.entry,
     required this.parent,
-    this.onSaved,
     this.editorBuilder = buildProVideoEditor,
     this.renderer = const ProVideoRenderer(),
     this.audioTrackPicker = pickAudioTracks,
@@ -33,9 +32,6 @@ class VideoEditorView extends StatefulWidget {
 
   /// 副本的目标目录；必须可创建文件。
   final StorageEntry parent;
-
-  /// 保存副本成功后的回调，参数为副本文件名。
-  final void Function(String name)? onSaved;
 
   /// 编辑器构建器；测试注入假实现。
   final VideoEditorBuilder editorBuilder;
@@ -55,7 +51,7 @@ class VideoEditorView extends StatefulWidget {
 }
 
 class _VideoEditorViewState extends State<VideoEditorView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
 
   String? _filePath;
   List<VideoAudioTrackSpec> _audioTracks = const [];
@@ -115,8 +111,7 @@ class _VideoEditorViewState extends State<VideoEditorView> {
       await _cleanup(outputPath);
       if (!mounted) return;
       _closed = true;
-      widget.onSaved?.call(saved);
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(saved);
     } catch (failure) {
       await _cleanup(outputPath);
       if (!mounted) return;
@@ -225,6 +220,6 @@ Future<List<VideoAudioTrackSpec>> pickAudioTracks(BuildContext context) async {
     ),
   );
   if (add != true) return const [];
-  final paths = await Get.find<StorageGateway>().pickAudioToCache();
+  final paths = await getIt<StorageGateway>().pickAudioToCache();
   return paths.map((path) => VideoAudioTrackSpec(path: path)).toList();
 }

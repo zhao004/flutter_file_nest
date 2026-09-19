@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/image_editor_host.dart';
 import '../../preview/media_editor_format.dart';
@@ -12,12 +12,11 @@ import 'preview_widgets.dart';
 /// 图片编辑器：基于 pro_image_editor 的全屏编辑。
 ///
 /// 读取原图字节后交给编辑器；保存采用“另存为副本”，在 [parent] 目录生成
-/// `原名_edited.扩展名`，原文件不变。保存成功后以新文件名作为返回值 pop。
+/// `原名_edited.扩展名`，原文件不变。保存成功后以新文件名作为路由返回值 pop。
 class ImageEditorView extends StatefulWidget {
   const ImageEditorView({
     required this.entry,
     required this.parent,
-    this.onSaved,
     this.editorBuilder = buildProImageEditor,
     super.key,
   });
@@ -27,9 +26,6 @@ class ImageEditorView extends StatefulWidget {
   /// 副本的目标目录；必须可创建文件。
   final StorageEntry parent;
 
-  /// 保存副本成功后的回调，参数为副本文件名。
-  final void Function(String name)? onSaved;
-
   /// 编辑器构建器；测试注入假实现，生产默认使用 pro_image_editor。
   final ImageEditorBuilder editorBuilder;
 
@@ -38,7 +34,7 @@ class ImageEditorView extends StatefulWidget {
 }
 
 class _ImageEditorViewState extends State<ImageEditorView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
 
   Uint8List? _bytes;
   String? _error;
@@ -79,8 +75,7 @@ class _ImageEditorViewState extends State<ImageEditorView> {
       final name = await _save(bytes);
       if (!mounted) return;
       _closed = true;
-      widget.onSaved?.call(name);
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(name);
     } catch (failure) {
       if (!mounted) return;
       setState(() => _saving = false);

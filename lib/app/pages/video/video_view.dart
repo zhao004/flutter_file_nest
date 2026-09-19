@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
+
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -38,7 +40,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
   /// 应用内亮度的下限，避免完全黑屏难以恢复。
   static const _minBrightness = 0.05;
 
-  late final VaultStore _store = Get.find<VaultStore>();
+  late final VaultStore _store = getIt<VaultStore>();
   Player? _player;
   VideoController? _videoController;
   final _subscriptions = <StreamSubscription<dynamic>>[];
@@ -246,7 +248,7 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     await player?.dispose().catchError((_) {});
   }
 
-  void _openExternally() => Get.find<StorageGateway>().openFile(widget.entry);
+  void _openExternally() => getIt<StorageGateway>().openFile(widget.entry);
 
   // ---- 手势 ----
 

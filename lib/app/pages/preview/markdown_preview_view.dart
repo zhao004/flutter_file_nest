@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/preview_defaults.dart';
 import '../../preview/text_content.dart';
-import '../../routes/app_pages.dart';
+import '../../routes/app_routes.dart';
 import '../../services/saf_storage.dart';
 import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
@@ -24,9 +26,9 @@ class MarkdownPreviewView extends StatefulWidget {
 }
 
 class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
+      getIt<PreviewSettingsController>();
   late Future<TextContent> _future = _load();
 
   Future<TextContent> _load() => loadTextContent(_storage, widget.entry);
@@ -35,7 +37,7 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
 
   /// 进入编辑页（编辑源码）；返回后重新加载以反映保存结果。
   Future<void> _edit() async {
-    await Get.toNamed<void>(Routes.textEditor, arguments: widget.entry);
+    await context.push<void>(Routes.textEditor, extra: widget.entry);
     if (!mounted) return;
     setState(() => _future = _load());
   }
@@ -49,16 +51,18 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
         overflow: TextOverflow.ellipsis,
       ),
       actions: [
-        Obx(() {
-          final reading = _settings.markdownMode.value != kMarkdownModeSource;
-          return IconButton(
-            tooltip: reading ? '查看源码' : '阅读模式',
-            onPressed: () => _settings.setMarkdownMode(
-              reading ? kMarkdownModeSource : kDefaultMarkdownMode,
-            ),
-            icon: Icon(reading ? Icons.code : Icons.article_outlined),
-          );
-        }),
+        SignalBuilder(
+          builder: (context) {
+            final reading = _settings.markdownMode.value != kMarkdownModeSource;
+            return IconButton(
+              tooltip: reading ? '查看源码' : '阅读模式',
+              onPressed: () => _settings.setMarkdownMode(
+                reading ? kMarkdownModeSource : kDefaultMarkdownMode,
+              ),
+              icon: Icon(reading ? Icons.code : Icons.article_outlined),
+            );
+          },
+        ),
         if (widget.entry.canWrite)
           IconButton(
             tooltip: '编辑源码',
@@ -97,31 +101,33 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
     ),
   );
 
-  Widget _body(TextContent content) => Obx(() {
-    final reading = _settings.markdownMode.value != kMarkdownModeSource;
-    if (!reading) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: SelectableText(
-          content.text,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: _settings.fontSize.value,
-            height: 1.4,
+  Widget _body(TextContent content) => SignalBuilder(
+    builder: (context) {
+      final reading = _settings.markdownMode.value != kMarkdownModeSource;
+      if (!reading) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: SelectableText(
+            content.text,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: _settings.fontSize.value,
+              height: 1.4,
+            ),
           ),
+        );
+      }
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: MarkdownBody(
+          data: content.text,
+          selectable: true,
+          onTapLink: (text, href, title) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('链接：${href ?? text}')));
+          },
         ),
       );
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: MarkdownBody(
-        data: content.text,
-        selectable: true,
-        onTapLink: (text, href, title) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('链接：${href ?? text}')));
-        },
-      ),
-    );
-  });
+    },
+  );
 }

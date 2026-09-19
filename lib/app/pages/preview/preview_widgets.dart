@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../models/storage_entry.dart';
 import '../../services/saf_storage.dart';
@@ -41,7 +42,7 @@ class PreviewErrorView extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               FilledButton.icon(
-                onPressed: () => Get.find<StorageGateway>().openFile(entry),
+                onPressed: () => getIt<StorageGateway>().openFile(entry),
                 icon: const Icon(Icons.open_in_new),
                 label: const Text('用其他应用打开'),
               ),
@@ -67,7 +68,7 @@ class TruncatedNotice extends StatelessWidget {
       leading: const Icon(Icons.info_outline, size: 20),
       title: const Text('文件较大，仅显示前一部分内容'),
       trailing: TextButton(
-        onPressed: () => Get.find<StorageGateway>().openFile(entry),
+        onPressed: () => getIt<StorageGateway>().openFile(entry),
         child: const Text('其他应用'),
       ),
     ),

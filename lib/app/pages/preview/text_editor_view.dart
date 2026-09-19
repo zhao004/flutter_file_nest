@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/editor_surface.dart';
 import '../../preview/text_content.dart';
-import '../../routes/app_pages.dart';
+import '../../routes/app_routes.dart';
 import '../../services/saf_storage.dart';
 import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
@@ -31,9 +33,9 @@ class TextEditorView extends StatefulWidget {
 }
 
 class _TextEditorViewState extends State<TextEditorView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
+      getIt<PreviewSettingsController>();
 
   CodeEditorController? _controller;
   TextContent? _content;
@@ -212,9 +214,9 @@ class _TextEditorViewState extends State<TextEditorView> {
             tooltip: '编辑选项',
             onSelected: (value) => switch (value) {
               _EditorMenu.revert => _revert(),
-              _EditorMenu.preview => Get.toNamed<void>(
+              _EditorMenu.preview => context.push<void>(
                 Routes.preview,
-                arguments: widget.entry,
+                extra: widget.entry,
               ),
               _EditorMenu.openExternal => _storage.openFile(widget.entry),
             },
@@ -291,8 +293,8 @@ class _TextEditorViewState extends State<TextEditorView> {
             content.lineEnding != '\n')
           _EncodingNotice(content: content),
         Expanded(
-          child: Obx(
-            () => widget.editorBuilder(
+          child: SignalBuilder(
+            builder: (context) => widget.editorBuilder(
               CodeEditorHostConfig(
                 editable: _editable,
                 dark: Theme.of(context).brightness == Brightness.dark,

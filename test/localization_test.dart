@@ -2,15 +2,11 @@ import 'package:filenest/app/localization.dart';
 import 'package:flutter/cupertino.dart' as cupertino;
 import 'package:flutter/material.dart' as legacy;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart' as material_ui;
 
 void main() {
-  setUp(() => Get.testMode = true);
-  tearDown(Get.reset);
-
   /// 应用根配置：与 main.dart 保持一致，用于回归“缺少本地化”问题。
-  legacy.Widget app(legacy.Widget home) => GetMaterialApp(
+  legacy.Widget app(legacy.Widget home) => legacy.MaterialApp(
     localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: appSupportedLocales,
     home: home,

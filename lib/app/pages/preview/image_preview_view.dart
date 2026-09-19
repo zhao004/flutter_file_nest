@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../file_type/file_type_info.dart';
 import '../../models/storage_entry.dart';
@@ -22,7 +23,7 @@ class ImagePreviewView extends StatefulWidget {
 }
 
 class _ImagePreviewViewState extends State<ImagePreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final Future<Uint8List?> _future = _storage.readDocument(widget.entry);
   final _controller = TransformationController();
 
@@ -106,8 +107,8 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
   );
 
   Future<void> _share() async {
-    if (!Get.isRegistered<ArchiveGateway>()) return;
-    await Get.find<ArchiveGateway>().share([widget.entry]);
+    if (!getIt.isRegistered<ArchiveGateway>()) return;
+    await getIt<ArchiveGateway>().share([widget.entry]);
   }
 
   @override
@@ -131,7 +132,7 @@ class _ImagePreviewViewState extends State<ImagePreviewView> {
           onPressed: _showInfo,
           icon: const Icon(Icons.info_outline),
         ),
-        if (Get.isRegistered<ArchiveGateway>())
+        if (getIt.isRegistered<ArchiveGateway>())
           IconButton(
             tooltip: '分享',
             onPressed: _share,

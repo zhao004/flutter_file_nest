@@ -1,7 +1,7 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/preview/preview_settings_controller.dart';
 import 'package:filenest/app/pages/settings/editor_settings_view.dart';
@@ -13,32 +13,31 @@ import 'support/archive_fakes.dart';
 import 'support/fakes.dart';
 
 void main() {
-  setUp(() => Get.testMode = true);
-  tearDown(() => Get.reset());
+  tearDown(() => getIt.reset());
 
   /// 注册主题控制器并返回其内存存储，便于断言持久化结果。
   Future<(ThemeController, MemoryThemeStore)> registerTheme() async {
     final store = MemoryThemeStore();
     final controller = ThemeController(store);
     await controller.initialize();
-    Get.put<ThemeController>(controller);
+    getIt.registerSingleton<ThemeController>(controller);
     return (controller, store);
   }
 
   testWidgets('设置页可切换外观模式并持久化', (tester) async {
     final (theme, store) = await registerTheme();
-    Get.put(
+    getIt.registerSingleton(
       HomeController(
         storage: FakeStorage(),
         store: MemoryStore(),
         archive: FakeArchive(),
       ),
     );
-    Get.put<PreviewSettingsController>(
+    getIt.registerSingleton<PreviewSettingsController>(
       PreviewSettingsController(MemoryStore()),
     );
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         theme: theme.lightTheme,
         darkTheme: theme.darkTheme,
         themeMode: theme.mode.value,
@@ -63,8 +62,10 @@ void main() {
 
   testWidgets('编辑器配置页切换行号并持久化', (tester) async {
     final store = MemoryStore();
-    Get.put<PreviewSettingsController>(PreviewSettingsController(store));
-    await tester.pumpWidget(GetMaterialApp(home: const EditorSettingsView()));
+    getIt.registerSingleton<PreviewSettingsController>(
+      PreviewSettingsController(store),
+    );
+    await tester.pumpWidget(MaterialApp(home: const EditorSettingsView()));
     await tester.pumpAndSettle();
 
     expect(find.text('显示行号'), findsOneWidget);
@@ -78,8 +79,10 @@ void main() {
 
   testWidgets('编辑器配置页可切换 Markdown 展示模式', (tester) async {
     final store = MemoryStore();
-    Get.put<PreviewSettingsController>(PreviewSettingsController(store));
-    await tester.pumpWidget(GetMaterialApp(home: const EditorSettingsView()));
+    getIt.registerSingleton<PreviewSettingsController>(
+      PreviewSettingsController(store),
+    );
+    await tester.pumpWidget(MaterialApp(home: const EditorSettingsView()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('展示模式'));
@@ -93,7 +96,7 @@ void main() {
   testWidgets('主题选择页选中方案后持久化', (tester) async {
     final (theme, store) = await registerTheme();
     await tester.pumpWidget(
-      GetMaterialApp(theme: theme.lightTheme, home: const ThemePickerView()),
+      MaterialApp(theme: theme.lightTheme, home: const ThemePickerView()),
     );
     await tester.pumpAndSettle();
 

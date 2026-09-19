@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
+import '../../di/injector.dart';
 
 import '../../models/storage_entry.dart';
 import '../../preview/csv_parser.dart';
@@ -19,7 +20,7 @@ class CsvPreviewView extends StatefulWidget {
 }
 
 class _CsvPreviewViewState extends State<CsvPreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late Future<TextContent> _future = _load();
 
   Future<TextContent> _load() => loadTextContent(_storage, widget.entry);

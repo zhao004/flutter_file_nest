@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../di/injector.dart';
 import '../../models/storage_entry.dart';
 import '../../preview/text_content.dart';
-import '../../routes/app_pages.dart';
+import '../../routes/app_routes.dart';
 import '../../services/saf_storage.dart';
 import 'preview_settings_controller.dart';
 import 'preview_widgets.dart';
@@ -23,13 +25,13 @@ class TextPreviewView extends StatefulWidget {
 }
 
 class _TextPreviewViewState extends State<TextPreviewView> {
-  late final StorageGateway _storage = Get.find<StorageGateway>();
+  late final StorageGateway _storage = getIt<StorageGateway>();
   late final PreviewSettingsController _settings =
-      Get.find<PreviewSettingsController>();
+      getIt<PreviewSettingsController>();
   late Future<TextContent> _future = _load();
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
-  final _query = ''.obs;
+  final _query = signal('');
   bool _searching = false;
 
   Future<TextContent> _load() => loadTextContent(_storage, widget.entry);
@@ -40,6 +42,7 @@ class _TextPreviewViewState extends State<TextPreviewView> {
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
+    _query.dispose();
     super.dispose();
   }
 
@@ -68,7 +71,7 @@ class _TextPreviewViewState extends State<TextPreviewView> {
 
   /// 进入编辑页；返回后重新加载以反映保存结果。
   Future<void> _edit() async {
-    await Get.toNamed<void>(Routes.textEditor, arguments: widget.entry);
+    await context.push<void>(Routes.textEditor, extra: widget.entry);
     if (!mounted) return;
     setState(() => _future = _load());
   }
@@ -178,30 +181,32 @@ class _TextPreviewViewState extends State<TextPreviewView> {
     ),
   );
 
-  Widget _body(TextContent content) => Obx(() {
-    final theme = Theme.of(context);
-    final base = TextStyle(fontSize: _settings.fontSize.value, height: 1.4);
-    final span = highlightMatches(
-      content.text,
-      _query.value,
-      base: base,
-      matchStyle: TextStyle(
-        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.3),
-      ),
-    );
-    final child = Padding(
-      padding: const EdgeInsets.all(12),
-      child: SelectableText.rich(span, style: base),
-    );
-    // 关闭自动换行时改为横向滚动；长行保持单行显示。
-    if (_settings.wrap.value) return SingleChildScrollView(child: child);
-    return SingleChildScrollView(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: child,
-      ),
-    );
-  });
+  Widget _body(TextContent content) => SignalBuilder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      final base = TextStyle(fontSize: _settings.fontSize.value, height: 1.4);
+      final span = highlightMatches(
+        content.text,
+        _query.value,
+        base: base,
+        matchStyle: TextStyle(
+          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.3),
+        ),
+      );
+      final child = Padding(
+        padding: const EdgeInsets.all(12),
+        child: SelectableText.rich(span, style: base),
+      );
+      // 关闭自动换行时改为横向滚动；长行保持单行显示。
+      if (_settings.wrap.value) return SingleChildScrollView(child: child);
+      return SingleChildScrollView(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
 enum _TextMenu { zoomIn, zoomOut, copyAll }

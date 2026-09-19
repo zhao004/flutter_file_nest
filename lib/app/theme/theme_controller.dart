@@ -1,23 +1,23 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 import 'app_theme.dart';
 import 'theme_store.dart';
 
-/// 持有应用主题状态并负责持久化；切换后重建 [GetMaterialApp]。
+/// 持有应用主题状态并负责持久化；切换后重建应用根 Widget。
 ///
 /// 状态先写内存再落盘，落盘失败时回退到上一个值，避免界面与持久化不一致。
-class ThemeController extends GetxController {
+class ThemeController {
   ThemeController(this._store);
 
   final ThemeStore _store;
 
   /// 当前配色方案。
-  final scheme = kDefaultFlexScheme.obs;
+  final scheme = signal(kDefaultFlexScheme);
 
   /// 当前外观模式。
-  final mode = kDefaultThemeMode.obs;
+  final mode = signal(kDefaultThemeMode);
 
   ThemeData get lightTheme => buildLightTheme(scheme.value);
 

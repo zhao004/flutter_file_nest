@@ -1,44 +1,43 @@
+import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/models/media_editor_args.dart';
+import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
-import 'package:filenest/app/routes/app_pages.dart';
+import 'package:filenest/app/routes/app_router.dart';
+import 'package:filenest/app/routes/app_routes.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 
+import 'support/archive_fakes.dart';
 import 'support/fakes.dart';
 
 void main() {
   late FakeStorage storage;
 
   setUp(() {
-    Get.testMode = true;
     storage = FakeStorage()..readDocumentResult = null;
-    Get.put<StorageGateway>(storage);
-  });
-
-  tearDown(Get.reset);
-
-  /// 回归：GetX 的 `onGenerateRoute` 始终重建为 `GetPageRoute<dynamic>`，若用
-  /// `Get.toNamed<String>` 会在 Navigator 内抛 `Route<String?>` 转换异常。
-  /// 编辑路由必须能以 `Get.toNamed<void>` 正常进入。
-  testWidgets('图片编辑路由经 Get.toNamed<void> 可正常进入', (tester) async {
-    await tester.pumpWidget(
-      GetMaterialApp(
-        getPages: [
-          GetPage(
-            name: '/',
-            page: () => const Scaffold(body: Text('root')),
-          ),
-          ...AppPages.routes.where((page) => page.name == Routes.imageEditor),
-        ],
+    getIt.registerSingleton<StorageGateway>(storage);
+    getIt.registerSingleton<HomeController>(
+      HomeController(
+        storage: storage,
+        store: MemoryStore(),
+        archive: FakeArchive(),
       ),
     );
-    expect(find.text('root'), findsOneWidget);
+  });
 
-    Get.toNamed<void>(
+  tearDown(() => getIt.reset());
+
+  /// 回归：编辑路由必须能携带 [MediaEditorArgs] 以 `extra` 进入且无异常；
+  /// 图片编辑器不应被分发成其他类型（如视频）。
+  testWidgets('图片编辑路由经 extra 携带参数可正常进入', (tester) async {
+    final router = createAppRouter();
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    expect(find.text('FileNest'), findsOneWidget);
+
+    router.push(
       Routes.imageEditor,
-      arguments: MediaEditorArgs(entry: entry('photo.jpg'), parent: root),
+      extra: MediaEditorArgs(entry: entry('photo.jpg'), parent: root),
     );
     await tester.pumpAndSettle();
 

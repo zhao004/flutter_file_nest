@@ -405,14 +405,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.17.4"
-  get:
+  get_it:
     dependency: "direct main"
     description:
-      name: get
-      sha256: "5ed34a7925b85336e15d472cc4cfe7d9ebf4ab8e8b9f688585bf6b50f4c3d79a"
+      name: get_it
+      sha256: "568d62f0e68666fb5d95519743b3c24a34c7f19d834b0658c46e26d778461f66"
       url: "https://pub.dev"
     source: hosted
-    version: "4.7.3"
+    version: "9.2.1"
   glob:
     dependency: transitive
     description:
@@ -421,6 +421,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  go_router:
+    dependency: "direct main"
+    description:
+      name: go_router
+      sha256: "008ab21d89d0de8ccd79586838f7533f126c2d894f50bf25f2947888d3c225b5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "18.0.1"
   graphs:
     dependency: transitive
     description:
@@ -797,6 +805,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.2"
+  preact_signals:
+    dependency: transitive
+    description:
+      name: preact_signals
+      sha256: "18f45e7f91a4dfad8bd0138efa6b85770bb25e13278b863fdaafd28a56579b16"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.0"
   pro_image_editor:
     dependency: "direct main"
     description:
@@ -981,6 +997,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
+  signals_core:
+    dependency: transitive
+    description:
+      name: signals_core
+      sha256: "04d7ccb0265264191a4e2666050031129f47c2bbf4ac3f31f6586889a9903b62"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.0"
+  signals_flutter:
+    dependency: "direct main"
+    description:
+      name: signals_flutter
+      sha256: f0285fd2f98d720724df879c258dc41725f260f8e5b1184655ef64ba679197ad
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.1.0"
   sky_engine:
     dependency: transitive
     description: flutter
