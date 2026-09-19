@@ -71,8 +71,13 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
   List<VideoClip> _clips = const [];
 
   TrimDurationSpan? _durationSpan;
-  TrimDurationSpan? _tempDurationSpan;
+  (TrimDurationSpan, Duration)? _pendingSeek;
   bool _isSeeking = false;
+
+  /// 最近一次裁剪范围与拖动边缘的预览目标；拖动期间用于判断跳转方向。
+  TrimDurationSpan? _lastTrimSpan;
+  Duration? _lastTrimSeekTarget;
+
   bool _failed = false;
 
   final Map<String, Uint8List> _cachedKeyFrames = {};
@@ -142,12 +147,8 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       onPause: _pause,
       onPlay: _play,
       onMuteToggle: (isMuted) => _videoController?.setVolume(isMuted ? 0 : 100),
-      onTrimSpanUpdate: (span) {
-        if (_videoController?.value.isPlaying ?? false) {
-          _proVideoController?.pause();
-        }
-      },
-      onTrimSpanEnd: _seekToPosition,
+      onTrimSpanUpdate: _onTrimSpanUpdate,
+      onTrimSpanEnd: _onTrimSpanEnd,
     ),
     clipsEditorCallbacks: ClipsEditorCallbacks(
       onReadKeyFrame: _readKeyFrame,
@@ -257,30 +258,59 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
     final position = controller.value.position;
     proController.setPlayTime(position);
 
-    if (_durationSpan != null && position >= _durationSpan!.end) {
+    // 仅在播放中回绕到裁剪起点；拖动预览定位到裁剪终点时不应触发回绕。
+    final isPlaying = controller.value.isPlaying;
+    if (isPlaying && _durationSpan != null && position >= _durationSpan!.end) {
       _seekToPosition(_durationSpan!);
-    } else if (position >= total) {
+    } else if (isPlaying && position >= total) {
       _seekToPosition(TrimDurationSpan(start: Duration.zero, end: total));
     }
   }
 
-  Future<void> _seekToPosition(TrimDurationSpan span) async {
+  Future<void> _seekToPosition(TrimDurationSpan span) =>
+      _seekToTime(span.start, span);
+
+  /// 定位预览到 [target]，并把 [span] 作为播放回绕边界。
+  ///
+  /// 拖动裁剪条会高频触发；正在定位时只保留最后一个目标，避免 seek 堆积。
+  Future<void> _seekToTime(Duration target, TrimDurationSpan span) async {
     _durationSpan = span;
     if (_isSeeking) {
-      _tempDurationSpan = span;
+      _pendingSeek = (span, target);
       return;
     }
     _isSeeking = true;
     _proVideoController?.pause();
-    _proVideoController?.setPlayTime(span.start);
+    _proVideoController?.setPlayTime(target);
     await _videoController?.pause();
-    await _videoController?.seekTo(span.start);
+    await _videoController?.seekTo(target);
     _isSeeking = false;
-    final pending = _tempDurationSpan;
+    final pending = _pendingSeek;
     if (pending != null) {
-      _tempDurationSpan = null;
-      await _seekToPosition(pending);
+      _pendingSeek = null;
+      await _seekToTime(pending.$2, pending.$1);
     }
+  }
+
+  /// 拖动裁剪条时实时预览对应帧：仅左手柄动看起点，仅右手柄动看终点，
+  /// 整体平移看起点；首次设置裁剪范围不跳转。
+  void _onTrimSpanUpdate(TrimDurationSpan span) {
+    if (_videoController?.value.isPlaying ?? false) {
+      _proVideoController?.pause();
+    }
+    final target = trimPreviewSeekTarget(_lastTrimSpan, span);
+    _lastTrimSpan = span;
+    if (target == null) return;
+    _lastTrimSeekTarget = target;
+    unawaited(_seekToTime(target, span));
+  }
+
+  /// 松手后停留在拖动边缘，便于核对裁剪结果；无拖动记录时回到起点。
+  void _onTrimSpanEnd(TrimDurationSpan span) {
+    _lastTrimSpan = span;
+    final target = _lastTrimSeekTarget ?? span.start;
+    _lastTrimSeekTarget = null;
+    unawaited(_seekToTime(target, span));
   }
 
   Future<void> _play() async {
@@ -480,6 +510,21 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
       configs: _configs,
     );
   }
+}
+
+/// 由裁剪范围的连续变化推断拖动预览目标。
+///
+/// 仅起点变化（左手柄）定位起点，仅终点变化（右手柄）定位终点，整体平移
+/// 定位起点；返回 null 表示无需跳转（首次设置或范围未变化）。
+Duration? trimPreviewSeekTarget(
+  TrimDurationSpan? previous,
+  TrimDurationSpan current,
+) {
+  if (previous == null) return null;
+  final startChanged = current.start != previous.start;
+  final endChanged = current.end != previous.end;
+  if (!startChanged && !endChanged) return null;
+  return endChanged && !startChanged ? current.end : current.start;
 }
 
 String _basename(String path) {
