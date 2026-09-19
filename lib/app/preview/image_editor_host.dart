@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 import '../localization.dart';
+import 'editor_i18n.dart';
 import 'media_editor_format.dart';
 
 /// 图片编辑器宿主配置：只暴露页面逻辑所需的输入与回调，
@@ -49,6 +50,8 @@ class _ProImageEditorHost extends StatelessWidget {
   Widget build(BuildContext context) => ProImageEditor.memory(
     config.bytes,
     configs: ProImageEditorConfigs(
+      i18n: editorI18nFor(editorLocale()),
+      emojiEditor: EmojiEditorConfigs(emojiSet: editorEmojiSet),
       imageGeneration: ImageGenerationConfigs(
         outputFormat: imageOutputFormatForName(config.sourceName),
         jpegQuality: 95,

@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 
 import '../i18n/app_l10n.dart';
 import '../models/video_export_request.dart';
+import 'editor_i18n.dart';
 
 /// 视频编辑器宿主配置：只暴露页面逻辑所需的输入与回调，
 /// 便于测试注入假实现而不依赖第三方重型组件。
@@ -89,6 +90,8 @@ class _ProVideoEditorHostState extends State<_ProVideoEditorHost> {
   late ProImageEditorConfigs _configs;
 
   ProImageEditorConfigs _buildConfigs() => ProImageEditorConfigs(
+    i18n: editorI18nFor(editorLocale()),
+    emojiEditor: EmojiEditorConfigs(emojiSet: editorEmojiSet),
     mainEditor: MainEditorConfigs(
       tools: const [
         SubEditorMode.videoClips,
