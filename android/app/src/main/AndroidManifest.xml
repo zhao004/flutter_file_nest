@@ -23,6 +23,11 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- 外部文件经自建 EventChannel 处理；禁用 Flutter 默认深链，
+                 避免微信 VIEW intent 的 content:// 被当作初始路由。 -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

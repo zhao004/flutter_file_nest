@@ -3,6 +3,7 @@ import 'package:filenest/app/localization.dart';
 import 'package:filenest/app/models/media_editor_args.dart';
 import 'package:filenest/app/models/update_models.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
+import 'package:filenest/app/pages/home/home_view.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
 import 'package:filenest/app/pages/settings/update_controller.dart';
 import 'package:filenest/app/routes/app_router.dart';
@@ -67,5 +68,27 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(ImageEditorView), findsOneWidget);
     expect(find.text('编辑视频'), findsNothing);
+  });
+
+  /// 回归：微信“用其他方式打开”会把 content:// URL 作为平台初始路由交给
+  /// go_router；应回退首页，而不是展示“Page Not Found”异常页。
+  testWidgets('外部 content:// 直达链接回退首页而非错误页', (tester) async {
+    tester.platformDispatcher.defaultRouteNameTestValue =
+        'content://com.tencent.mm.external.fileprovider/c2c/opendata/1b/30/file.pdf'
+        '?displayName=%E5%90%88%E5%90%8C.pdf';
+    addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+    final router = createAppRouter();
+    await tester.pumpWidget(
+      MaterialApp.router(
+        locale: const Locale('zh'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        routerConfig: router,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Page Not Found'), findsNothing);
+    expect(find.byType(HomeView), findsOneWidget);
   });
 }

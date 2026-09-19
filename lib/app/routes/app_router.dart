@@ -15,9 +15,12 @@ import 'app_routes.dart';
 /// 构建应用路由表；页面跳转经 `context.push`，对象参数经 `state.extra` 传入。
 ///
 /// 预览与编辑器路由依赖 `extra` 承载不可序列化的条目对象：状态恢复或外部
-/// 直达链接缺少参数时回退首页，避免在构建期抛类型转换异常。
+/// 直达链接缺少参数时回退首页，避免在构建期抛类型转换异常。外部 intent
+/// 传入的未知位置（如微信“用其他方式打开”的 content:// 链接）同样回退首页，
+/// 不进入 go_router 默认异常页。
 GoRouter createAppRouter() => GoRouter(
   initialLocation: Routes.home,
+  onException: (context, state, router) => router.go(Routes.home),
   routes: [
     GoRoute(path: Routes.home, builder: (context, state) => const HomeView()),
     GoRoute(
