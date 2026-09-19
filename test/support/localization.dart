@@ -1,6 +1,6 @@
 import 'package:filenest/app/localization.dart';
 import 'package:filenest/l10n/generated/app_localizations.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 测试用简体中文文案；用于直接调用本地化函数的断言。
 final AppLocalizations zhL10n = lookupAppLocalizations(const Locale('zh'));

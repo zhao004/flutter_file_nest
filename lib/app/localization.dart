@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:material_ui/material_ui.dart' as material_ui;
+import 'package:flutter_localizations/flutter_localizations.dart' as legacy;
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/generated/app_localizations.dart';
 
@@ -12,15 +11,14 @@ const List<Locale> appSupportedLocales = [Locale('zh'), Locale('en')];
 
 /// 应用本地化委托。
 ///
-/// 应用自身基于 legacy `flutter/material.dart`，而图片/视频编辑器基于
-/// `material_ui`，两者的 `MaterialLocalizations` 类型不同，必须同时注册两组
-/// 委托；只保留其中一组会让另一侧抛 `No MaterialLocalizations found`。
+/// 应用与图片/视频编辑器统一使用 material_ui 的委托（覆盖 Material、Cupertino
+/// 与 Widgets 三类文案）；media_kit_video、flutter_markdown_plus 等未迁移依赖
+/// 仍按 legacy 类型查找本地化，故保留 legacy 委托兜底，待其迁移后再移除。
 const List<LocalizationsDelegate<dynamic>> appLocalizationsDelegates = [
   AppLocalizations.delegate,
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-  ...material_ui.GlobalMaterialLocalizations.delegates,
+  ...GlobalMaterialLocalizations.delegates,
+  legacy.GlobalMaterialLocalizations.delegate,
+  legacy.GlobalCupertinoLocalizations.delegate,
 ];
 
 /// 控件文案入口；随语言切换自动重建。

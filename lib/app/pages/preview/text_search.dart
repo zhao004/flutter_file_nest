@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 在 [text] 中高亮全部 [query] 匹配（大小写不敏感）；空查询返回纯文本。
 ///

@@ -6,7 +6,7 @@ import 'package:filenest/app/pages/preview/image_editor_view.dart';
 import 'package:filenest/app/routes/app_router.dart';
 import 'package:filenest/app/routes/app_routes.dart';
 import 'package:filenest/app/services/saf_storage.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/archive_fakes.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 语义色助手：`ColorScheme` 未覆盖的成功/警告状态色，按亮暗模式取值。
 abstract final class AppColors {

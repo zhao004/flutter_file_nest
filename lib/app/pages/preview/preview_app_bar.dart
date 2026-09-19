@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 沉浸式（深色背景）预览页顶部栏的图标样式。
 ///

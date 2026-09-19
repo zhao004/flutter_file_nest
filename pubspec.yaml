@@ -30,15 +30,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # 应用自身使用 legacy Material/Cupertino 本地化；material_ui 编辑器需要
-  # 其自身的本地化类型，两者类型不同、需同时注册。
+  # 应用与编辑器统一使用 material_ui/cupertino_ui 本地化；保留 legacy 委托
+  # 供 media_kit_video、flutter_markdown_plus 等未迁移依赖兜底。
   flutter_localizations:
     sdk: flutter
+  # lib/l10n 生成代码引用 intl 类型，需显式声明；约束对齐 material_ui。
+  intl: ^0.20.2
 
-  # flex_color_scheme 9.x 返回独立包 material_ui 的 ThemeData，与应用根
-  # MaterialApp.router（基于 flutter/material）类型不兼容；整体迁移到
-  # material_ui/cupertino_ui 是独立重构，待 Flutter 正式弃用后再随生态跟进。
-  flex_color_scheme: ^8.4.0
+  # flex_color_scheme 9.x 返回 material_ui 的 ThemeData，与应用根
+  # MaterialApp.router 类型一致；8.x 返回 legacy ThemeData，无法搭配。
+  flex_color_scheme: ^9.0.0
   # signals_flutter 已包含 signals_core 并额外提供 SignalBuilder 等
   # Flutter 响应式组件；无需再引入 signals 元包（其只导出 core，且会
   # 带入未使用的 signals_hooks）。
@@ -63,8 +64,8 @@ dependencies:
   hugeicons: ^1.2.0
   pro_image_editor: ^14.3.0
   pro_video_editor: ^2.13.1
-  # material_ui / cupertino_ui 供 pro 系列编辑器使用，应用自身仍使用
-  # flutter/material；两者本地化类型不同，需在 localization.dart 同时注册。
+  # 应用、pro 系列编辑器与 flex_color_scheme 统一基于 material_ui；cupertino_ui
+  # 由 material_ui 与编辑器传递使用，直接声明以复用其本地化类型。
   material_ui: ^1.3.0
   cupertino_ui: ^1.1.0
   video_player: ^2.14.0

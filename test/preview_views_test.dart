@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:filenest/app/pages/preview/archive_preview_view.dart';
 import 'package:filenest/app/pages/preview/code_preview_view.dart';
 import 'package:filenest/app/pages/preview/csv_preview_view.dart';

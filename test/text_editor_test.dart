@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:filenest/app/pages/preview/preview_settings_controller.dart';
 import 'package:filenest/app/pages/preview/text_editor_view.dart';
 import 'package:filenest/app/preview/editor_surface.dart';

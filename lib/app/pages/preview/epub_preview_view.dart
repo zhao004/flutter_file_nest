@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
@@ -173,6 +173,11 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
               fontSize: _settings.fontSize.value,
               height: 1.7,
             ),
+            // 未迁移依赖的链接默认色读 legacy 主题，这里显式指定 primary，
+            // 避免深色模式下回落到浅色兜底主题。
+            customStylesBuilder: (element) => element.localName == 'a'
+                ? {'color': _cssHexColor(Theme.of(context).colorScheme.primary)}
+                : null,
             customWidgetBuilder: (element) =>
                 element.localName == 'img' ? const SizedBox.shrink() : null,
             onTapUrl: (url) async {
@@ -187,3 +192,7 @@ class _EpubPreviewViewState extends State<EpubPreviewView> {
     );
   }
 }
+
+/// 把颜色转换为不含透明度的 CSS 十六进制表示，供 HTML 内联样式使用。
+String _cssHexColor(Color color) =>
+    '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';

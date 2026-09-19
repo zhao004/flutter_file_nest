@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:filenest/app/file_type/file_category.dart';
 import 'package:filenest/app/file_type/file_category_icon.dart';
 import 'package:filenest/app/file_type/file_icon_mapper.dart';

@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di/injector.dart';
 import '../../localization.dart';
 import '../../models/storage_entry.dart';
+import '../../preview/markdown_style.dart';
 import '../../preview/preview_defaults.dart';
 import '../../preview/text_content.dart';
 import '../../routes/app_routes.dart';
@@ -125,6 +126,7 @@ class _MarkdownPreviewViewState extends State<MarkdownPreviewView> {
         child: MarkdownBody(
           data: content.text,
           selectable: true,
+          styleSheet: markdownStyleSheetFor(Theme.of(context)),
           onTapLink: (text, href, title) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.commonLink(href ?? text))),

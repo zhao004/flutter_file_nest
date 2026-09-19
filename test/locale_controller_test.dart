@@ -3,7 +3,7 @@ import 'package:filenest/app/i18n/locale_controller.dart';
 import 'package:filenest/app/i18n/locale_defaults.dart';
 import 'package:filenest/app/localization.dart';
 import 'package:filenest/app/services/vault_store.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

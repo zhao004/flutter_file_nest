@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'file_category.dart';
@@ -6,8 +6,8 @@ import 'file_icon_mapper.dart';
 
 /// 文件分类图标的统一渲染组件。
 ///
-/// 封装 hugeicons 的 `HugeIcon`，使 UI 层不直接依赖图标库；[color] 为空时
-/// 由 hugeicons 继承当前主题图标色。
+/// 封装 hugeicons 的 `HugeIcon`，使 UI 层不直接依赖图标库；[color] 为空时按
+/// 当前 IconTheme 取色，再回落到 material_ui 主题色，避免其 legacy 主题兜底。
 class FileCategoryIcon extends StatelessWidget {
   const FileCategoryIcon({
     required this.category,
@@ -28,7 +28,10 @@ class FileCategoryIcon extends StatelessWidget {
   Widget build(BuildContext context) => HugeIcon(
     icon: fileCategoryIcon(category, folderState: folderState),
     size: size,
-    color: color,
+    color:
+        color ??
+        IconTheme.of(context).color ??
+        Theme.of(context).colorScheme.onSurface,
     strokeWidth: strokeWidth,
   );
 }
