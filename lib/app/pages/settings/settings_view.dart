@@ -51,17 +51,17 @@ class SettingsView extends StatelessWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.brightness_6_outlined),
-              title: Text(context.l10n.settingsAppearance),
-              subtitle: Text(themeModeLabel(theme.mode.value, context.l10n)),
-              onTap: () => _pickMode(context, theme),
-            ),
-            ListTile(
               leading: const Icon(Icons.palette_outlined),
               title: Text(context.l10n.settingsColorScheme),
               subtitle: Text(theme.scheme.value.data.name),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push<void>(Routes.themePicker),
+            ),
+            ListTile(
+              leading: const Icon(Icons.brightness_6_outlined),
+              title: Text(context.l10n.settingsAppearance),
+              subtitle: Text(themeModeLabel(theme.mode.value, context.l10n)),
+              onTap: () => _pickMode(context, theme),
             ),
             ListTile(
               leading: const Icon(Icons.translate),

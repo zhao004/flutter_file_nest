@@ -72,6 +72,29 @@ void main() {
     expect(find.text('深色'), findsOneWidget);
   });
 
+  testWidgets('设置页外观项按配色、外观模式、语言排序', (tester) async {
+    final (theme, _) = await registerTheme();
+    registerLocale();
+    getIt.registerSingleton(
+      HomeController(
+        storage: FakeStorage(),
+        store: MemoryStore(),
+        archive: FakeArchive(),
+      ),
+    );
+    getIt.registerSingleton<PreviewSettingsController>(
+      PreviewSettingsController(MemoryStore()),
+    );
+    await tester.pumpWidget(
+      localizedApp(const SettingsView(), theme: theme.lightTheme),
+    );
+    await tester.pumpAndSettle();
+
+    double top(String label) => tester.getTopLeft(find.text(label)).dy;
+    expect(top('主题配色'), lessThan(top('外观模式')));
+    expect(top('外观模式'), lessThan(top('语言')));
+  });
+
   testWidgets('设置页可切换语言并持久化', (tester) async {
     final (theme, _) = await registerTheme();
     final (locale, store) = registerLocale();
