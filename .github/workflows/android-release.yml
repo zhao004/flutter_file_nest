@@ -111,7 +111,25 @@ jobs:
           : "${ANDROID_KEY_ALIAS:?未配置 ANDROID_KEY_ALIAS}"
           : "${ANDROID_KEY_PASSWORD:?未配置 ANDROID_KEY_PASSWORD}"
 
-      - name: Build signed APK and AAB
+      - name: Build signed arm64 APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          RELEASE_VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
+          # 侧载 APK 只发 arm64-v8a，并在包内压缩原生库以减小下载体积；
+          # --target-platform 只裁剪引擎与 AOT，插件 .so 由 Gradle 侧过滤。
+          ANDROID_TARGET_ABI: arm64-v8a
+          ANDROID_LEGACY_PACKAGING: 'true'
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --target-platform android-arm64 \
+            --split-debug-info=build/symbols \
+            --build-name "$RELEASE_VERSION_NAME" \
+            --build-number "$GITHUB_RUN_NUMBER"
+
+      - name: Build signed AAB
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -119,12 +137,18 @@ jobs:
           RELEASE_VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
         run: |
           set -euo pipefail
-          flutter build apk --release \
-            --build-name "$RELEASE_VERSION_NAME" \
-            --build-number "$GITHUB_RUN_NUMBER"
           flutter build appbundle --release \
             --build-name "$RELEASE_VERSION_NAME" \
             --build-number "$GITHUB_RUN_NUMBER"
+
+      # 符号文件用于把线上崩溃栈还原为可读位置；仅作为 CI 产物保留。
+      - name: Upload Dart symbols
+        uses: actions/upload-artifact@v6
+        with:
+          name: dart-symbols-${{ steps.metadata.outputs.tag }}
+          path: build/symbols
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Prepare release assets
         id: assets
