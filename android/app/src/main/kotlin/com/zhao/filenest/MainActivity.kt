@@ -18,6 +18,8 @@ import com.zhao.filenest.storage.SafStorage
 import com.zhao.filenest.storage.StorageFailure
 import com.zhao.filenest.storage.archive.ArchiveManager
 import com.zhao.filenest.storage.share.ShareManager
+import com.zhao.filenest.update.UpdateInstallFailure
+import com.zhao.filenest.update.UpdateInstaller
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -52,6 +54,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var mediaPickResult: MethodChannel.Result? = null
     private var channel: MethodChannel? = null
     private var archiveChannel: MethodChannel? = null
+    private var updateChannel: MethodChannel? = null
     private var events: EventChannel.EventSink? = null
     // 来自其他应用（微信/QQ 等）的待保存文件；Flutter 未监听时先缓冲。
     private var incomingSink: EventChannel.EventSink? = null
@@ -208,6 +211,36 @@ class MainActivity : FlutterFragmentActivity() {
                         runOnUiThread { if (!isDestroyed) result.error(failure.code, failure.message, failure.details) }
                     }
                 }
+            }
+        }
+
+        // 更新安装：仅接受应用缓存 updates 目录内的 APK，交给系统安装器。
+        val updateInstaller = UpdateInstaller(this)
+        updateChannel = MethodChannel(engine.dartExecutor.binaryMessenger, "filenest/update")
+        updateChannel!!.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> {
+                    val path = (call.arguments as? Map<*, *>)?.get("path") as? String
+                    if (path.isNullOrBlank()) {
+                        result.error("invalid_argument", "缺少安装包路径", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        updateInstaller.install(path)
+                        result.success(null)
+                    } catch (failure: UpdateInstallFailure) {
+                        result.error(failure.code, failure.message, null)
+                    }
+                }
+                "openInstallPermissionSettings" -> {
+                    try {
+                        updateInstaller.openInstallPermissionSettings()
+                        result.success(null)
+                    } catch (failure: UpdateInstallFailure) {
+                        result.error(failure.code, failure.message, null)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
     }
@@ -599,6 +632,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onDestroy() {
         channel?.setMethodCallHandler(null)
         archiveChannel?.setMethodCallHandler(null)
+        updateChannel?.setMethodCallHandler(null)
         events = null
         incomingSink = null
         pendingShares = null

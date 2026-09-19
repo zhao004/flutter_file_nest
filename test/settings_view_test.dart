@@ -3,11 +3,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/i18n/locale_controller.dart';
+import 'package:filenest/app/models/update_models.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/preview/preview_settings_controller.dart';
 import 'package:filenest/app/pages/settings/editor_settings_view.dart';
 import 'package:filenest/app/pages/settings/settings_view.dart';
 import 'package:filenest/app/pages/settings/theme_picker_view.dart';
+import 'package:filenest/app/pages/settings/update_controller.dart';
 import 'package:filenest/app/theme/theme_controller.dart';
 
 import 'support/archive_fakes.dart';
@@ -34,9 +36,23 @@ void main() {
     return (controller, store);
   }
 
+  /// 注册更新控制器；返回假接口以便注入检查结果。
+  FakeUpdateApi registerUpdates() {
+    final api = FakeUpdateApi();
+    getIt.registerSingleton<UpdateController>(
+      UpdateController(
+        api: api,
+        installer: FakeUpdateInstaller(),
+        build: const AppBuildInfo(version: '1.0.0', buildNumber: 1),
+      ),
+    );
+    return api;
+  }
+
   testWidgets('设置页可切换外观模式并持久化', (tester) async {
     final (theme, store) = await registerTheme();
     registerLocale();
+    registerUpdates();
     getIt.registerSingleton(
       HomeController(
         storage: FakeStorage(),
@@ -75,6 +91,7 @@ void main() {
   testWidgets('设置页外观项按配色、外观模式、语言排序', (tester) async {
     final (theme, _) = await registerTheme();
     registerLocale();
+    registerUpdates();
     getIt.registerSingleton(
       HomeController(
         storage: FakeStorage(),
@@ -98,6 +115,7 @@ void main() {
   testWidgets('设置页可切换语言并持久化', (tester) async {
     final (theme, _) = await registerTheme();
     final (locale, store) = registerLocale();
+    registerUpdates();
     getIt.registerSingleton(
       HomeController(
         storage: FakeStorage(),
@@ -178,5 +196,80 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.value.scheme, FlexScheme.indigo);
+  });
+
+  testWidgets('设置页检查更新展示新版本弹窗', (tester) async {
+    final (theme, _) = await registerTheme();
+    registerLocale();
+    getIt.registerSingleton(
+      HomeController(
+        storage: FakeStorage(),
+        store: MemoryStore(),
+        archive: FakeArchive(),
+      ),
+    );
+    getIt.registerSingleton<PreviewSettingsController>(
+      PreviewSettingsController(MemoryStore()),
+    );
+    final api = registerUpdates();
+    api.outcome = const UpdateAvailable(
+      UpdatePackage(
+        versionName: '1.2.0',
+        downloadUrl: 'https://example.com/app.apk',
+        filesize: 2048,
+        releaseNotes: '## 新增\n- 修复问题',
+      ),
+    );
+    await tester.pumpWidget(
+      localizedApp(const SettingsView(), theme: theme.lightTheme),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前版本 1.0.0 (1)'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('检查更新'));
+    await tester.tap(find.text('检查更新'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('发现新版本 1.2.0'), findsOneWidget);
+    expect(find.text('更新内容'), findsOneWidget);
+    expect(find.text('安装包大小：2.0 KB'), findsOneWidget);
+    expect(find.text('立即更新'), findsOneWidget);
+    expect(find.text('稍后再说'), findsOneWidget);
+  });
+
+  testWidgets('强制更新弹窗不提供稍后再说', (tester) async {
+    final (theme, _) = await registerTheme();
+    registerLocale();
+    getIt.registerSingleton(
+      HomeController(
+        storage: FakeStorage(),
+        store: MemoryStore(),
+        archive: FakeArchive(),
+      ),
+    );
+    getIt.registerSingleton<PreviewSettingsController>(
+      PreviewSettingsController(MemoryStore()),
+    );
+    final api = registerUpdates();
+    api.outcome = const UpdateAvailable(
+      UpdatePackage(
+        versionName: '1.2.0',
+        downloadUrl: 'https://example.com/app.apk',
+        forceUpdate: true,
+      ),
+    );
+    await tester.pumpWidget(
+      localizedApp(const SettingsView(), theme: theme.lightTheme),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('检查更新'));
+    await tester.tap(find.text('检查更新'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('此版本为强制更新，需完成后才能继续使用'), findsOneWidget);
+    expect(find.text('立即更新'), findsOneWidget);
+    expect(find.text('稍后再说'), findsNothing);
   });
 }

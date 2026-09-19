@@ -1058,6 +1058,162 @@ abstract class AppLocalizations {
   /// **'跟随系统'**
   String get themeModeSystem;
 
+  /// No description provided for @settingsCheckUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新'**
+  String get settingsCheckUpdate;
+
+  /// No description provided for @settingsVersionValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前版本 {version}'**
+  String settingsVersionValue(String version);
+
+  /// No description provided for @updateUpToDateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新'**
+  String get updateUpToDateTitle;
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'已是最新版本（{version}）'**
+  String updateUpToDate(String version);
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现新版本 {version}'**
+  String updateAvailableTitle(String version);
+
+  /// No description provided for @updateForceHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'此版本为强制更新，需完成后才能继续使用'**
+  String get updateForceHint;
+
+  /// No description provided for @updateReleaseNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新内容'**
+  String get updateReleaseNotes;
+
+  /// No description provided for @updatePackageSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包大小：{size}'**
+  String updatePackageSize(String size);
+
+  /// No description provided for @updateNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即更新'**
+  String get updateNow;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍后再说'**
+  String get updateLater;
+
+  /// No description provided for @updateCancelDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消下载'**
+  String get updateCancelDownload;
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在下载 {percent}%'**
+  String updateDownloading(int percent);
+
+  /// No description provided for @updatePrepareDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备下载…'**
+  String get updatePrepareDownload;
+
+  /// No description provided for @updateVerifying.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在校验安装包…'**
+  String get updateVerifying;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在启动安装程序…'**
+  String get updateInstalling;
+
+  /// No description provided for @updateInstallLaunched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已启动安装程序，请按系统提示完成安装'**
+  String get updateInstallLaunched;
+
+  /// No description provided for @updatePermissionRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请允许「FileNest」安装未知应用，然后重试'**
+  String get updatePermissionRequired;
+
+  /// No description provided for @updateOpenSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置'**
+  String get updateOpenSettings;
+
+  /// No description provided for @updateRetryInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试安装'**
+  String get updateRetryInstall;
+
+  /// No description provided for @updateCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消更新'**
+  String get updateCancelled;
+
+  /// No description provided for @updateErrorNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络不可用，请检查网络后重试'**
+  String get updateErrorNetwork;
+
+  /// No description provided for @updateErrorResponse.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器响应异常，请稍后重试'**
+  String get updateErrorResponse;
+
+  /// No description provided for @updateErrorNoPackage.
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到可用的安装包，请稍后重试'**
+  String get updateErrorNoPackage;
+
+  /// No description provided for @updateErrorDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，请重试'**
+  String get updateErrorDownload;
+
+  /// No description provided for @updateErrorHash.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包校验失败，请重新下载'**
+  String get updateErrorHash;
+
+  /// No description provided for @updateErrorInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法启动安装程序，请重试'**
+  String get updateErrorInstall;
+
   /// No description provided for @editorSectionTextCode.
   ///
   /// In zh, this message translates to:

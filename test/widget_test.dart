@@ -5,11 +5,13 @@ import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/models/archive_models.dart';
 import 'package:filenest/app/models/incoming_share.dart';
 import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/models/update_models.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/home/home_view.dart';
 import 'package:filenest/app/pages/home/home_widgets.dart';
 import 'package:filenest/app/pages/preview/image_preview_view.dart';
 import 'package:filenest/app/pages/preview/pdf_preview_view.dart';
+import 'package:filenest/app/pages/settings/update_controller.dart';
 import 'package:filenest/app/pages/video/video_view.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:filenest/app/services/vault_store.dart';
@@ -21,6 +23,17 @@ import 'support/archive_fakes.dart';
 
 void main() {
   tearDown(() => getIt.reset());
+
+  setUp(() {
+    // 首页启动静默检查更新；默认已是最新，不弹窗、不干扰用例。
+    getIt.registerSingleton<UpdateController>(
+      UpdateController(
+        api: FakeUpdateApi(),
+        installer: FakeUpdateInstaller(),
+        build: const AppBuildInfo(version: '1.0.0'),
+      ),
+    );
+  });
 
   testWidgets('选择根目录、新建文件夹并校验非法名称', (tester) async {
     final storage = FakeStorage();

@@ -1,8 +1,10 @@
 import 'package:filenest/app/di/injector.dart';
 import 'package:filenest/app/localization.dart';
 import 'package:filenest/app/models/media_editor_args.dart';
+import 'package:filenest/app/models/update_models.dart';
 import 'package:filenest/app/pages/home/home_controller.dart';
 import 'package:filenest/app/pages/preview/image_editor_view.dart';
+import 'package:filenest/app/pages/settings/update_controller.dart';
 import 'package:filenest/app/routes/app_router.dart';
 import 'package:filenest/app/routes/app_routes.dart';
 import 'package:filenest/app/services/saf_storage.dart';
@@ -28,6 +30,14 @@ void main() {
         storage: storage,
         store: MemoryStore(),
         archive: FakeArchive(),
+      ),
+    );
+    // 首页启动静默检查更新；默认已是最新，不弹窗、不干扰用例。
+    getIt.registerSingleton<UpdateController>(
+      UpdateController(
+        api: FakeUpdateApi(),
+        installer: FakeUpdateInstaller(),
+        build: const AppBuildInfo(version: '1.0.0'),
       ),
     );
   });

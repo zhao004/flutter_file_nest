@@ -529,6 +529,101 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeSystem => 'System default';
 
   @override
+  String get settingsCheckUpdate => 'Check for updates';
+
+  @override
+  String settingsVersionValue(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateUpToDateTitle => 'Check for updates';
+
+  @override
+  String updateUpToDate(String version) {
+    return 'You are on the latest version ($version)';
+  }
+
+  @override
+  String updateAvailableTitle(String version) {
+    return 'New version $version';
+  }
+
+  @override
+  String get updateForceHint => 'This update is required to keep using the app';
+
+  @override
+  String get updateReleaseNotes => 'What\'s new';
+
+  @override
+  String updatePackageSize(String size) {
+    return 'Package size: $size';
+  }
+
+  @override
+  String get updateNow => 'Update now';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateCancelDownload => 'Cancel download';
+
+  @override
+  String updateDownloading(int percent) {
+    return 'Downloading $percent%';
+  }
+
+  @override
+  String get updatePrepareDownload => 'Preparing download…';
+
+  @override
+  String get updateVerifying => 'Verifying package…';
+
+  @override
+  String get updateInstalling => 'Launching installer…';
+
+  @override
+  String get updateInstallLaunched =>
+      'Installer launched; follow the on-screen steps';
+
+  @override
+  String get updatePermissionRequired =>
+      'Allow FileNest to install unknown apps, then retry';
+
+  @override
+  String get updateOpenSettings => 'Settings';
+
+  @override
+  String get updateRetryInstall => 'Retry install';
+
+  @override
+  String get updateCancelled => 'Update cancelled';
+
+  @override
+  String get updateErrorNetwork =>
+      'Network unavailable; check your connection and retry';
+
+  @override
+  String get updateErrorResponse =>
+      'Unexpected server response; please try again later';
+
+  @override
+  String get updateErrorNoPackage =>
+      'No installable package found; please try again later';
+
+  @override
+  String get updateErrorDownload => 'Download failed, please retry';
+
+  @override
+  String get updateErrorHash =>
+      'Package verification failed; please download again';
+
+  @override
+  String get updateErrorInstall =>
+      'Unable to launch the installer, please retry';
+
+  @override
   String get editorSectionTextCode => 'Text & code';
 
   @override

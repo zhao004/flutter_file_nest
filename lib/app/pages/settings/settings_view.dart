@@ -7,17 +7,22 @@ import '../../i18n/locale_controller.dart';
 import '../../i18n/locale_defaults.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../localization.dart';
+import '../../models/update_models.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 import '../home/home_controller.dart';
 import '../preview/preview_settings_controller.dart';
+import 'update_controller.dart';
+import 'update_dialog.dart';
 
 /// 管理活动根目录、外观、语言与编辑器入口；文件导入与录制均交由系统应用完成。
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
 
   HomeController get controller => getIt<HomeController>();
+
+  UpdateController get updates => getIt<UpdateController>();
 
   @override
   Widget build(BuildContext context) {
@@ -83,10 +88,58 @@ class SettingsView extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push<void>(Routes.editorSettings),
             ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.system_update_alt),
+              title: Text(context.l10n.settingsCheckUpdate),
+              subtitle: Text(
+                context.l10n.settingsVersionValue(updates.build.label),
+              ),
+              trailing: updates.checking.value
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.chevron_right),
+              enabled: !updates.checking.value,
+              onTap: () => _checkUpdate(context),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// 手动检查更新；按结果显示更新弹窗、最新提示或失败原因。
+  Future<void> _checkUpdate(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final outcome = await updates.check();
+    if (!context.mounted) return;
+    switch (outcome) {
+      case UpdateAvailable(:final package):
+        await showUpdateDialog(
+          context: context,
+          controller: updates,
+          package: package,
+        );
+      case UpToDate(:final currentVersion):
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(dialogContext.l10n.updateUpToDateTitle),
+            content: Text(dialogContext.l10n.updateUpToDate(currentVersion)),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(dialogContext.l10n.commonConfirm),
+              ),
+            ],
+          ),
+        );
+      case UpdateCheckFailure(:final message):
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   /// 选择跟随系统/浅色/深色；取消不改变当前模式。

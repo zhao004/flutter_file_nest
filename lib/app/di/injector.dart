@@ -1,15 +1,21 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../database/database.dart';
 import '../i18n/locale_controller.dart';
+import '../models/update_models.dart';
 import '../pages/home/home_controller.dart';
 import '../pages/preview/preview_settings_controller.dart';
+import '../pages/settings/update_controller.dart';
 import '../services/archive_service.dart';
 import '../services/incoming_share_service.dart';
 import '../services/saf_storage.dart';
 import '../services/thumbnail_service.dart';
+import '../services/update_api.dart';
+import '../services/update_installer.dart';
 import '../services/vault_store.dart';
 import '../theme/theme_controller.dart';
 import '../theme/theme_store.dart';
@@ -46,6 +52,13 @@ Future<void> configureDependencies() async {
 
   getIt.registerSingleton<ArchiveGateway>(ArchiveService());
   getIt.registerSingleton<IncomingShareGateway>(const IncomingShareService());
+  // 更新检查：启动静默检查与设置页手动触发，安装包在应用内下载后交给系统安装器。
+  final updateController = UpdateController(
+    api: GitHubUpdateApi(),
+    installer: const UpdateInstallerService(),
+    build: await _appBuildInfo(),
+  );
+  getIt.registerSingleton<UpdateController>(updateController);
   // 首页控制器持有目录导航与列表状态，首次进入首页路由时创建。
   getIt.registerLazySingleton<HomeController>(
     () => HomeController(
@@ -56,4 +69,18 @@ Future<void> configureDependencies() async {
       incoming: getIt<IncomingShareGateway>(),
     ),
   );
+}
+
+/// 读取应用版本信息用于更新检查；失败时返回空版本，不阻断启动。
+Future<AppBuildInfo> _appBuildInfo() async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    return AppBuildInfo(
+      version: info.version,
+      buildNumber: int.tryParse(info.buildNumber),
+    );
+  } catch (failure) {
+    debugPrint('读取应用版本失败：$failure');
+    return const AppBuildInfo(version: '');
+  }
 }

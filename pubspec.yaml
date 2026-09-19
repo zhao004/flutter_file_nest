@@ -75,6 +75,10 @@ dependencies:
   # 未声明 KGP 的插件子工程自动补应用 Kotlin 插件。
   wakelock_plus: ^1.8.0
   package_info_plus: ^10.2.1
+  # 更新检查与安装包下载；两者此前已随传递依赖进入依赖树，此处显式声明。
+  http: ^1.6.0
+  # 安装包完整性校验（sha256/md5）。
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

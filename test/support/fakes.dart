@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:filenest/app/models/batch_models.dart';
 import 'package:filenest/app/models/incoming_share.dart';
 import 'package:filenest/app/models/storage_entry.dart';
+import 'package:filenest/app/models/update_models.dart';
 import 'package:filenest/app/services/incoming_share_service.dart';
 import 'package:filenest/app/services/saf_storage.dart';
 import 'package:filenest/app/services/thumbnail_service.dart';
+import 'package:filenest/app/services/update_api.dart';
+import 'package:filenest/app/services/update_installer.dart';
 import 'package:filenest/app/services/vault_store.dart';
 import 'package:filenest/app/theme/theme_store.dart';
 
@@ -66,6 +70,102 @@ String? _mimeFromName(String name) {
     'jpg' || 'jpeg' => 'image/jpeg',
     _ => null,
   };
+}
+
+/// 可注入的更新接口；检查结果、下载内容与失败均由用例设置。
+class FakeUpdateApi implements UpdateApi {
+  UpdateCheckOutcome outcome = const UpToDate('1.0.0');
+  int checks = 0;
+  AppBuildInfo? lastBuild;
+
+  /// 下载字节与目标目录；用于断言下载参数与摘要校验。
+  Uint8List downloadBytes = Uint8List.fromList(const [1, 2, 3, 4]);
+  UpdatePackage? downloadedPackage;
+  Directory? downloadDirectory;
+  int downloads = 0;
+  bool cancelCalled = false;
+
+  /// 非空时下载以该错误结束。
+  UpdateDownloadFailure? downloadFailure;
+
+  /// 非空时下载挂起，直到 [releaseDownload] 放行；用于覆盖取消路径。
+  Completer<void>? downloadGate;
+
+  @override
+  Future<UpdateCheckOutcome> check(AppBuildInfo build) async {
+    checks++;
+    lastBuild = build;
+    return outcome;
+  }
+
+  @override
+  UpdateDownload download(UpdatePackage package, Directory directory) {
+    downloads++;
+    downloadedPackage = package;
+    downloadDirectory = directory;
+    final progress = StreamController<UpdateDownloadProgress>();
+    final completer = Completer<File>();
+    unawaited(() async {
+      try {
+        final failure = downloadFailure;
+        if (failure != null) throw failure;
+        final gate = downloadGate;
+        if (gate != null) await gate.future;
+        await directory.create(recursive: true);
+        final file = File(
+          '${directory.path}${Platform.pathSeparator}filenest-update.apk',
+        );
+        await file.writeAsBytes(downloadBytes);
+        if (!progress.isClosed) {
+          progress.add(
+            UpdateDownloadProgress(
+              received: downloadBytes.length,
+              total: downloadBytes.length,
+            ),
+          );
+        }
+        if (!completer.isCompleted) completer.complete(file);
+      } on Exception catch (error) {
+        if (!completer.isCompleted) completer.completeError(error);
+      } finally {
+        await progress.close();
+      }
+    }());
+    return UpdateDownload(
+      progress: progress.stream,
+      file: completer.future,
+      onCancel: () {
+        cancelCalled = true;
+        if (!completer.isCompleted) {
+          completer.completeError(const UpdateDownloadCancelled());
+        }
+      },
+    );
+  }
+
+  /// 放行被 [downloadGate] 挂起的下载。
+  void releaseDownload() => downloadGate?.complete();
+}
+
+/// 可注入的安装器；记录安装与授权页调用，支持注入失败。
+class FakeUpdateInstaller implements UpdateInstallerGateway {
+  final installs = <String>[];
+  int permissionSettingsOpened = 0;
+
+  /// 非空时 [installApk] 抛出该错误。
+  UpdateInstallFailure? failure;
+
+  @override
+  Future<void> installApk(File file) async {
+    final failure = this.failure;
+    if (failure != null) throw failure;
+    installs.add(file.path);
+  }
+
+  @override
+  Future<void> openInstallPermissionSettings() async {
+    permissionSettingsOpened++;
+  }
 }
 
 class MemoryStore implements VaultStore {

@@ -522,6 +522,94 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeSystem => '跟随系统';
 
   @override
+  String get settingsCheckUpdate => '检查更新';
+
+  @override
+  String settingsVersionValue(String version) {
+    return '当前版本 $version';
+  }
+
+  @override
+  String get updateUpToDateTitle => '检查更新';
+
+  @override
+  String updateUpToDate(String version) {
+    return '已是最新版本（$version）';
+  }
+
+  @override
+  String updateAvailableTitle(String version) {
+    return '发现新版本 $version';
+  }
+
+  @override
+  String get updateForceHint => '此版本为强制更新，需完成后才能继续使用';
+
+  @override
+  String get updateReleaseNotes => '更新内容';
+
+  @override
+  String updatePackageSize(String size) {
+    return '安装包大小：$size';
+  }
+
+  @override
+  String get updateNow => '立即更新';
+
+  @override
+  String get updateLater => '稍后再说';
+
+  @override
+  String get updateCancelDownload => '取消下载';
+
+  @override
+  String updateDownloading(int percent) {
+    return '正在下载 $percent%';
+  }
+
+  @override
+  String get updatePrepareDownload => '正在准备下载…';
+
+  @override
+  String get updateVerifying => '正在校验安装包…';
+
+  @override
+  String get updateInstalling => '正在启动安装程序…';
+
+  @override
+  String get updateInstallLaunched => '已启动安装程序，请按系统提示完成安装';
+
+  @override
+  String get updatePermissionRequired => '请允许「FileNest」安装未知应用，然后重试';
+
+  @override
+  String get updateOpenSettings => '去设置';
+
+  @override
+  String get updateRetryInstall => '重试安装';
+
+  @override
+  String get updateCancelled => '已取消更新';
+
+  @override
+  String get updateErrorNetwork => '网络不可用，请检查网络后重试';
+
+  @override
+  String get updateErrorResponse => '服务器响应异常，请稍后重试';
+
+  @override
+  String get updateErrorNoPackage => '未找到可用的安装包，请稍后重试';
+
+  @override
+  String get updateErrorDownload => '下载失败，请重试';
+
+  @override
+  String get updateErrorHash => '安装包校验失败，请重新下载';
+
+  @override
+  String get updateErrorInstall => '无法启动安装程序，请重试';
+
+  @override
   String get editorSectionTextCode => '文本与代码';
 
   @override

@@ -13,6 +13,8 @@ import '../../models/storage_entry.dart';
 import '../../preview/preview_launcher.dart';
 import '../../routes/app_routes.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../settings/update_controller.dart';
+import '../settings/update_dialog.dart';
 import 'home_controller.dart';
 import 'home_widgets.dart';
 
@@ -45,6 +47,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     });
     // 冷启动时可能已存在待保存项，构建完成后补处理一次。
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleIncoming());
+    // 启动静默检查更新；发现新版本才弹窗，已最新或失败不打扰。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdates());
   }
 
   @override
@@ -52,6 +56,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     _incomingEffect?.call();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// 启动静默检查更新；仅在发现新版本时弹窗，已最新或失败保持安静。
+  Future<void> _checkForUpdates() async {
+    final updates = getIt<UpdateController>();
+    final available = await updates.checkOnStartup();
+    if (!mounted || available == null) return;
+    await showUpdateDialog(
+      context: context,
+      controller: updates,
+      package: available.package,
+    );
   }
 
   /// 处理来自其他应用的文件：保存到当前打开的文件夹。
