@@ -69,7 +69,6 @@ dependencies:
   material_ui: ^1.3.0
   cupertino_ui: ^1.1.0
   video_player: ^2.14.0
-  audioplayers: ^6.8.1
   # wakelock_plus 1.7+ / package_info_plus 10.2+ 已适配 AGP 9 内置 Kotlin；
   # 应用保持 legacy 模式（android.builtInKotlin=false），Flutter 3.47 会为
   # 未声明 KGP 的插件子工程自动补应用 Kotlin 插件。
