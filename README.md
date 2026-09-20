@@ -143,7 +143,7 @@ GitHub Release。
 - 运行环境 `flutter_android_build`，需配置以下 Secrets：
 
   | Secret | 说明 |
-  | --- | --- |
+          | --- | --- |
   | `ANDROID_KEYSTORE_BASE64` | 发布 keystore 的 Base64 内容 |
   | `ANDROID_KEYSTORE_PASSWORD` | keystore 密码 |
   | `ANDROID_KEY_ALIAS` | 密钥别名 |
@@ -176,3 +176,8 @@ GitHub Release。
   解压仍仅支持 ZIP。
 - Office 文档、MOBI/AZW3、字体集合（TTC）与 Web 字体不做内嵌解析，交由系统应用。
 - 「创建时间」仅对本应用登记的文件可靠，外部来源文件显示为未知，不用修改时间冒充。
+
+## 相关链接
+
+- 社区：[Linux.do](https://linux.do/)
+- 更多开源项目：[zhao04 的公开主题](https://linux.do/u/zhao04/activity/topics)
