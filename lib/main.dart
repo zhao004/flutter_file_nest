@@ -47,21 +47,22 @@ class _FileNestAppState extends State<FileNestApp> with WidgetsBindingObserver {
       getIt<LocaleController>().syncCurrent();
 
   @override
-  Widget build(BuildContext context) => SignalBuilder(
-    builder: (context) {
-      final theme = getIt<ThemeController>();
-      final locale = getIt<LocaleController>();
-      return MaterialApp.router(
-        title: 'FileNest',
-        debugShowCheckedModeBanner: false,
-        theme: theme.lightTheme,
-        darkTheme: theme.darkTheme,
-        themeMode: theme.mode.value,
-        locale: locale.locale.value,
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: appSupportedLocales,
-        routerConfig: widget.router,
+  Widget build(BuildContext context) =>
+      SignalBuilder(
+        builder: (context) {
+          final theme = getIt<ThemeController>();
+          final locale = getIt<LocaleController>();
+          return MaterialApp.router(
+            title: 'FileNest',
+            debugShowCheckedModeBanner: false,
+            theme: theme.lightTheme,
+            darkTheme: theme.darkTheme,
+            themeMode: theme.mode.value,
+            locale: locale.locale.value,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: appSupportedLocales,
+            routerConfig: widget.router,
+          );
+        },
       );
-    },
-  );
 }
